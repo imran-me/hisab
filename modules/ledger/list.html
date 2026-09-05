@@ -5,17 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
   <script>
-    /* PRE-PAINT — the twin of applyTheme() in shared/js/core/state.js, and of
-       the identical block in every other page. Duplicated rather than imported
-       because an import cannot run before the first paint, and one white frame
-       on every navigation is what this prevents.
-       tools/check-pages.py asserts that all copies stay identical. */
+    /* PRE-PAINT. Inline, and first, on purpose: a deferred script runs after
+       the first paint, and the first paint is exactly what this exists to get
+       right. A night-theme user who sees one white frame on every navigation
+       has a broken app, however correct it looks a moment later.
+
+       This block is the twin of applyTheme() in shared/js/core/state.js. If one
+       changes, so must the other. It is duplicated into every page rather than
+       imported because an import cannot run before paint.
+
+       It is byte-identical in every page, and tools/check-pages.py asserts
+       that, because duplicated code drifts. That tool also prints the
+       Content-Security-Policy hash for this exact block; if the two disagree,
+       the browser blocks the script and every page paints the white frame this
+       is here to prevent.
+
+       .no-js is removed here too, so [data-reveal] content is only hidden when
+       JavaScript is actually present to reveal it. */
     document.documentElement.classList.remove('no-js');
     try {
       var root = document.documentElement;
       var theme = localStorage.getItem('hisab:theme');
       if (theme) {
         var value = JSON.parse(theme);
+        /* Both directions matter. A stored 'day' must ADD the attribute and a
+           cleared preference must REMOVE it, or someone who switches back to
+           following their device stays stuck on their old choice. */
         if (value === 'day' || value === 'night') root.setAttribute('data-theme', value);
         else root.removeAttribute('data-theme');
       }
@@ -23,7 +38,7 @@
       if (density && JSON.parse(density) === 'compact') root.setAttribute('data-density', 'compact');
       var hand = localStorage.getItem('hisab:hand');
       if (hand && JSON.parse(hand) === 'left') root.setAttribute('data-hand', 'left');
-    } catch (e) { /* storage off, or private mode — the built-in theme stands. */ }
+    } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
   </script>
 
   <title>Ledger — Hisab</title>

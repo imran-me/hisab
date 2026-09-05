@@ -1,0 +1,258 @@
+# =============================================================================
+# Hisab · Apache / LiteSpeed configuration
+#
+# This file is deployed to the document root (public_html on Hostinger).
+#
+# It does four jobs, in order of how much damage getting them wrong does:
+#
+#   1. Forces HTTPS. THE VAULT DOES NOT WORK WITHOUT IT — crypto.subtle is
+#      undefined outside a secure context, so on plain http the vault screen
+#      fails while every other page works, which is a confusing way to find out.
+#   2. Blocks the files that must never be served: documentation, the Python
+#      tools, the Laravel application layer, dotfiles.
+#   3. Sets the MIME types Hostinger does not send correctly on its own.
+#   4. Sets security headers, including a real Content-Security-Policy.
+#
+# After editing, run:  python tools/check-pages.py
+# It verifies the CSP hash below still matches the inline theme block in the
+# pages. If they disagree the browser silently blocks that script and every
+# page paints one white frame before correcting itself.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 0 · No directory listings, ever
+#
+# Without this, a URL ending in a directory with no index file returns a
+# browsable index of it — which on this app means a listing of every module.
+# -----------------------------------------------------------------------------
+Options -Indexes
+
+DirectoryIndex index.html index.php
+
+# -----------------------------------------------------------------------------
+# 1 · HTTPS
+#
+# Two conditions rather than one. %{HTTPS} is the direct signal and is what
+# LiteSpeed sets on Hostinger; X-Forwarded-Proto is what arrives when a request
+# has come through a proxy or CDN, where %{HTTPS} reads as off on an already
+# secure request and a single-condition rule redirects forever in a loop.
+# -----------------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# -----------------------------------------------------------------------------
+# 2 · What must never be served
+#
+# The frontend and the backend live in one repository, which is what makes a
+# module a deletable vertical slice — and it means the web root contains files
+# that are not for the web. Each pattern below is a file that would otherwise be
+# readable by anyone who guessed its name.
+# -----------------------------------------------------------------------------
+
+# Documentation and notes. endpoints.md describes every route, SECURITY.md
+# describes the vault's key hierarchy, and context.md is a decision log. None of
+# it is secret exactly, and none of it is anyone else's business.
+<FilesMatch "\.(md|markdown)$">
+  Require all denied
+</FilesMatch>
+
+# Developer tooling. Python validators, and the test harnesses.
+<FilesMatch "\.(py|mjs|sh|bat|ps1)$">
+  Require all denied
+</FilesMatch>
+
+# Build and dependency manifests — they enumerate versions, which is a
+# vulnerability shopping list.
+<FilesMatch "^(composer\.(json|lock)|package(-lock)?\.json|artisan|\.env.*|.*\.log)$">
+  Require all denied
+</FilesMatch>
+
+# Anything beginning with a dot: .env, .git, .gitignore, .htaccess itself.
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+# A vault export is a real secret in a file. It should never be in the web root
+# at all; this is the second line of defence for when one gets left there.
+<FilesMatch "\.(hisab-vault|sql|sqlite|db|bak|old|orig|swp|dist)$">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # The Laravel application layer. Every .php file under a module's backend/
+  # directory is a controller, a model or a migration, and none of them is an
+  # entry point — Laravel routes through public/index.php. Reaching one directly
+  # executes it out of context.
+  RewriteRule ^modules/[^/]+/backend/.*\.php$ - [F,L]
+
+  # The framework's own directories, for the same reason.
+  RewriteRule ^(app|bootstrap|config|database|storage|vendor|routes|tests)/ - [F,L]
+
+  # Developer directories in full, not only by file extension: tools/ holds
+  # HTML harnesses that frame the app, and docs/ holds the deployment notes.
+  RewriteRule ^(tools|docs|research)/ - [F,L]
+
+  # The .git directory. Blocked by the dotfile rule above as well; this catches
+  # the case where a server is configured to allow dotfiles.
+  RewriteRule ^\.git - [F,L]
+</IfModule>
+
+# -----------------------------------------------------------------------------
+# 3 · MIME types
+#
+# A woff2 served as application/octet-stream still downloads and still renders,
+# so this looks like it does not matter. It costs the compression and the
+# correct caching, and a .webmanifest served as text/plain is rejected outright,
+# which silently disables installing the app to a phone's home screen.
+# -----------------------------------------------------------------------------
+<IfModule mod_mime.c>
+  AddType font/woff2                    .woff2
+  AddType image/svg+xml                 .svg
+  AddType application/manifest+json     .webmanifest
+  AddType text/javascript               .js .mjs
+  AddType application/json              .json
+  AddType text/css                      .css
+
+  AddDefaultCharset UTF-8
+  AddCharset UTF-8 .html .css .js .json .svg .webmanifest
+</IfModule>
+
+# -----------------------------------------------------------------------------
+# 4 · Compression
+# -----------------------------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+  AddOutputFilterByType DEFLATE text/javascript application/javascript
+  AddOutputFilterByType DEFLATE application/json application/manifest+json
+  AddOutputFilterByType DEFLATE image/svg+xml
+  # woff2 is already compressed. Running deflate over it costs CPU on every
+  # request and makes the file very slightly larger.
+</IfModule>
+
+# -----------------------------------------------------------------------------
+# 5 · Caching
+#
+# THIS PROJECT HAS NO BUILD STEP, SO FILENAMES CARRY NO CONTENT HASH.
+# That single fact decides every value below. A year-long cache on a stylesheet
+# whose name never changes means a deploy reaches nobody who has visited before,
+# and there is no way to force it. So:
+#
+#   · HTML          never cached. It is the document that points at everything.
+#   · CSS and JS    one hour, and must-revalidate. Long enough to help a session,
+#                   short enough that a fix lands the same day.
+#   · fonts, icons  one year, immutable. Their content genuinely does not change;
+#                   a new icon is a new symbol inside the same sprite, which is
+#                   why the sprite is grouped with CSS below rather than here.
+#   · seed JSON     one day. Read once per install.
+# -----------------------------------------------------------------------------
+<IfModule mod_headers.c>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+
+  <FilesMatch "\.(css|js)$">
+    Header set Cache-Control "public, max-age=3600, must-revalidate"
+  </FilesMatch>
+
+  # The sprite changes whenever an icon is added, and a stale one means missing
+  # glyphs rather than an old colour, so it is treated as code.
+  <FilesMatch "sprite\.svg$">
+    Header set Cache-Control "public, max-age=3600, must-revalidate"
+  </FilesMatch>
+
+  <FilesMatch "\.woff2$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  <FilesMatch "\.(png|jpg|jpeg|webp|avif|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  <FilesMatch "\.json$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+
+  # ---------------------------------------------------------------------------
+  # 6 · Security headers
+  # ---------------------------------------------------------------------------
+
+  # No sniffing. A JSON response reinterpreted as HTML is the mechanism behind
+  # a whole class of injection.
+  Header always set X-Content-Type-Options "nosniff"
+
+  # A private ledger must never render inside someone else's page. DENY rather
+  # than SAMEORIGIN: nothing in this app frames itself.
+  Header always set X-Frame-Options "DENY"
+
+  # Do not leak which page of a private app was open when following a link out.
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Features this app does not use, switched off so a compromised script cannot
+  # reach them. Notably the camera and the microphone: the vault has no scanner.
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), accelerometer=(), gyroscope=()"
+
+  # Cross-origin isolation. Also what a future WASM Argon2 build would need.
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Cross-Origin-Resource-Policy "same-origin"
+
+  # ---------------------------------------------------------------------------
+  # Content-Security-Policy
+  #
+  # The inline hash below is the theme block that runs before the first paint in
+  # every page. It is NOT 'unsafe-inline': allowing inline script wholesale on a
+  # page that decrypts secrets would leave the policy decorative, and this
+  # product has exactly one inline script, identical in every page.
+  #
+  # REGENERATE IT AFTER ANY EDIT TO THAT BLOCK:
+  #     python tools/check-pages.py
+  # The tool fails the build if this string and the pages disagree.
+  #
+  # Everything else is 'self' because everything else IS self — no CDN, no
+  # analytics, no webfont host. That is a deliberate choice for an app holding a
+  # private ledger, and it is what makes a policy this tight possible.
+  # ---------------------------------------------------------------------------
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-0qYJf+ZXLkvwd2kLmQlxzgzOLGnlT6zY7rLoYDOX09s='; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+
+  # ---------------------------------------------------------------------------
+  # HSTS — commented out ON PURPOSE.
+  #
+  # Enable it only once HTTPS is confirmed working on the real domain, including
+  # every subdomain you use. It tells browsers to refuse plain http for two
+  # years, and that instruction cannot be withdrawn from a browser that has
+  # already received it. Turning it on before the certificate is right locks
+  # people out of the site with no way to bypass.
+  #
+  # Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains"
+  # ---------------------------------------------------------------------------
+</IfModule>
+
+# -----------------------------------------------------------------------------
+# 7 · Errors
+# -----------------------------------------------------------------------------
+ErrorDocument 404 /404.html
+ErrorDocument 403 /404.html
+
+# -----------------------------------------------------------------------------
+# 8 · The Laravel API — NOT YET ACTIVE
+#
+# Uncomment when the backend exists. It routes /api/* into Laravel's front
+# controller while leaving every static file served directly by the web server.
+#
+# The front controller lives in public/, and public/ is NOT the document root
+# here — Hostinger fixes the document root at public_html, and moving the whole
+# framework above it is the alternative arrangement documented in
+# docs/DEPLOY-HOSTINGER.md §7.
+#
+# <IfModule mod_rewrite.c>
+#   RewriteEngine On
+#   RewriteCond %{REQUEST_URI} ^/api
+#   RewriteRule ^api/?(.*)$ public/index.php [L,QSA]
+# </IfModule>
+# -----------------------------------------------------------------------------
