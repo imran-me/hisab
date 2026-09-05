@@ -10,6 +10,19 @@
   box-sizing: border-box;
 }
 
+/* [hidden] must actually hide.
+   The browser's own [hidden] rule lives in the UA stylesheet, so ANY author
+   `display` declaration outranks it — `.stack { display: flex }` included. The
+   result is a panel that JS has set `hidden` on and that is still on screen,
+   empty, with its heading above it. Caught by screenshotting the overview on a
+   fresh install: "Where it went" and "What the numbers say" were both showing
+   with nothing inside them.
+   !important is right here rather than lazy — `hidden` is a statement about
+   whether the element exists for the reader, not a styling suggestion. */
+[hidden] {
+  display: none !important;
+}
+
 /* Margin is opted into, never inherited. Every vertical rhythm in the product
    comes from a layout primitive (.stack, .grid) so that two components placed
    next to each other cannot produce an unpredictable gap from margin

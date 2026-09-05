@@ -128,7 +128,7 @@ export function delegate(container, eventName, selector, handler) {
 /**
  * An SVG sprite reference.
  *
- *   icon('arrow-down', { class: 'icon icon--sm' })
+ *   icon('arrow-in', { class: 'icon icon--sm' })
  *
  * <use href="…#id"> rather than an inline copy of the path, so the twenty-eight
  * icons are one cached file and a row repeated 400 times costs 400 references

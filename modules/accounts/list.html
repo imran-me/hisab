@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <script>
+    /* PRE-PAINT — the twin of applyTheme() in shared/js/core/state.js, and of
+       the identical block in every other page. Duplicated rather than imported
+       because an import cannot run before the first paint, and one white frame
+       on every navigation is what this prevents.
+       tools/check-pages.py asserts that all copies stay identical. */
+    document.documentElement.classList.remove('no-js');
+    try {
+      var root = document.documentElement;
+      var theme = localStorage.getItem('hisab:theme');
+      if (theme) {
+        var value = JSON.parse(theme);
+        if (value === 'day' || value === 'night') root.setAttribute('data-theme', value);
+        else root.removeAttribute('data-theme');
+      }
+      var density = localStorage.getItem('hisab:density');
+      if (density && JSON.parse(density) === 'compact') root.setAttribute('data-density', 'compact');
+      var hand = localStorage.getItem('hisab:hand');
+      if (hand && JSON.parse(hand) === 'left') root.setAttribute('data-hand', 'left');
+    } catch (e) { /* storage off, or private mode — the built-in theme stands. */ }
+  </script>
+
+  <title>Accounts — Hisab</title>
+  <meta name="description" content="Cash, bank, mobile money, cards, savings and investments — every account in one place.">
+  <meta name="theme-color" content="#06080B">
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../../assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="../../site.webmanifest">
+
+  <link rel="stylesheet" href="../../shared/css/hisab.css">
+  <link rel="stylesheet" href="accounts.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="app">
+    <header class="app-header"></header>
+    <nav class="app-rail" aria-label="Sections"></nav>
+
+    <main class="app-main" id="main">
+      <div class="page stack stack--5">
+
+        <!-- Totals first: the question "how much do I have" is answered before
+             the list that breaks it down, not after it. -->
+        <section class="stack stack--3" aria-labelledby="totals-h">
+          <h2 class="sr-only" id="totals-h">Totals</h2>
+          <div class="grid grid--pair">
+            <div class="stat">
+              <span class="stat__label">Spendable</span>
+              <span class="money money--lg" data-total-spendable>—</span>
+              <span class="stat__delta" data-count-spendable></span>
+            </div>
+            <div class="stat">
+              <span class="stat__label">Held</span>
+              <span class="money money--lg money--hold" data-total-held>—</span>
+              <span class="stat__delta" data-count-held></span>
+            </div>
+          </div>
+          <p class="meta" data-totals-note hidden></p>
+        </section>
+
+        <!-- Grouped by whether the money is spendable today. The grouping IS
+             the point of this screen: a DPS listed between a cash wallet and a
+             bKash balance invites it to be counted as available. -->
+        <section class="stack stack--3" aria-labelledby="spend-h">
+          <div class="section-head">
+            <div class="section-head__title">
+              <h2 class="h3" id="spend-h">Spendable</h2>
+            </div>
+            <button type="button" class="btn btn--secondary btn--sm section-head__action" data-new-account>
+              <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-plus"/></svg>
+              New
+            </button>
+          </div>
+          <div class="card card--flush">
+            <ul class="list" data-spendable></ul>
+          </div>
+        </section>
+
+        <section class="stack stack--3" data-held-section hidden aria-labelledby="held-h">
+          <div class="section-head">
+            <div class="section-head__title">
+              <h2 class="h3" id="held-h">Savings &amp; investment</h2>
+            </div>
+          </div>
+          <div class="card card--flush">
+            <ul class="list" data-held></ul>
+          </div>
+        </section>
+
+        <section class="stack stack--3" data-archived-section hidden aria-labelledby="arch-h">
+          <div class="section-head">
+            <div class="section-head__title">
+              <h2 class="h3" id="arch-h">Archived</h2>
+            </div>
+          </div>
+          <p class="meta">Hidden from pickers. Every past entry that used them still resolves.</p>
+          <div class="card card--flush">
+            <ul class="list" data-archived></ul>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <nav class="tabbar" aria-label="Primary"></nav>
+
+  <script type="module" src="../../shared/js/main.js"></script>
+  <script type="module" src="list-page.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hisab · exact-width shot</title>
+<!--
+  A screenshot harness, for the same reason qa-viewport.html exists.
+
+  `chrome --headless --window-size=390,844 --screenshot` does NOT produce a
+  390px render. Headless clamps its viewport, lays the page out at that wider
+  width, and crops the image to 390 — so the picture shows a desktop layout with
+  its right-hand side cut off, which looks like an overflow bug when there is
+  none, and hides one when there is.
+
+  This page puts the target in an iframe of an EXACT width. The iframe's own
+  viewport is its element width regardless of the window, so the media queries
+  inside resolve exactly as they would on the device. Screenshot the window and
+  what you get is the real layout at that width.
+
+    chrome --headless=new --hide-scrollbars --window-size=1500,1000 \
+      --virtual-time-budget=9000 --screenshot=out.png \
+      "http://localhost:8000/tools/shot.html?url=../index.html&w=390&h=900"
+
+  ?url  page to frame, relative to this file
+  ?w    frame width  (default 390)
+  ?h    frame height (default 900)
+  ?n    number of side-by-side frames at ?w2, ?w3 … for comparing widths
+-->
+<style>
+  html, body { margin: 0; background: #14181f; }
+  .rail { display: flex; gap: 24px; padding: 24px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption {
+    font: 600 11px/1 ui-monospace, monospace; letter-spacing: .08em;
+    text-transform: uppercase; color: #7d8a99; padding: 0 0 8px 2px;
+  }
+  iframe { display: block; border: 1px solid #2a3542; border-radius: 10px; background: #06080B; }
+</style>
+</head>
+<body>
+<div class="rail" id="rail"></div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const url = params.get('url') || '../index.html';
+  const height = Number(params.get('h') || 900);
+
+  /* One width, or several for a side-by-side comparison. Comparing 360 against
+     768 in one image is the fastest way to see a breakpoint doing the wrong
+     thing. */
+  const widths = (params.get('w') || '390').split(',').map(Number);
+
+  document.getElementById('rail').innerHTML = widths.map((w) => `
+    <figure>
+      <figcaption>${w}px</figcaption>
+      <iframe src="${url}" width="${w}" height="${height}" style="width:${w}px;height:${height}px"></iframe>
+    </figure>`).join('');
+</script>
+</body>
+</html>

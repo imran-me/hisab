@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hisab">
+  <!--
+    The mark: a ledger rule with a rising line through it.
+
+    Drawn rather than lettered, because a letterform at 16px in a browser tab is
+    a smudge. Three horizontal rules read as an account book at any size, and
+    the line crossing them is the only part that needs to survive the shrink —
+    which is why it is the heaviest stroke in the drawing.
+
+    No text, no gradient, no rounded-square backplate. The tab strip is already
+    a row of rounded squares.
+  -->
+  <rect width="64" height="64" rx="14" fill="#06080B"/>
+  <g stroke="#1D2634" stroke-width="3" stroke-linecap="round">
+    <path d="M14 22h36"/>
+    <path d="M14 32h36"/>
+    <path d="M14 42h36"/>
+  </g>
+  <path d="M14 44 26 32l8 7 16-19" fill="none" stroke="#3FE3AE" stroke-width="5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="50" cy="20" r="4.5" fill="#00C2D4"/>
+</svg>

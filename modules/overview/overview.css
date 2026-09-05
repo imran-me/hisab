@@ -1,0 +1,103 @@
+/* =========================================================================
+   Overview · module styles
+   Only what is unique to the home screen. Anything that appears on a second
+   screen has already been promoted to a shared partial.
+   ========================================================================= */
+
+/* ---- The net worth panel -----------------------------------------------
+   The one place in the product with a hero figure. It is deliberately NOT a
+   card: no border, no background. The number is the panel, and putting a box
+   round it would make it one tile among several instead of the thing the
+   screen is about.
+   ------------------------------------------------------------------------ */
+.net {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding-block: var(--s-2) 0;
+}
+
+.net__spark {
+  flex: none;
+  width: 10rem;
+  max-width: 45%;
+  /* Aligned to the bottom of the figure beside it rather than to the top of
+     the block, so the line ends level with the number's baseline. */
+  align-self: flex-end;
+  opacity: 0.85;
+  color: var(--accent);
+}
+
+.net__spark:empty { display: none; }
+
+@media (max-width: 400px) {
+  /* At 360px the sparkline and a ten-digit figure cannot share a row without
+     one of them truncating, and truncating a balance is not an option. */
+  .net__spark { display: none; }
+}
+
+/* The spendable / held pair. A hard two-up that never stacks: the comparison
+   between the two IS the content, and stacking them destroys it. */
+.net__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--line);
+}
+
+.net__slice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.net__slice + .net__slice {
+  border-inline-start: 1px solid var(--line-soft);
+  padding-inline-start: var(--s-4);
+}
+
+/* ---- The month stepper -------------------------------------------------
+   Lives in the section header, so it is beside the figures it controls rather
+   than in a toolbar at the top of the page where the relationship is implied
+   rather than shown.
+   ------------------------------------------------------------------------ */
+.period-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+  padding: 2px;
+}
+
+.period-stepper__label {
+  min-width: 8.5rem;
+  min-height: 34px;
+  padding-inline: var(--s-2);
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  text-align: center;
+  cursor: pointer;
+  border-radius: var(--r-1);
+}
+
+.period-stepper__label:hover { background: var(--wash-hover); }
+
+@media (max-width: 420px) {
+  .period-stepper__label { min-width: 6.5rem; font-size: var(--fs-12); }
+}
+
+/* ---- Stat strip on this screen -----------------------------------------
+   Four tiles that must stay comparable, so they scroll horizontally on a phone
+   rather than wrapping to a 2×2 grid — a wrapped grid puts "Out" under "In"
+   and the reader compares the wrong pairs.
+   ------------------------------------------------------------------------ */
+@media (max-width: 599px) {
+  .stat-strip { grid-auto-columns: minmax(8.5rem, 1fr); }
+}

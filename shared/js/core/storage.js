@@ -27,9 +27,9 @@ export const KEYS = {
                                  // not lose a half-typed entry
   LAST_SEEN: `${NS}:lastSeen`,   // for the "since you were last here" summary
 
-  // Ledger data while the app runs on the mock seam, before Laravel exists.
-  // One key, replaced wholesale — see modules/ledger/backend/api.js.
-  LEDGER:    `${NS}:ledger`,
+  // Module data — accounts, transactions, categories — is NOT listed here. Each
+  // module owns its own key under the hisab:m: prefix via moduleStore() below,
+  // so adding a feature needs no edit to this file.
 
   // The vault's ENCRYPTED blob. Ciphertext only: the master password and every
   // derived key live in memory for the life of the tab and are never written
@@ -106,7 +106,7 @@ export const storage = {
    */
   clearAll() {
     if (!isAvailable()) return;
-    for (const key of Object.values(KEYS)) {
+    for (const key of ownedKeys()) {
       try { window.localStorage.removeItem(key); } catch { /* ignore */ }
     }
   },
@@ -126,6 +126,53 @@ export const storage = {
 
   get isAvailable() { return isAvailable(); },
 };
+
+/**
+ * A namespaced store for one module.
+ *
+ *   const db = moduleStore('accounts');   // writes to hisab:m:accounts
+ *
+ * The tension this resolves: the locked rules say a module owns everything it
+ * needs, but this file also exists so that there is ONE list of what the app
+ * leaves on a device. If every module wrote its own localStorage key directly,
+ * clearing the app's data would mean knowing every module that ever existed.
+ *
+ * So the prefix is owned here and the key under it is owned by the module. A
+ * module needs no edit to this file, and `clearAll()` below still finds
+ * everything by walking the prefix — including keys belonging to a module that
+ * has since been deleted, which is exactly the case a hardcoded list misses.
+ */
+const MODULE_PREFIX = `${NS}:m:`;
+
+export function moduleStore(moduleName) {
+  const key = MODULE_PREFIX + moduleName;
+  return {
+    key,
+    read(fallback = null) { return storage.get(key, fallback); },
+    write(value) { return storage.set(key, value); },
+    clear() { storage.remove(key); },
+  };
+}
+
+/**
+ * Every key this app owns, including module stores.
+ *
+ * Walking localStorage by prefix rather than returning the KEYS list, so a
+ * module store — whose name this file deliberately does not know — is still
+ * found. The try/catch is around the length read as well as the loop: an
+ * iframe with storage blocked throws on the property access itself.
+ */
+export function ownedKeys() {
+  if (!isAvailable()) return [];
+  const out = [];
+  try {
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith(`${NS}:`)) out.push(key);
+    }
+  } catch { return []; }
+  return out;
+}
 
 /**
  * Session storage, for things that must NOT survive the tab closing.

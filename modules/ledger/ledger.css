@@ -1,0 +1,56 @@
+/* =========================================================================
+   Ledger · module styles
+   ========================================================================= */
+
+/* The period totals sit directly under the sticky filter bar, so they need to
+   clear it rather than slide beneath it. The bar is not fixed — it is sticky —
+   so no offset is required here; this is only about breathing room. */
+.ledger-totals { margin-top: var(--s-1); }
+
+/* Inside a stat tile on this page the figure is the row's whole point, so the
+   label is quieter than it is on the dashboard. */
+.ledger-totals .stat { background: var(--surface); }
+
+/* ---- The entry sheet ---------------------------------------------------
+   .entry is the form inside the sheet. It gets its own rules only where the
+   sheet's default stack is not enough.
+   ------------------------------------------------------------------------ */
+
+/* The four type choices must fit one row at 360px — wrapping puts Transfer on
+   its own line under Expense and the group stops reading as a set of four
+   alternatives. Equal flex, and the label is allowed to truncate before the
+   row wraps. */
+.entry .choices[role='radiogroup'] {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-2);
+}
+
+.entry .choices[role='radiogroup'] .choice {
+  justify-content: center;
+  padding-inline: var(--s-1);
+  min-width: 0;
+}
+
+.entry .choices[role='radiogroup'] .choice span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 340px) {
+  /* Below 340px even the truncated labels collide. The icon alone still
+     identifies the type — it is the same glyph used on every row in the list —
+     and the radio's accessible name comes from the input, not from the visible
+     text, so nothing is lost for a screen reader. */
+  .entry .choices[role='radiogroup'] .choice span { display: none; }
+}
+
+/* The necessity band picker wraps freely: four labels of very different
+   lengths, and no comparison is being made between them side by side. */
+.entry [data-necessity-choices] { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+/* The amount field is the tallest thing on the sheet on purpose. It is the one
+   control that is always used, and on a phone it should be reachable without
+   the eye searching for it. */
+.entry .amount-field { margin-top: var(--s-1); }

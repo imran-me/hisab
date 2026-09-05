@@ -1,0 +1,53 @@
+{
+  "_comment": "The starting accounts on a fresh install, so the app opens on something usable rather than on an empty screen with a form. All of them are editable and archivable; opening balances are zero because a made-up balance is worse than no balance — it is a number that looks real.",
+  "accounts": [
+    {
+      "name": "Cash in hand",
+      "type": "cash",
+      "currency": "BDT",
+      "book": "personal",
+      "opening_balance_minor": 0,
+      "opening_on": "2026-01-01",
+      "institution": null,
+      "number_tail": null,
+      "credit_limit_minor": null,
+      "is_default": true
+    },
+    {
+      "name": "bKash",
+      "type": "mfs",
+      "currency": "BDT",
+      "book": "personal",
+      "opening_balance_minor": 0,
+      "opening_on": "2026-01-01",
+      "institution": "bKash",
+      "number_tail": null,
+      "credit_limit_minor": null,
+      "is_default": false
+    },
+    {
+      "name": "Bank account",
+      "type": "bank",
+      "currency": "BDT",
+      "book": "personal",
+      "opening_balance_minor": 0,
+      "opening_on": "2026-01-01",
+      "institution": null,
+      "number_tail": null,
+      "credit_limit_minor": null,
+      "is_default": false
+    },
+    {
+      "name": "DPS",
+      "type": "savings",
+      "currency": "BDT",
+      "book": "personal",
+      "opening_balance_minor": 0,
+      "opening_on": "2026-01-01",
+      "institution": null,
+      "number_tail": null,
+      "credit_limit_minor": null,
+      "is_default": false
+    }
+  ]
+}

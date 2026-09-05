@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <!-- BEFORE the script below, and that order is load-bearing. A phone's
+       layout viewport is 980px until this tag is parsed, so any matchMedia
+       running above it answers as though the device were a desktop. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <script>
+    /* PRE-PAINT. Inline and first, on purpose: a deferred script runs after the
+       first paint, and the first paint is exactly what this exists to get
+       right. A night-theme user who sees one white frame on every navigation
+       has a broken app, however correct it looks a moment later.
+
+       This block is the twin of applyTheme() in shared/js/core/state.js. If one
+       changes, so must the other. It is duplicated rather than imported because
+       an import cannot run before paint.
+
+       .no-js is removed here as well, so that [data-reveal] content is hidden
+       only when JavaScript is actually available to reveal it. */
+    document.documentElement.classList.remove('no-js');
+    try {
+      var root = document.documentElement;
+      var theme = localStorage.getItem('hisab:theme');
+      if (theme) {
+        var value = JSON.parse(theme);
+        /* Both directions matter. A stored 'day' must ADD the attribute and a
+           cleared preference must REMOVE it — otherwise someone who switches
+           back to following their device stays stuck on their old choice. */
+        if (value === 'day' || value === 'night') root.setAttribute('data-theme', value);
+        else root.removeAttribute('data-theme');
+      }
+      var density = localStorage.getItem('hisab:density');
+      if (density && JSON.parse(density) === 'compact') root.setAttribute('data-density', 'compact');
+      var hand = localStorage.getItem('hisab:hand');
+      if (hand && JSON.parse(hand) === 'left') root.setAttribute('data-hand', 'left');
+    } catch (e) { /* storage off, or private mode — the built-in theme stands. */ }
+  </script>
+
+  <title>Overview — Hisab</title>
+  <meta name="description" content="Personal and business accounts, cash flow, investments and a sealed vault for sensitive information.">
+  <meta name="theme-color" content="#06080B">
+  <meta name="color-scheme" content="dark light">
+  <meta name="author" content="Md Imran Hossain">
+  <!-- A private ledger has no business in a search index. -->
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="apple-touch-icon" href="assets/logo/apple-touch-icon.svg">
+  <!-- Both spellings: Chrome deprecated the apple- prefix, iOS still only
+       reads that one. Dropping either loses the standalone launch on one of
+       the two platforms this is actually used on. -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="stylesheet" href="shared/css/hisab.css">
+  <link rel="stylesheet" href="modules/overview/overview.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="app">
+    <!-- Filled by shared/js/components/shell.js. They are in the markup rather
+         than created by script so the page keeps its landmark structure with
+         JavaScript disabled, and so the grid does not reflow when JS arrives. -->
+    <header class="app-header"></header>
+    <nav class="app-rail" aria-label="Sections"></nav>
+
+    <main class="app-main" id="main">
+      <div class="page stack stack--6">
+
+        <!-- ================= The headline figure =================
+             One hero number per screen. This is net worth: everything held,
+             across every account and every currency, converted to the display
+             currency. It is marked as converted and carries the rate date,
+             because a roll-up across currencies is an estimate and presenting
+             it as an exact balance is a lie of formatting. -->
+        <section class="net" aria-labelledby="net-h">
+          <div class="split split--top">
+            <div class="stack stack--1">
+              <h2 class="label" id="net-h">Net worth</h2>
+              <div class="money money--hero" data-net>
+                <span class="skeleton skeleton--fig" style="width:9rem"></span>
+              </div>
+              <p class="meta" data-net-note></p>
+            </div>
+            <div class="net__spark" data-net-spark aria-hidden="true"></div>
+          </div>
+
+          <div class="net__split" data-net-split>
+            <div class="net__slice">
+              <span class="label">Spendable</span>
+              <span class="money money--md" data-net-spendable>—</span>
+            </div>
+            <div class="net__slice">
+              <span class="label">Held</span>
+              <span class="money money--md money--hold" data-net-held>—</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= This month ================= -->
+        <section class="stack stack--3" aria-labelledby="month-h">
+          <div class="section-head">
+            <div class="section-head__title">
+              <h2 class="h3" id="month-h">This month</h2>
+            </div>
+            <div class="section-head__action" data-period-slot></div>
+          </div>
+
+          <div class="stat-strip scroll-x" data-month-stats>
+            <div class="stat"><span class="stat__label">In</span><span class="skeleton skeleton--fig"></span></div>
+            <div class="stat"><span class="stat__label">Out</span><span class="skeleton skeleton--fig"></span></div>
+            <div class="stat"><span class="stat__label">Held</span><span class="skeleton skeleton--fig"></span></div>
+            <div class="stat"><span class="stat__label">Kept</span><span class="skeleton skeleton--fig"></span></div>
+          </div>
+
+          <div class="card stack stack--3" data-breakdown hidden>
+            <div class="split split--base">
+              <span class="label">Where it went</span>
+              <a class="meta" href="modules/reports/insights.html">Full report</a>
+            </div>
+            <div data-breakdown-bar></div>
+            <div class="legend" data-breakdown-legend></div>
+          </div>
+        </section>
+
+        <!-- ================= Insights =================
+             Generated from the month's own figures, never from a template.
+             An insight that says nothing is not shown at all. -->
+        <section class="stack stack--3" data-insights hidden aria-labelledby="insight-h">
+          <h2 class="label" id="insight-h">What the numbers say</h2>
+          <div class="stack stack--2" data-insight-list></div>
+        </section>
+
+        <!-- ================= Accounts ================= -->
+        <section class="stack stack--3" aria-labelledby="acc-h">
+          <div class="section-head">
+            <div class="section-head__title">
+              <h2 class="h3" id="acc-h">Accounts</h2>
+              <span class="section-head__count" data-account-count></span>
+            </div>
+            <a class="btn btn--ghost btn--sm section-head__action" href="modules/accounts/list.html">Manage</a>
+          </div>
+          <div class="card card--flush">
+            <ul class="list" data-accounts>
+              <li><div class="row row--static"><div class="skeleton skeleton--glyph"></div><div class="row__main"><span class="skeleton skeleton--line"></span></div></div></li>
+              <li><div class="row row--static"><div class="skeleton skeleton--glyph"></div><div class="row__main"><span class="skeleton skeleton--line"></span></div></div></li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- ================= Recent ================= -->
+        <section class="stack stack--3" aria-labelledby="recent-h">
+          <div class="section-head">
+            <div class="section-head__title">
+              <h2 class="h3" id="recent-h">Recent</h2>
+            </div>
+            <a class="btn btn--ghost btn--sm section-head__action" href="modules/ledger/list.html">All entries</a>
+          </div>
+          <div class="card card--flush">
+            <ul class="list" data-recent></ul>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- The compose action. A real button in the document rather than a
+       script-created one, so it exists in the tab order from the first paint. -->
+  <button type="button" class="fab" data-compose>
+    <svg class="icon icon--lg" aria-hidden="true"><use href="shared/icons/sprite.svg#i-plus"/></svg>
+    <span>Add</span>
+  </button>
+
+  <nav class="tabbar" aria-label="Primary"></nav>
+
+  <script type="module" src="shared/js/main.js"></script>
+  <script type="module" src="modules/overview/overview-page.js"></script>
+</body>
+</html>

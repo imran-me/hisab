@@ -1,10 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
 <!--
   Hisab · icon sprite
 
   One file, referenced as <svg class="icon"><use href="…/sprite.svg#i-name"/></svg>.
   A row repeated 400 times costs 400 references rather than 400 copies of the
   geometry, and the whole set is one cached request.
+
+  THE ROOT ELEMENT MUST NOT BE display:none.
+  That is the standard idiom for a sprite pasted INLINE into a page, and it is
+  fatal for one referenced EXTERNALLY: the browser resolves <use> against this
+  document with its styles applied, so a hidden root hides every symbol in it
+  and the whole product renders with blank squares where the icons should be.
+  It fetches fine, the ids are all present, and nothing appears — which is what
+  makes it a slow bug to find. width="0" height="0" keeps it invisible if it is
+  ever inlined, without hiding the symbols.
+
+  NO DOUBLE HYPHEN ANYWHERE IN THIS COMMENT.
+  An .svg served as image/svg+xml is parsed as XML, and XML forbids a doubled hyphen
+  inside a comment. A CSS custom property written in prose here — the token
+  name for the hairline colour was the one that did it — makes the entire
+  document fail to parse. The file still fetches with a 200 and the right
+  byte count, every id is still in the source, and not one icon renders.
+  Run tools/check-sprite.py after editing.
 
   DRAWING RULES — every symbol obeys these, which is what makes the set read as
   one hand rather than as a collection:
@@ -13,8 +30,8 @@
     · stroke only, never fill. `fill:none; stroke:currentColor` comes from
       .icon in _utilities.css, so an icon inherits the text colour it sits in
       and there is no per-colour variant of anything
-    · 1.5 stroke weight — the same weight as --line, so an icon beside a
-      hairline belongs to the same drawing
+    · 1.5 stroke weight, matching the hairline token, so an icon beside a
+      rule belongs to the same drawing
     · round caps and joins
     · corners rounded at 1.5–2 units; nothing is a perfect square
     · coordinates land on whole or half units, so the stroke sits on the pixel

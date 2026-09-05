@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <script>
+    /* PRE-PAINT — the twin of applyTheme() in shared/js/core/state.js, and of
+       the identical block in every other page. Duplicated rather than imported
+       because an import cannot run before the first paint, and one white frame
+       on every navigation is what this prevents.
+       tools/check-pages.py asserts that all copies stay identical. */
+    document.documentElement.classList.remove('no-js');
+    try {
+      var root = document.documentElement;
+      var theme = localStorage.getItem('hisab:theme');
+      if (theme) {
+        var value = JSON.parse(theme);
+        if (value === 'day' || value === 'night') root.setAttribute('data-theme', value);
+        else root.removeAttribute('data-theme');
+      }
+      var density = localStorage.getItem('hisab:density');
+      if (density && JSON.parse(density) === 'compact') root.setAttribute('data-density', 'compact');
+      var hand = localStorage.getItem('hisab:hand');
+      if (hand && JSON.parse(hand) === 'left') root.setAttribute('data-hand', 'left');
+    } catch (e) { /* storage off, or private mode — the built-in theme stands. */ }
+  </script>
+
+  <title>Ledger — Hisab</title>
+  <meta name="description" content="Every entry: income, expenses, deposits and transfers.">
+  <meta name="theme-color" content="#06080B">
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../../assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="../../site.webmanifest">
+
+  <link rel="stylesheet" href="../../shared/css/hisab.css">
+  <link rel="stylesheet" href="ledger.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="app">
+    <header class="app-header"></header>
+    <nav class="app-rail" aria-label="Sections"></nav>
+
+    <main class="app-main" id="main">
+      <div class="page page--tight stack stack--4">
+
+        <!-- The filter bar. Sticky under the header, because on a list of four
+             hundred rows the filters have to be reachable from wherever you
+             have scrolled to — not only from the top. -->
+        <div class="sticky-bar stack stack--2">
+          <div class="split">
+            <div data-period-slot></div>
+            <button type="button" class="btn btn--icon btn--sm" data-search-toggle aria-label="Search entries" aria-expanded="false">
+              <svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-search"/></svg>
+            </button>
+          </div>
+
+          <div class="input-wrap" data-search-field hidden>
+            <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-search"/></svg>
+            <input class="input" type="search" data-search placeholder="Payee, note or category" aria-label="Search entries" enterkeyhint="search">
+          </div>
+
+          <div class="scroll-x pills" data-type-filter role="group" aria-label="Filter by type">
+            <button type="button" class="pill is-active" data-type="">All</button>
+            <button type="button" class="pill" data-type="expense">Out</button>
+            <button type="button" class="pill" data-type="income">In</button>
+            <button type="button" class="pill" data-type="deposit">Held</button>
+            <button type="button" class="pill" data-type="transfer">Moves</button>
+          </div>
+        </div>
+
+        <!-- The period's running totals. Above the list rather than below it,
+             so the answer to "how did this month go" does not require scrolling
+             past every row that produced it. -->
+        <div class="ledger-totals" data-totals></div>
+
+        <div class="card card--flush">
+          <ul class="list" data-list>
+            <li><div class="row row--static"><div class="skeleton skeleton--glyph"></div><div class="row__main"><span class="skeleton skeleton--line"></span><span class="skeleton skeleton--text" style="width:40%"></span></div></div></li>
+            <li><div class="row row--static"><div class="skeleton skeleton--glyph"></div><div class="row__main"><span class="skeleton skeleton--line"></span><span class="skeleton skeleton--text" style="width:30%"></span></div></div></li>
+            <li><div class="row row--static"><div class="skeleton skeleton--glyph"></div><div class="row__main"><span class="skeleton skeleton--line"></span><span class="skeleton skeleton--text" style="width:50%"></span></div></div></li>
+          </ul>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <button type="button" class="fab" data-compose>
+    <svg class="icon icon--lg" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-plus"/></svg>
+    <span>Add</span>
+  </button>
+
+  <nav class="tabbar" aria-label="Primary"></nav>
+
+  <script type="module" src="../../shared/js/main.js"></script>
+  <script type="module" src="list-page.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "_comment": "Seed rates so a fresh install can convert on day one. These are ESTIMATES with an as_of date, and every figure converted through them is marked as converted in the UI. Replace with real rates in Settings > Currencies, or from GET /api/fx/rates once the backend is up.",
+  "currencies": [
+    { "code": "BDT", "symbol": "৳",   "name": "Bangladeshi taka",  "minor_unit": 2, "group": "indian",  "symbol_first": true },
+    { "code": "AED", "symbol": "د.إ", "name": "UAE dirham",        "minor_unit": 2, "group": "western", "symbol_first": true },
+    { "code": "USD", "symbol": "$",   "name": "US dollar",         "minor_unit": 2, "group": "western", "symbol_first": true },
+    { "code": "EUR", "symbol": "€",   "name": "Euro",              "minor_unit": 2, "group": "western", "symbol_first": true },
+    { "code": "GBP", "symbol": "£",   "name": "Pound sterling",    "minor_unit": 2, "group": "western", "symbol_first": true },
+    { "code": "SAR", "symbol": "﷼",   "name": "Saudi riyal",       "minor_unit": 2, "group": "western", "symbol_first": true },
+    { "code": "INR", "symbol": "₹",   "name": "Indian rupee",      "minor_unit": 2, "group": "indian",  "symbol_first": true },
+    { "code": "MYR", "symbol": "RM",  "name": "Malaysian ringgit", "minor_unit": 2, "group": "western", "symbol_first": true },
+    { "code": "KWD", "symbol": "KD",  "name": "Kuwaiti dinar",     "minor_unit": 3, "group": "western", "symbol_first": true },
+    { "code": "JPY", "symbol": "¥",   "name": "Japanese yen",      "minor_unit": 0, "group": "western", "symbol_first": true }
+  ],
+  "rates": [
+    { "base": "USD", "quote": "BDT", "rate": 122.50, "as_of": "2026-09-01" },
+    { "base": "AED", "quote": "BDT", "rate": 33.35,  "as_of": "2026-09-01" },
+    { "base": "SAR", "quote": "BDT", "rate": 32.66,  "as_of": "2026-09-01" },
+    { "base": "EUR", "quote": "BDT", "rate": 133.20, "as_of": "2026-09-01" },
+    { "base": "GBP", "quote": "BDT", "rate": 156.40, "as_of": "2026-09-01" },
+    { "base": "INR", "quote": "BDT", "rate": 1.395,  "as_of": "2026-09-01" },
+    { "base": "MYR", "quote": "BDT", "rate": 27.80,  "as_of": "2026-09-01" },
+    { "base": "KWD", "quote": "BDT", "rate": 399.10, "as_of": "2026-09-01" },
+    { "base": "JPY", "quote": "BDT", "rate": 0.812,  "as_of": "2026-09-01" },
+    { "base": "USD", "quote": "AED", "rate": 3.6725, "as_of": "2026-09-01" }
+  ]
+}

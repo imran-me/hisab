@@ -8,35 +8,27 @@
    Self-hosted in assets/fonts/, so the app renders identically offline and no
    third party is told which pages an owner of a private ledger is opening.
 
-   font-display: swap on the body face and optional on the display face, on
-   purpose: body text must appear immediately even in a fallback, whereas a
-   heading that swaps a beat later is a visible re-flow of the biggest thing
-   on screen, so it is better skipped entirely on a slow connection.
+   Latin subsets only, plus a separately-ranged Bengali face — 152KB for the
+   whole product. `font-display: swap` throughout: text must be readable in a
+   fallback immediately, and every face here is same-origin, so the swap window
+   is short.
 
-   size-adjust on the fallback metric below removes the layout shift when the
-   swap does happen — see the @font-face for the fallback family.
+   The mono is the one family declared per weight, because its two weights are
+   genuinely different files. The sans and the display face are variable and
+   each ship as a single file across a weight range — see the note on the first
+   block for how that was discovered.
    ------------------------------------------------------------------------ */
 
+/* VARIABLE, and declared as one face across a weight RANGE.
+   The three static weights this used to declare turned out to be byte-identical
+   downloads — Google serves one variable file per subset and lets the browser
+   interpolate. Three copies of the same 45KB file was 91KB of pure waste, and
+   worse, three separate fetches racing to paint the same text. */
 @font-face {
   font-family: 'IBM Plex Sans';
-  src: url('../../../assets/fonts/ibm-plex-sans-400.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'IBM Plex Sans';
-  src: url('../../../assets/fonts/ibm-plex-sans-500.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'IBM Plex Sans';
-  src: url('../../../assets/fonts/ibm-plex-sans-600.woff2') format('woff2');
-  font-weight: 600;
+  src: url('../../../assets/fonts/ibm-plex-sans-var.woff2') format('woff2-variations'),
+       url('../../../assets/fonts/ibm-plex-sans-var.woff2') format('woff2');
+  font-weight: 100 700;
   font-style: normal;
   font-display: swap;
 }
@@ -57,28 +49,20 @@
   font-display: swap;
 }
 
+/* Also variable — same story as the sans above. */
 @font-face {
   font-family: 'Space Grotesk';
-  src: url('../../../assets/fonts/space-grotesk-500.woff2') format('woff2');
-  font-weight: 500;
+  src: url('../../../assets/fonts/space-grotesk-var.woff2') format('woff2-variations'),
+       url('../../../assets/fonts/space-grotesk-var.woff2') format('woff2');
+  font-weight: 300 700;
   font-style: normal;
-  font-display: optional;
-}
-
-@font-face {
-  font-family: 'Space Grotesk';
-  src: url('../../../assets/fonts/space-grotesk-600.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: optional;
-}
-
-@font-face {
-  font-family: 'Space Grotesk';
-  src: url('../../../assets/fonts/space-grotesk-700.woff2') format('woff2');
-  font-weight: 700;
-  font-style: normal;
-  font-display: optional;
+  /* swap, not optional. It was `optional` on the reasoning that a heading
+     swapping in late is a visible reflow of the biggest thing on screen — but
+     `optional` means a slow first load never gets the face AT ALL, and on this
+     product the display face is the wordmark and every page title. Losing the
+     identity on a bad connection is worse than one reflow, and the file is
+     22KB and same-origin. */
+  font-display: swap;
 }
 
 /* Bengali. unicode-range means this file is only fetched when a Bangla
@@ -227,6 +211,10 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
   font-family: var(--font-mono);
   letter-spacing: 0.14em;
   color: var(--ink-2);
+  /* A masked secret must not be selectable: a triple-click that copies a row of
+     bullets and pastes them into a support chat is a confusing bug, and on
+     Safari the unprefixed property alone does nothing. */
+  -webkit-user-select: none;
   user-select: none;
 }
 

@@ -1,0 +1,31 @@
+{
+  "name": "Hisab",
+  "short_name": "Hisab",
+  "description": "Personal and business accounts, cash flow, investments, and a sealed vault for sensitive information.",
+  "id": "/",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#06080B",
+  "theme_color": "#06080B",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    { "src": "assets/logo/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/logo/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add an entry",
+      "short_name": "Add",
+      "description": "Record an expense, income, deposit or transfer",
+      "url": "./modules/ledger/list.html?compose=1"
+    },
+    {
+      "name": "Open the vault",
+      "short_name": "Vault",
+      "description": "Cards, accounts and passwords",
+      "url": "./modules/vault/list.html"
+    }
+  ]
+}

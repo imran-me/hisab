@@ -1,0 +1,22 @@
+/* =========================================================================
+   Accounts · module styles
+   ========================================================================= */
+
+/* An archived account is dimmed but NOT hidden or struck through. It is still
+   a real account with real history behind it; struck-through text says
+   "deleted", which is the one thing archiving specifically is not. */
+.is-archived .row__title,
+.is-archived .money { opacity: 0.55; }
+.is-archived .row__glyph { opacity: 0.4; }
+
+/* The default badge sits inline with the name, so it reads as part of the
+   title rather than as a second line of metadata. */
+.row__title .chip { margin-inline-start: var(--s-2); vertical-align: 1px; }
+
+/* The account form's type picker wraps — seven types of very different label
+   lengths, and no side-by-side comparison is being made between them. */
+.choices { row-gap: var(--s-2); }
+
+/* The "available" line under a credit card's balance. Right-aligned with the
+   figure above it, and small enough not to compete with it. */
+.row__end .meta { font-size: var(--fs-11); }

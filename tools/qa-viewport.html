@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hisab · viewport QA</title>
+<!--
+  WHY THIS EXISTS
+
+  A `--window-size=360` screenshot in headless Chrome is not a 360px render.
+  Headless clamps its viewport to roughly 526px, so what you get is a wider
+  layout cropped to 360 — which *looks* broken when nothing is wrong, and hides
+  a real overflow behind the crop when something is.
+
+  This page frames each screen in an iframe of an EXACT width and measures
+  scrollWidth against clientWidth inside it. That is a number, not an
+  impression, and it is the same number at any window size.
+
+  Run it two ways:
+
+    · open http://localhost:8000/tools/qa-viewport.html in a browser
+    · headless, and read the summary out of the DOM:
+
+      chrome --headless=new --virtual-time-budget=20000 --dump-dom \
+        "http://localhost:8000/tools/qa-viewport.html" | grep -A40 'id="summary"'
+
+  A page must not scroll sideways. That is treated as a defect here, not a
+  nuisance: on a phone it makes every row shift under the thumb while reading.
+-->
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; padding: 16px;
+    background: #06080B; color: #E9EEF4;
+    font: 14px/1.5 ui-monospace, 'Cascadia Mono', Menlo, monospace;
+  }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  .hint { color: #6B7A8B; margin: 0 0 16px; }
+  #summary { border: 1px solid #1D2634; border-radius: 8px; padding: 12px; margin-bottom: 20px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 4px 10px 4px 0; white-space: nowrap; }
+  th { color: #6B7A8B; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .pass { color: #3FE3AE; }
+  .fail { color: #FF6B5E; font-weight: 700; }
+  .pending { color: #6B7A8B; }
+  .frames { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .frame { border: 1px solid #1D2634; border-radius: 8px; overflow: hidden; }
+  .frame > figcaption { padding: 6px 10px; background: #111823; color: #A3B0BF; font-size: 12px; }
+  iframe { display: block; border: 0; background: #06080B; height: 620px; }
+  .totals { font-size: 15px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<h1>Hisab · viewport QA</h1>
+<p class="hint">Measuring document scrollWidth against clientWidth inside exact-width frames. Anything over 0 is horizontal overflow.</p>
+
+<div id="summary"><p class="pending">Measuring…</p></div>
+<div class="frames" id="frames"></div>
+
+<script type="module">
+/* The screens under test. A new page is added here, and it is checked from the
+   next run onward — there is no separate list to keep in step. */
+const PAGES = [
+  { label: 'Overview',        url: '../index.html' },
+  { label: 'Ledger',          url: '../modules/ledger/list.html' },
+  { label: 'Accounts',        url: '../modules/accounts/list.html' },
+];
+
+/* The widths that matter, and why each one is here:
+     360  the narrowest Android in real use — the design width
+     390  iPhone 13/14/15
+     414  the larger iPhone / Android, where a two-up grid first fits
+     768  tablet portrait, just below the 900px rail breakpoint
+    1280  desktop, with the rail */
+const WIDTHS = [360, 390, 414, 768, 1280];
+
+const results = [];
+const frames = document.getElementById('frames');
+
+for (const page of PAGES) {
+  for (const width of WIDTHS) {
+    const figure = document.createElement('figure');
+    figure.className = 'frame';
+    figure.style.margin = '0';
+
+    const caption = document.createElement('figcaption');
+    caption.textContent = `${page.label} · ${width}px`;
+
+    const iframe = document.createElement('iframe');
+    iframe.width = String(width);
+    iframe.src = page.url;
+    /* An exact width on the element is what makes the measurement real: the
+       iframe's own viewport is its element width, regardless of the outer
+       window, so the media queries inside resolve as they would on a device. */
+    iframe.style.width = `${width}px`;
+
+    figure.append(caption, iframe);
+    frames.append(figure);
+
+    results.push(await measure(iframe, page, width, caption));
+  }
+}
+
+render();
+
+function measure(iframe, page, width, caption) {
+  return new Promise((resolve) => {
+    const done = () => {
+      /* A frame that has just fired load may not have run its module scripts
+         yet — they are deferred by definition. Waiting two animation frames
+         plus a beat lets the page render its data before it is measured;
+         without it, every screen measures as an empty skeleton and passes. */
+      setTimeout(() => {
+        let row;
+        try {
+          const doc = iframe.contentDocument;
+          const el = doc.documentElement;
+          const overflow = el.scrollWidth - el.clientWidth;
+          row = {
+            page: page.label,
+            width,
+            overflow,
+            /* The widest offending element, named — so a failure points at the
+               box to fix instead of at the page. */
+            culprit: overflow > 0 ? widestChild(doc, el.clientWidth) : null,
+            error: null,
+          };
+        } catch (err) {
+          row = { page: page.label, width, overflow: null, culprit: null, error: String(err.message || err) };
+        }
+        caption.textContent = `${page.label} · ${width}px · ${row.overflow === 0 ? 'ok' : row.overflow == null ? 'error' : '+' + row.overflow + 'px'}`;
+        caption.className = row.overflow === 0 ? 'pass' : 'fail';
+        resolve(row);
+      }, 350);
+    };
+    iframe.addEventListener('load', done, { once: true });
+    /* A frame that never fires load (a 404, a blocked request) must not hang
+       the whole run — it is reported as an error instead. */
+    setTimeout(done, 6000);
+  });
+}
+
+/** The narrowest description of the widest element that exceeds the viewport. */
+function widestChild(doc, limit) {
+  let worst = null;
+  let worstRight = limit;
+  for (const node of doc.querySelectorAll('body *')) {
+    const rect = node.getBoundingClientRect();
+    if (rect.right > worstRight + 0.5) { worstRight = rect.right; worst = node; }
+  }
+  if (!worst) return null;
+  const id = worst.id ? `#${worst.id}` : '';
+  const cls = worst.className && typeof worst.className === 'string'
+    ? '.' + worst.className.trim().split(/\s+/).slice(0, 3).join('.') : '';
+  return `${worst.tagName.toLowerCase()}${id}${cls} → ${Math.round(worstRight)}px`;
+}
+
+function render() {
+  const failures = results.filter((r) => r.overflow !== 0);
+  const summary = document.getElementById('summary');
+
+  summary.innerHTML = `
+    <p class="totals ${failures.length ? 'fail' : 'pass'}">
+      ${failures.length ? `${failures.length} of ${results.length} FAILED` : `all ${results.length} checks passed`}
+    </p>
+    <table>
+      <thead><tr><th>Page</th><th>Width</th><th>Overflow</th><th>Widest element</th></tr></thead>
+      <tbody>
+        ${results.map((r) => `
+          <tr>
+            <td>${r.page}</td>
+            <td>${r.width}px</td>
+            <td class="${r.overflow === 0 ? 'pass' : 'fail'}">${r.error ? 'ERROR: ' + r.error : r.overflow === 0 ? 'none' : '+' + r.overflow + 'px'}</td>
+            <td>${r.culprit || ''}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+</script>
+</body>
+</html>

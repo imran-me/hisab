@@ -1,0 +1,95 @@
+{
+  "_comment": "The starting category set, seeded from OppTracker's FIN_DEFAULTS and extended with a business book. These live in DATA, not in PHP or JS — a category list hardcoded in a constant means a deployment every time spending habits change. Every one of these is editable and archivable in Categories.",
+
+  "necessity": [
+    { "band": 1, "key": "essential",     "label": "Essential",     "hint": "Non-negotiable — rent, food, bills, health" },
+    { "band": 2, "key": "important",     "label": "Important",     "hint": "Real value — education, growth, family" },
+    { "band": 3, "key": "discretionary", "label": "Discretionary", "hint": "Nice to have — comfort, leisure, wants" },
+    { "band": 4, "key": "avoidable",     "label": "Avoidable",     "hint": "Regret or impulse — could have been skipped" }
+  ],
+
+  "methods": [
+    { "key": "cash",     "label": "Cash",            "icon": "cash" },
+    { "key": "bkash",    "label": "bKash",           "icon": "mobile" },
+    { "key": "nagad",    "label": "Nagad",           "icon": "mobile" },
+    { "key": "rocket",   "label": "Rocket",          "icon": "mobile" },
+    { "key": "card",     "label": "Debit / credit card", "icon": "card" },
+    { "key": "bank",     "label": "Bank transfer",   "icon": "bank" },
+    { "key": "cheque",   "label": "Cheque",          "icon": "note" },
+    { "key": "other",    "label": "Other",           "icon": "more" }
+  ],
+
+  "personal": {
+    "income": [
+      { "key": "salary",        "label": "Salary" },
+      { "key": "freelance",     "label": "Freelance / contract" },
+      { "key": "business-draw", "label": "Business drawings" },
+      { "key": "scholarship",   "label": "Scholarship / stipend" },
+      { "key": "investment",    "label": "Investment return" },
+      { "key": "rent-received", "label": "Rent received" },
+      { "key": "gift",          "label": "Gift / family" },
+      { "key": "refund",        "label": "Refund / cashback" },
+      { "key": "other-income",  "label": "Other income" }
+    ],
+    "expense": [
+      { "key": "groceries",     "label": "Food & groceries",   "necessity": 1 },
+      { "key": "dining",        "label": "Dining out",          "necessity": 3 },
+      { "key": "transport",     "label": "Transport",           "necessity": 1 },
+      { "key": "rent",          "label": "Rent / housing",      "necessity": 1 },
+      { "key": "utilities",     "label": "Utilities",           "necessity": 1 },
+      { "key": "internet",      "label": "Internet & mobile",   "necessity": 1 },
+      { "key": "education",     "label": "Education / tuition", "necessity": 2 },
+      { "key": "books",         "label": "Books & courses",     "necessity": 2 },
+      { "key": "health",        "label": "Health & medicine",   "necessity": 1 },
+      { "key": "clothing",      "label": "Clothing",            "necessity": 3 },
+      { "key": "entertainment", "label": "Entertainment",       "necessity": 3 },
+      { "key": "subscriptions", "label": "Subscriptions",       "necessity": 3 },
+      { "key": "gadgets",       "label": "Gadgets / tech",      "necessity": 3 },
+      { "key": "family",        "label": "Family support",      "necessity": 2 },
+      { "key": "charity",       "label": "Charity / zakat",     "necessity": 2 },
+      { "key": "travel",        "label": "Travel",              "necessity": 3 },
+      { "key": "personal-care", "label": "Personal care",       "necessity": 3 },
+      { "key": "bank-fees",     "label": "Bank fees & charges", "necessity": 1 },
+      { "key": "other-expense", "label": "Other expense",       "necessity": 3 }
+    ],
+    "deposit": [
+      { "key": "savings",   "label": "Savings" },
+      { "key": "dps",       "label": "DPS / recurring deposit" },
+      { "key": "fdr",       "label": "Fixed deposit (FDR)" },
+      { "key": "shares",    "label": "Investment / shares" },
+      { "key": "emergency", "label": "Emergency fund" },
+      { "key": "gold",      "label": "Gold / metal" },
+      { "key": "other-deposit", "label": "Other deposit" }
+    ]
+  },
+
+  "business": {
+    "income": [
+      { "key": "sales",         "label": "Sales revenue" },
+      { "key": "services",      "label": "Service income" },
+      { "key": "commission",    "label": "Commission" },
+      { "key": "interest",      "label": "Interest income" },
+      { "key": "other-biz-in",  "label": "Other business income" }
+    ],
+    "expense": [
+      { "key": "cogs",          "label": "Cost of goods sold",   "necessity": 1 },
+      { "key": "salaries",      "label": "Salaries & wages",     "necessity": 1 },
+      { "key": "office-rent",   "label": "Office rent",          "necessity": 1 },
+      { "key": "biz-utilities", "label": "Utilities",            "necessity": 1 },
+      { "key": "marketing",     "label": "Marketing & ads",      "necessity": 2 },
+      { "key": "software",      "label": "Software & tools",     "necessity": 2 },
+      { "key": "logistics",     "label": "Shipping & logistics", "necessity": 1 },
+      { "key": "professional",  "label": "Legal & professional", "necessity": 2 },
+      { "key": "travel-biz",    "label": "Business travel",      "necessity": 3 },
+      { "key": "equipment",     "label": "Equipment",            "necessity": 2 },
+      { "key": "tax",           "label": "Tax & government fees","necessity": 1 },
+      { "key": "biz-bank-fees", "label": "Bank & payment fees",  "necessity": 1 },
+      { "key": "other-biz-out", "label": "Other business expense","necessity": 3 }
+    ],
+    "deposit": [
+      { "key": "retained",  "label": "Retained earnings" },
+      { "key": "reinvest",  "label": "Reinvestment" },
+      { "key": "biz-fdr",   "label": "Business FDR" }
+    ]
+  }
+}
