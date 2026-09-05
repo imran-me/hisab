@@ -20,6 +20,7 @@ import { get, post, put, del, hasBackend } from '../../../shared/js/core/http.js
 import { ulid } from '../../../shared/js/core/id.js';
 import { on, emit, EVENTS } from '../../../shared/js/core/bus.js';
 import * as crypto from './crypto.js';
+import { randomBytes } from './crypto.js';
 import * as session from './session.js';
 
 /**
@@ -333,8 +334,13 @@ export async function destroy(id) {
  *    while typing it into a terminal.
  */
 export function generatePassword({ length = 20, symbols = true, ambiguous = false } = {}) {
+  // Excludes exactly five characters: I, l, 1, O and 0. Those are the ones
+  // actually confused with one another when a password is read off a screen and
+  // typed into a terminal. i, o and L stay — a dotted i is distinguishable, and
+  // L has no lookalike once 1 and I are gone. Excluding more than necessary
+  // costs entropy for nothing.
   let alphabet = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  if (ambiguous) alphabet += 'il1Lo0O';
+  if (ambiguous) alphabet += 'Il1O0';
   if (symbols) alphabet += '!@#$%^&*()-_=+[]{};:,.?';
 
   const out = [];
@@ -344,7 +350,7 @@ export function generatePassword({ length = 20, symbols = true, ambiguous = fals
     // A batch rather than one byte at a time: rejection means some bytes are
     // discarded, and asking for exactly as many as are needed guarantees a
     // second round trip on most calls.
-    const bytes = crypto.randomBytes(length * 2);
+    const bytes = randomBytes(length * 2);
     for (const byte of bytes) {
       if (byte >= max) continue;          // reject, to stay uniform
       out.push(alphabet[byte % alphabet.length]);
@@ -361,12 +367,26 @@ export function generatePassphrase(words = 5) {
   // is about 8.5 bits rather than 12.9, and the default length compensates.
   const list = ('able acid aged also area army away baby back ball band bank base bath bear beat been beer bell belt best bike bird blue boat body bone book boot born boss both bowl bulk burn bush busy cake call calm came camp card care case cash cast cell chat chip city club coal coat code cold come cook cool cope copy core corn cost crew crop dark data date dawn days dead deal dean dear debt deep deny desk dial diet disc disk does done door dose down draw drew drop drug dual duke dust duty each earn ease east easy edge else even ever evil exit face fact fail fair fall farm fast fate fear feed feel feet fell felt file fill film find fine fire firm fish five flat flow food foot ford form fort four free from fuel full fund gain game gate gave gear gene gift girl give glad goal goes gold golf gone good gray grew grey grid grow gulf hair half hall hand hang hard harm hate have head hear heat held hell help here hero high hill hire hold hole holy home hope horn host hour huge hung hunt hurt idea inch into iron item jack jane jean john join jump jury just keen keep kent kept kick kind king knee knew know lack lady laid lake land lane last late lead leaf lean left lens less life lift like limb line link list live load loan lock logo long look lord lose loss lost love luck made mail main make male mall many mark mass matt meal mean meat meet menu mere mile milk mill mind mine miss mode mood moon more most move much must name navy near neck need news next nice nine node none noon norm nose note noun page paid pain pair palm park part pass past path peak pick pile pink pipe plan play plot plug plus poem poet pole poll pool poor port post pull pure push race rail rain rank rare rate read real rear rely rent rest rice rich ride ring rise risk road rock role roll roof room root rope rose rule rush ruth safe said sail salt same sand save seat seed seek seem seen self sell send sent sept ship shoe shop shot show shut sick side sign silk sing sink site size skin skip slip slow snap snow soft soil sold sole solo some song soon sort soul spot star stay step stop such suit sure take tale talk tall tank tape task team tech tell tend tent term test text than that them then they thin this thus tide tidy tile till time tiny told toll tone took tool tour town tree trip true tube tune turn twin type unit upon urge used user vary vast very vice view vote wage wait wake walk wall want ward warm wash wave ways weak wear week well went were west what when whom wide wife wild will wind wine wing wire wise wish with wood word wore work worn wrap yard yarn year your zero zone').split(' ');
 
+  // SIXTEEN-BIT sampling, not eight.
+  //
+  // The single-byte rejection loop used for generatePassword above cannot work
+  // here and the failure is not subtle: with a list longer than 256 entries,
+  // Math.floor(256 / list.length) is 0, so `max` is 0, so every byte is
+  // rejected, and the loop never terminates. It hung the browser hard — no
+  // error, no rejection, just a page that stopped — and it was found by a test
+  // reporting which assertion it had reached rather than by reading the code.
+  //
+  // Two bytes give a 0..65535 value, and 65536 divided by a list of this size
+  // leaves a remainder small enough that rejection almost never fires.
   const picked = [];
-  const max = Math.floor(256 / list.length) * list.length;
+  const max = Math.floor(65536 / list.length) * list.length;
+
   while (picked.length < words) {
-    for (const byte of crypto.randomBytes(words * 3)) {
-      if (byte >= max) continue;
-      picked.push(list[byte % list.length]);
+    const bytes = randomBytes(words * 8);
+    for (let i = 0; i + 1 < bytes.length; i += 2) {
+      const value = (bytes[i] << 8) | bytes[i + 1];
+      if (value >= max) continue;              // reject, to stay uniform
+      picked.push(list[value % list.length]);
       if (picked.length === words) break;
     }
   }

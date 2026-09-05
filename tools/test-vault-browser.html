@@ -66,6 +66,11 @@ function is(actual, expected, label) {
   if (good) passed += 1; else failures.push(`${label} — expected ${e}, got ${a}`);
   log.insertAdjacentHTML('beforeend',
     `<li class="${good ? 'pass' : 'fail'}">${good ? '·' : 'x'} ${label}${good ? '' : ` — expected ${e}, got ${a}`}</li>`);
+  /* The title carries live progress, not only the final verdict. The runner
+     polls it, so a run that stalls reports WHICH assertion it stalled after
+     instead of just timing out — which is the difference between a two-minute
+     diagnosis and an hour of guessing. */
+  document.title = `STEP|${passed + failures.length}|${label.slice(0, 80)}`;
 }
 
 function ok(value, label) { is(Boolean(value), true, label); }
@@ -81,6 +86,15 @@ const PASSWORD = 'test vault master passphrase';
 const FAST = { iterations: 2000 };
 
 try {
+  /* Auto-lock off for the duration.
+
+     Not merely to avoid a lock mid-test. Under --virtual-time-budget the clock
+     jumps straight to the next scheduled timer whenever the main thread goes
+     idle, so a five-minute idle timer burns 300,000 of the budget on EVERY
+     unlock — which is why the run kept truncating at a different assertion for
+     every budget value, and why it looked like a hang. */
+  vsession.setIdleTimeout(0);
+
   // Start from nothing, whatever the browser was holding.
   vault.forgetOnThisDevice();
   sessionStore.remove('hisab:vaultAttempts');
@@ -191,7 +205,13 @@ try {
   /* ---- Generators -------------------------------------------------------- */
   const pw = vault.generatePassword({ length: 24 });
   is(pw.length, 24, 'a generated password is the requested length');
-  is(/[il1Lo0O]/.test(pw), false, 'and excludes ambiguous characters by default');
+  // Exactly the five the generator excludes. The first version of this
+  // assertion also listed i, o and L, and failed against correct code — the
+  // test was wrong, not the alphabet.
+  is(/[Il1O0]/.test(pw), false, 'and excludes the five ambiguous characters by default');
+  ok(/[a-z]/.test(pw) && /[A-Z]/.test(pw) && /[2-9]/.test(pw), 'while still using every class');
+  ok(/[Il1O0]/.test(vault.generatePassword({ length: 400, ambiguous: true })),
+     'and includes them when asked');
   ok(new Set(Array.from({ length: 200 }, () => vault.generatePassword({ length: 12 }))).size === 200,
      '200 generated passwords are all distinct');
 
@@ -215,6 +235,15 @@ result.className = failures.length ? 'fail' : 'pass';
 result.textContent = failures.length
   ? `${failures.length} FAILED, ${passed} passed`
   : `all ${passed} assertions passed`;
+
+/* The title is how the runner knows the test finished.
+
+   tools/run-browser-tests.sh polls Chrome's DevTools target list over plain
+   HTTP, which reports each page's title, and waits for this prefix. That
+   avoids --virtual-time-budget entirely: the runner waits real time for a real
+   completion signal, instead of guessing a budget and reading a truncated run
+   as a hang. */
+document.title = `RESULT|${failures.length ? 'FAIL' : 'PASS'}|${passed}|${failures.length}|${failures.join(' ~ ').slice(0, 400)}`;
 </script>
 </body>
 </html>

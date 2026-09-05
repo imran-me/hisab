@@ -19,7 +19,14 @@ import * as crypto from './crypto.js';
 /** The unwrapped DEK. Null whenever the vault is locked. */
 let dek = null;
 
-/** Auto-lock. Five minutes by default; a minute is offered in settings. */
+/**
+ * Auto-lock. Five minutes by default. 0 disables it entirely.
+ *
+ * "Never" is a real setting, not a test hook: on a desktop that nobody else
+ * touches, a vault that locks every five minutes gets a weaker master password
+ * chosen precisely because it has to be typed so often. Offering the choice is
+ * better than being overridden by a bad one.
+ */
 let idleMs = 5 * 60 * 1000;
 let idleTimer = null;
 
@@ -127,12 +134,16 @@ export async function changePassword(oldPassword, newPassword, header) {
    ========================================================================= */
 
 export function setIdleTimeout(minutes) {
-  idleMs = Math.max(1, Number(minutes) || 5) * 60 * 1000;
+  const value = Number(minutes);
+  // 0 means never. Anything else is clamped to at least a minute, because a
+  // shorter timer locks the vault while it is being read.
+  idleMs = value === 0 ? 0 : Math.max(1, value || 5) * 60 * 1000;
   if (dek) startIdleTimer();
 }
 
 function startIdleTimer() {
   stopIdleTimer();
+  if (idleMs === 0) return;
   idleTimer = window.setTimeout(() => lock('idle'), idleMs);
 }
 
