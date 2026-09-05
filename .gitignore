@@ -1,0 +1,43 @@
+# ---- PHP / Laravel -------------------------------------------------------
+/vendor/
+/node_modules/
+/storage/*.key
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+/bootstrap/cache/*.php
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+
+# ---- Python --------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ---- Editors / OS --------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+
+# ---- Local artefacts -----------------------------------------------------
+/public/hot
+/public/storage
+/tmp/
+*.local.json
+
+# The vault's encrypted export is a real secret in a file. Never committed,
+# even by accident, even from a scratch test run.
+*.hisab-vault
+/backups/
