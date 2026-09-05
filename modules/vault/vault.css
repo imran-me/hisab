@@ -1,0 +1,215 @@
+/* =========================================================================
+   Vault · module styles
+
+   The vault is the only place in Hisab that uses --vault gold. That is
+   deliberate and it is not decoration: a screen handling secrets should be
+   identifiable from across a room, before anything on it has been read.
+   ========================================================================= */
+
+/* ---- The lock screen ----------------------------------------------------
+   Covers everything, including the header and the tab bar, at --z-lock.
+
+   NO BLUR, NO TRANSLUCENCY. A blurred screenshot of a secret is still a
+   screenshot of a secret, and both iOS and Android render a live thumbnail of
+   the page into the app switcher. The content is REPLACED, not obscured — and
+   the markup behind it is empty anyway, because nothing is decrypted until the
+   unlock succeeds.
+   ------------------------------------------------------------------------ */
+.lock__badge {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-3);
+  background: var(--vault-wash);
+  border: 1px solid var(--vault);
+  color: var(--vault-ink);
+  margin-bottom: var(--s-2);
+}
+
+.lock__panel .field__error { justify-content: center; text-align: center; }
+
+/* The lock screen's forms are centred, unlike every other form in the product.
+   There is one thing to do on this screen and nothing to scan down. */
+.lock__panel [data-unlock-form],
+.lock__panel [data-setup-form] { text-align: start; }
+
+/* ---- Password strength --------------------------------------------------
+   A four-step bar, coloured by score. Not a percentage: the estimate is a
+   guide, and a number to two decimal places would imply a precision that a
+   character-frequency heuristic does not have.
+   ------------------------------------------------------------------------ */
+.strength {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.strength__bar {
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.strength__fill {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--danger);
+  transition: width var(--t-base) var(--ease-out), background-color var(--t-base) var(--ease);
+}
+
+.strength__label {
+  flex: none;
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+  color: var(--ink-3);
+  min-width: 5.5rem;   /* holds "Very strong" without the bar resizing as you type */
+}
+
+.strength[data-score="1"] .strength__fill { background: var(--danger); }
+.strength[data-score="2"] .strength__fill { background: var(--warn); }
+.strength[data-score="3"] .strength__fill { background: var(--flow-in); }
+.strength[data-score="4"] .strength__fill { background: var(--flow-in); }
+
+.strength[data-score="3"] .strength__label,
+.strength[data-score="4"] .strength__label { color: var(--flow-in-ink); }
+
+/* ---- Detail: the field list --------------------------------------------- */
+.vault-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.vault-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--line-soft);
+  min-width: 0;
+}
+
+.vault-field:last-child { border-bottom: 0; }
+
+.vault-field__label {
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.vault-field__value {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+/* The value is mono and breaks anywhere. An API key, an IBAN or a 64-character
+   token is one unbroken run of characters, and it is the single most reliable
+   way to push a 360px sheet sideways. */
+.vault-field__text,
+.vault-field__value .masked {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-14);
+  overflow-wrap: anywhere;
+  /* Selectable when revealed, so it can be copied by hand as well as by the
+     button. .masked overrides this with user-select: none — copying a row of
+     bullets into a support chat is a confusing thing to be able to do. */
+  user-select: text;
+}
+
+.vault-field__actions { flex: none; display: flex; gap: 2px; }
+
+.vault-note {
+  font-size: var(--fs-14);
+  line-height: var(--lh-normal);
+  color: var(--ink-2);
+  white-space: pre-wrap;      /* a note's own line breaks are content */
+  overflow-wrap: anywhere;
+  padding: var(--s-3);
+  background: var(--surface-3);
+  border-radius: var(--r-2);
+}
+
+/* ---- Edit: a custom field row ------------------------------------------
+   Label, value, a secret toggle and a remove button. On a phone this stacks;
+   from 520px the label and value share a row.
+   ------------------------------------------------------------------------ */
+.vault-edit-field {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'label  remove'
+    'value  value'
+    'secret secret';
+  gap: var(--s-2);
+  align-items: center;
+  padding: var(--s-3);
+  background: var(--surface-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-2);
+  min-width: 0;
+}
+
+.vault-edit-field__label  { grid-area: label; }
+.vault-edit-field .input-wrap { grid-area: value; min-width: 0; }
+.vault-edit-field__secret { grid-area: secret; min-height: 0; padding-block: 0; }
+.vault-edit-field [data-remove-field] { grid-area: remove; }
+
+/* The label input is quieter than the value input: it is metadata about the
+   field, not the thing being entered. */
+.vault-edit-field__label {
+  background: transparent;
+  border-color: transparent;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  min-height: 36px;
+  padding-inline: var(--s-2);
+}
+
+.vault-edit-field__label:hover,
+.vault-edit-field__label:focus { background: var(--surface-2); border-color: var(--line); }
+
+.vault-edit-field .check__text { font-size: var(--fs-12); color: var(--ink-3); }
+
+@media (min-width: 520px) {
+  .vault-edit-field {
+    grid-template-columns: 11rem 1fr auto auto;
+    grid-template-areas: 'label value secret remove';
+  }
+}
+
+/* ---- The kind picker ----------------------------------------------------
+   Five kinds, wrapping freely. Unlike the ledger's four transaction types,
+   these are not a set being compared against each other — they are a list
+   being chosen from, so wrapping loses nothing.
+   ------------------------------------------------------------------------ */
+.choice:has(input:checked) {
+  background: var(--vault-wash);
+  border-color: var(--vault);
+  color: var(--vault-ink);
+}
+
+/* A disabled choice is the kind on an entry being edited: fixed once created,
+   because changing it would not migrate the fields already filled in. */
+.choice:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- The vault's own accent --------------------------------------------- */
+.row__glyph--vault { background: var(--vault-wash); color: var(--vault-ink); border-color: transparent; }
+
+/* The compose button is gold here rather than cyan, so the one action that
+   writes a secret does not look like every other primary action in the app. */
+.fab {
+  background: var(--vault);
+  color: var(--void);
+}

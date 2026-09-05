@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <script>
+    /* PRE-PAINT. Inline, and first, on purpose: a deferred script runs after
+       the first paint, and the first paint is exactly what this exists to get
+       right. A night-theme user who sees one white frame on every navigation
+       has a broken app, however correct it looks a moment later.
+
+       This block is the twin of applyTheme() in shared/js/core/state.js. If one
+       changes, so must the other. It is duplicated into every page rather than
+       imported because an import cannot run before paint.
+
+       It is byte-identical in every page, and tools/check-pages.py asserts
+       that, because duplicated code drifts. That tool also prints the
+       Content-Security-Policy hash for this exact block; if the two disagree,
+       the browser blocks the script and every page paints the white frame this
+       is here to prevent.
+
+       .no-js is removed here too, so [data-reveal] content is only hidden when
+       JavaScript is actually present to reveal it. */
+    document.documentElement.classList.remove('no-js');
+    try {
+      var root = document.documentElement;
+      var theme = localStorage.getItem('hisab:theme');
+      if (theme) {
+        var value = JSON.parse(theme);
+        /* Both directions matter. A stored 'day' must ADD the attribute and a
+           cleared preference must REMOVE it, or someone who switches back to
+           following their device stays stuck on their old choice. */
+        if (value === 'day' || value === 'night') root.setAttribute('data-theme', value);
+        else root.removeAttribute('data-theme');
+      }
+      var density = localStorage.getItem('hisab:density');
+      if (density && JSON.parse(density) === 'compact') root.setAttribute('data-density', 'compact');
+      var hand = localStorage.getItem('hisab:hand');
+      if (hand && JSON.parse(hand) === 'left') root.setAttribute('data-hand', 'left');
+    } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
+  </script>
+
+  <title>Vault — Hisab</title>
+  <meta name="description" content="Cards, accounts, logins and notes, encrypted so the server cannot read them.">
+  <meta name="theme-color" content="#06080B">
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../../assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="../../site.webmanifest">
+
+  <link rel="stylesheet" href="../../shared/css/hisab.css">
+  <link rel="stylesheet" href="vault.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!--
+    THE LOCK SCREEN IS FIRST IN THE DOCUMENT AND VISIBLE BY DEFAULT.
+
+    Not hidden and then shown by script. If the lock markup started hidden, a
+    slow script or a JavaScript error would leave the vault's content on screen
+    with nothing covering it — the one failure mode this screen exists to
+    prevent. So it covers the page from the first paint and is removed only once
+    the vault is actually open.
+
+    The content behind it is empty at that point anyway: nothing is decrypted
+    until unlock succeeds. The cover is the second line of defence, not the
+    first.
+  -->
+  <div class="lock" data-lock>
+    <div class="lock__panel stack stack--4">
+
+      <div class="stack stack--2" style="align-items:center">
+        <span class="lock__badge">
+          <svg class="icon icon--xl" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-shield-lock"/></svg>
+        </span>
+        <h1 class="h2" data-lock-title>Vault</h1>
+        <p class="meta" data-lock-sub>Checking…</p>
+      </div>
+
+      <!-- Unlock. Shown when a vault already exists. -->
+      <form class="stack stack--3" data-unlock-form hidden>
+        <!--
+          A username field, present only for the browser.
+
+          Chrome warns that a password form without one cannot be understood by
+          a password manager or announced properly by a screen reader, and it is
+          right: without it, a manager either declines to save or saves the
+          master password against a guessed identity and then fills it into the
+          wrong field later.
+
+          The value is fixed and meaningless — there is one vault per device and
+          no account name to enter. It is readonly so it cannot be edited into
+          something misleading, and hidden with .sr-only rather than the hidden
+          attribute, because a display:none input is skipped by most managers,
+          which defeats the point of adding it.
+
+          Whether to let a manager hold the master password at all is the
+          owner's call. Refusing to help would not stop the browser offering;
+          it would only make the association wrong.
+        -->
+        <label class="sr-only" for="lock-username">Vault</label>
+        <input class="sr-only" type="text" id="lock-username" name="username" value="hisab-vault"
+               autocomplete="username" readonly tabindex="-1" aria-hidden="true">
+
+        <div class="field">
+          <label class="field__label sr-only" for="lock-password">Master password</label>
+          <div class="input-wrap">
+            <input class="input" type="password" id="lock-password" name="password"
+                   autocomplete="current-password" enterkeyhint="go"
+                   placeholder="Master password" data-autofocus>
+            <button type="button" class="btn btn--icon btn--sm input-action" data-peek
+                    aria-label="Show password" aria-pressed="false">
+              <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-eye"/></svg>
+            </button>
+          </div>
+          <p class="field__error" data-unlock-error hidden></p>
+        </div>
+        <button type="submit" class="btn btn--vault btn--lg btn--block">Unlock</button>
+      </form>
+
+      <!-- First-time setup. Shown when there is no vault yet. -->
+      <form class="stack stack--3" data-setup-form hidden>
+        <label class="sr-only" for="setup-username">Vault</label>
+        <input class="sr-only" type="text" id="setup-username" name="username" value="hisab-vault"
+               autocomplete="username" readonly tabindex="-1" aria-hidden="true">
+
+        <div class="callout callout--warn">
+          <svg class="icon callout__glyph" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-alert"/></svg>
+          <div class="callout__body">
+            <strong>There is no way to recover this password.</strong>
+            It never reaches the server, so nobody — including you — can reset
+            it. Write it down somewhere physical before you continue.
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="setup-password">Choose a master password</label>
+          <div class="input-wrap">
+            <input class="input" type="password" id="setup-password" name="password"
+                   autocomplete="new-password" placeholder="Four or five unrelated words">
+            <button type="button" class="btn btn--icon btn--sm input-action" data-peek
+                    aria-label="Show password" aria-pressed="false">
+              <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-eye"/></svg>
+            </button>
+          </div>
+          <div class="strength" data-strength hidden>
+            <div class="strength__bar"><div class="strength__fill"></div></div>
+            <span class="strength__label"></span>
+          </div>
+          <p class="field__hint" data-strength-hint></p>
+        </div>
+
+        <button type="button" class="btn btn--ghost btn--sm" data-suggest>
+          <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-refresh"/></svg>
+          Suggest a passphrase
+        </button>
+
+        <div class="field">
+          <label class="field__label" for="setup-confirm">Type it again</label>
+          <input class="input" type="password" id="setup-confirm" name="confirm"
+                 autocomplete="new-password" placeholder="Confirm">
+          <p class="field__error" data-setup-error hidden></p>
+        </div>
+
+        <button type="submit" class="btn btn--vault btn--lg btn--block">Create the vault</button>
+      </form>
+
+      <!-- Shown when the page is not on https, where crypto.subtle does not
+           exist at all. Neither form is usable in that state, so offering one
+           would only produce a confusing failure. -->
+      <div class="callout callout--bad" data-insecure hidden>
+        <svg class="icon callout__glyph" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-alert"/></svg>
+        <div class="callout__body">
+          <strong>The vault needs a secure connection.</strong>
+          The Web Crypto API it is built on is only available over https, or on
+          localhost. Everything else in Hisab works here; the vault cannot.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="app">
+    <header class="app-header"></header>
+    <nav class="app-rail" aria-label="Sections"></nav>
+
+    <main class="app-main" id="main">
+      <div class="page stack stack--4">
+
+        <div class="sticky-bar stack stack--2">
+          <div class="input-wrap">
+            <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-search"/></svg>
+            <input class="input" type="search" data-search placeholder="Search the vault"
+                   aria-label="Search the vault" enterkeyhint="search" autocomplete="off">
+          </div>
+          <div class="scroll-x pills" data-kind-filter role="group" aria-label="Filter by kind"></div>
+        </div>
+
+        <div class="card card--flush">
+          <ul class="list" data-list></ul>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <button type="button" class="fab" data-new-entry>
+    <svg class="icon icon--lg" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-plus"/></svg>
+    <span>Add</span>
+  </button>
+
+  <nav class="tabbar" aria-label="Primary"></nav>
+
+  <script type="module" src="../../shared/js/main.js"></script>
+  <script type="module" src="list-page.js"></script>
+</body>
+</html>

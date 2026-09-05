@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hisab · vault integration test</title>
+<!--
+  What this covers that tools/test-crypto.mjs does not.
+
+  That file tests the cryptography in Node, which is the same implementation the
+  browser uses — so the maths is covered. What it cannot reach is everything
+  around it: localStorage, the session's key lifetime, the lock event clearing
+  the decrypted cache, and the fact that api.js persists ciphertext and nothing
+  else.
+
+  That last one is the assertion that matters most in this file. It reads the
+  raw localStorage string and searches it for the plaintext. If a refactor ever
+  writes a decrypted field to storage, this fails, and no amount of reading the
+  code would have caught it as reliably.
+
+    chrome --headless=new --virtual-time-budget=30000 --dump-dom \
+      "http://localhost:8000/tools/test-vault-browser.html" | grep -A5 'id="result"'
+
+  It writes to the real storage keys, so it CLEARS THE VAULT on this origin when
+  it finishes. Never run it against a browser profile holding a real vault.
+-->
+<style>
+  body { margin:0; padding:20px; background:#06080B; color:#E9EEF4;
+         font:13px/1.6 ui-monospace,'Cascadia Mono',monospace; }
+  h1 { font-size:15px; margin:0 0 12px; }
+  #result { padding:10px 14px; border:1px solid #1D2634; border-radius:8px; margin-bottom:16px; }
+  .pass { color:#3FE3AE; } .fail { color:#FF6B5E; font-weight:700; }
+  .warn { color:#F2B23C; }
+  li { list-style:none; margin:2px 0; }
+  ul { padding:0; margin:0; }
+</style>
+</head>
+<body>
+<h1>Hisab · vault integration test</h1>
+<div id="result" class="warn">running…</div>
+<ul id="log"></ul>
+
+<script type="module">
+import { storage, KEYS, session as sessionStore } from '../shared/js/core/storage.js';
+import * as vault from '../modules/vault/backend/api.js';
+import * as vsession from '../modules/vault/backend/session.js';
+import { on, EVENTS } from '../shared/js/core/bus.js';
+
+const log = document.getElementById('log');
+
+/* A promise that never settles shows up as a test that simply stops, with no
+   error anywhere — which is exactly what happened while writing this. These
+   two handlers turn that into a visible line. */
+window.addEventListener('unhandledrejection', (e) => {
+  log.insertAdjacentHTML('beforeend', `<li class="fail">x UNHANDLED REJECTION: ${String(e.reason && e.reason.stack || e.reason)}</li>`);
+});
+window.addEventListener('error', (e) => {
+  log.insertAdjacentHTML('beforeend', `<li class="fail">x ERROR: ${String(e.message)}</li>`);
+});
+
+let passed = 0;
+const failures = [];
+
+function is(actual, expected, label) {
+  const a = JSON.stringify(actual), e = JSON.stringify(expected);
+  const good = a === e;
+  if (good) passed += 1; else failures.push(`${label} — expected ${e}, got ${a}`);
+  log.insertAdjacentHTML('beforeend',
+    `<li class="${good ? 'pass' : 'fail'}">${good ? '·' : 'x'} ${label}${good ? '' : ` — expected ${e}, got ${a}`}</li>`);
+}
+
+function ok(value, label) { is(Boolean(value), true, label); }
+
+const PASSWORD = 'test vault master passphrase';
+
+// A low iteration count, so the test does not spend a minute deriving keys to
+// assert things that have nothing to do with the KDF. It is the ONLY thing
+// this test changes about the real code path: the count is stored in the
+// header and read back from it, so unlock, rewrap and everything else run
+// exactly as they do in production. The KDF's real cost is asserted in
+// tools/test-crypto.mjs instead, where it belongs.
+const FAST = { iterations: 2000 };
+
+try {
+  // Start from nothing, whatever the browser was holding.
+  vault.forgetOnThisDevice();
+  sessionStore.remove('hisab:vaultAttempts');
+
+  /* ---- Setup ------------------------------------------------------------ */
+  is(await vault.exists(), false, 'no vault exists to begin with');
+  is(vault.isUnlocked(), false, 'and it is locked');
+
+  const created = await vault.create(PASSWORD, FAST);
+  ok(created.ok, 'the vault is created');
+  is(await vault.exists(), true, 'it now exists');
+  is(vault.isUnlocked(), true, 'and setup leaves it unlocked');
+
+  const conflict = await vault.create('another password', FAST);
+  is(conflict.ok, false, 'creating a second vault over the first is refused');
+
+  /* ---- Saving ----------------------------------------------------------- */
+  const saved = await vault.save({
+    kind: 'login',
+    title: 'GitHub',
+    tags: ['work', 'Work', ' code '],
+    note: 'the note',
+    fields: [
+      { label: 'Username', value: 'imran-me' },
+      { label: 'Password', value: 'a-very-secret-value-9182', secret: true },
+      { label: 'Empty', value: '' },
+    ],
+  });
+  ok(saved.ok, 'an entry saves');
+  is(saved.data.fields.length, 2, 'an empty field is dropped rather than stored');
+  is(saved.data.tags, ['work', 'code'], 'tags are lowercased, trimmed and de-duplicated');
+
+  /* ---- THE ASSERTION THAT MATTERS --------------------------------------
+     Read the raw storage string and look for the plaintext in it. If any
+     refactor ever persists a decrypted field, this fails — and reading the
+     code would not have caught it as reliably.
+     --------------------------------------------------------------------- */
+  const raw = window.localStorage.getItem(KEYS.VAULT) || '';
+  ok(raw.length > 0, 'something was written to storage');
+  is(raw.includes('a-very-secret-value-9182'), false, 'the secret value is NOT in storage');
+  is(raw.includes('GitHub'), false, 'the TITLE is not in storage either');
+  is(raw.includes('imran-me'), false, 'nor the username');
+  is(raw.includes('the note'), false, 'nor the note');
+  is(raw.includes('login'), false, 'nor even the kind of entry');
+
+  const rawHeader = window.localStorage.getItem(KEYS.VAULT_META) || '';
+  is(rawHeader.includes(PASSWORD), false, 'the master password is not in the header');
+
+  /* ---- Reading back ----------------------------------------------------- */
+  const listed = await vault.list();
+  is(listed.data.length, 1, 'the entry lists');
+  is(listed.data[0].title, 'GitHub', 'with its title decrypted');
+  is(listed.data[0].fields[1].value, 'a-very-secret-value-9182', 'and its secret intact');
+
+  is((await vault.list({ q: 'github' })).data.length, 1, 'search matches the title, case-insensitively');
+  is((await vault.list({ q: 'imran' })).data.length, 1, 'search matches a non-secret field');
+  is((await vault.list({ q: 'a-very-secret-value' })).data.length, 0, 'search does NOT match a secret field');
+  is((await vault.list({ kind: 'card' })).data.length, 0, 'filtering by another kind excludes it');
+  is((await vault.list({ tag: 'work' })).data.length, 1, 'filtering by tag finds it');
+
+  /* ---- Locking ---------------------------------------------------------- */
+  let lockedEventFired = false;
+  on(EVENTS.VAULT_LOCKED, () => { lockedEventFired = true; });
+
+  vault.lock('test');
+  ok(lockedEventFired, 'locking emits the event');
+  is(vault.isUnlocked(), false, 'and the session reports locked');
+  is((await vault.list()).reason, 'locked', 'listing while locked is refused');
+  is((await vault.find(saved.data.id)).reason, 'locked', 'and so is reading one entry');
+  is((await vault.save({ title: 'x' })).reason, 'locked', 'and so is writing');
+
+  let threw = false;
+  try { vsession.key(); } catch { threw = true; }
+  ok(threw, 'asking the session for the key while locked throws');
+
+  /* ---- Unlocking again -------------------------------------------------- */
+  const wrong = await vault.unlock('not the password');
+  is(wrong.ok, false, 'a wrong password does not unlock');
+  is(vault.isUnlocked(), false, 'and leaves it locked');
+
+  const right = await vault.unlock(PASSWORD);
+  ok(right.ok, 'the right password unlocks');
+  const after = await vault.list();
+  is(after.data.length, 1, 'the entry survived the lock');
+  is(after.data[0].fields[1].value, 'a-very-secret-value-9182', 'with its secret still readable');
+
+  /* ---- Changing the master password ------------------------------------- */
+  const changed = await vault.changePassword(PASSWORD, 'a different master password');
+  ok(changed.ok, 'the master password changes');
+
+  vault.lock('test');
+  is((await vault.unlock(PASSWORD)).ok, false, 'the old password no longer works');
+  ok((await vault.unlock('a different master password')).ok, 'the new one does');
+  is((await vault.list()).data[0].fields[1].value, 'a-very-secret-value-9182',
+     'and every entry written before the change still opens');
+
+  /* ---- Editing and deleting --------------------------------------------- */
+  const id = (await vault.list()).data[0].id;
+  const edited = await vault.save({ id, kind: 'login', title: 'GitHub (work)', fields: [{ label: 'Username', value: 'imran-me' }] });
+  ok(edited.ok, 'an entry edits');
+  is(edited.data.id, id, 'keeping its id');
+  is((await vault.list()).data.length, 1, 'without creating a duplicate');
+
+  const removed = await vault.destroy(id);
+  ok(removed.ok, 'an entry deletes');
+  is((await vault.list()).data.length, 0, 'and is gone');
+
+  /* ---- Generators -------------------------------------------------------- */
+  const pw = vault.generatePassword({ length: 24 });
+  is(pw.length, 24, 'a generated password is the requested length');
+  is(/[il1Lo0O]/.test(pw), false, 'and excludes ambiguous characters by default');
+  ok(new Set(Array.from({ length: 200 }, () => vault.generatePassword({ length: 12 }))).size === 200,
+     '200 generated passwords are all distinct');
+
+  const phrase = vault.generatePassphrase(5);
+  is(phrase.split(' ').length, 5, 'a passphrase has the requested number of words');
+
+  /* ---- Validation --------------------------------------------------------- */
+  is((await vault.save({ title: '   ' })).reason, 'invalid', 'a blank title is rejected');
+
+} catch (err) {
+  failures.push(`threw: ${err && err.stack ? err.stack : err}`);
+  log.insertAdjacentHTML('beforeend', `<li class="fail">x THREW: ${String(err && err.message || err)}</li>`);
+}
+
+// Always clean up, pass or fail — this writes to the real keys.
+vault.forgetOnThisDevice();
+sessionStore.remove('hisab:vaultAttempts');
+
+const result = document.getElementById('result');
+result.className = failures.length ? 'fail' : 'pass';
+result.textContent = failures.length
+  ? `${failures.length} FAILED, ${passed} passed`
+  : `all ${passed} assertions passed`;
+</script>
+</body>
+</html>

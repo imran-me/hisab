@@ -167,6 +167,16 @@ export const patch = (path, body, options) => request(path, { ...options, method
 export const del = (path, options) => request(path, { ...options, method: 'DELETE' });
 
 /**
+ * PUT — replace a resource wholesale.
+ *
+ * Distinct from PATCH on purpose, and used by exactly one module: the vault
+ * stores an opaque blob, so there is no such thing as a partial update. The
+ * server cannot merge fields it cannot read, and offering PATCH there would
+ * imply that it can.
+ */
+export const put = (path, body, options) => request(path, { ...options, method: 'PUT', body });
+
+/**
  * Is there a backend at all?
  *
  * Probed once and cached for the life of the page. A module's api.js asks this

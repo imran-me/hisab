@@ -163,7 +163,14 @@ export async function deriveKEK(password, salt, iterations = KDF.iterations) {
  */
 export async function calibrate(targetMs = 350) {
   const crypto = requireSubtle();
-  const probe = 50_000;
+
+  // A 200,000-iteration probe rather than 50,000. The measurement has to be
+  // long enough that the CLOCK'S RESOLUTION does not dominate it: browsers
+  // deliberately coarsen performance.now() — to 1ms, and more under some
+  // isolation settings — as a Spectre mitigation, so a probe that finishes in
+  // two milliseconds is measured as "1ms" and the device looks a hundred times
+  // faster than it is.
+  const probe = 200_000;
   const salt = randomBytes(KDF.saltBytes);
 
   const material = await crypto.importKey('raw', encoder.encode('calibration'), 'PBKDF2', false, ['deriveBits']);
@@ -172,13 +179,30 @@ export async function calibrate(targetMs = 350) {
   await crypto.deriveBits({ name: 'PBKDF2', salt, iterations: probe, hash: KDF.hash }, material, KEY_BITS);
   const elapsed = performance.now() - started;
 
-  // A device fast enough to make `elapsed` round to zero would otherwise divide
-  // by zero and return Infinity.
-  const perMs = probe / Math.max(elapsed, 1);
+  // Under a clamped or virtualised clock the probe can report as ~0ms. Trusting
+  // that produced a suggestion of seventeen million iterations, which is a
+  // fifteen-second unlock on a real phone — found by a headless test appearing
+  // to hang rather than fail. When the clock is not usable, take the floor.
+  if (!Number.isFinite(elapsed) || elapsed < 20) return KDF.iterations;
+
+  const perMs = probe / elapsed;
   const suggested = Math.round((perMs * targetMs) / 10_000) * 10_000;
 
-  return Math.max(KDF.iterations, suggested);
+  // Bounded at both ends. The floor is the OWASP figure; the ceiling is there
+  // because a mis-measurement in the fast direction is unrecoverable — the
+  // count is written into the header, and every future unlock on every device,
+  // including a slower phone, has to pay it.
+  return Math.min(MAX_ITERATIONS, Math.max(KDF.iterations, suggested));
 }
+
+/**
+ * The hard ceiling on derived iterations.
+ *
+ * 2,000,000 is roughly 1.5 seconds on the authoring machine — slow enough to be
+ * a serious cost per guess, and just about tolerable to wait for on an unlock.
+ * Anything beyond this is a measurement error rather than a fast device.
+ */
+const MAX_ITERATIONS = 2_000_000;
 
 /* =========================================================================
    Sealing and opening
