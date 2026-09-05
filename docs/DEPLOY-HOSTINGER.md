@@ -42,23 +42,35 @@ quick when it is ready.
 
 Five things in hPanel. Ten minutes.
 
-### 1.1 Decide where it lives — a subdomain, not a subfolder
-
-Use `hisab.yourdomain.com`, or the domain root. **Do not put it in a subfolder**
-like `yourdomain.com/hisab/`.
-
-The reason is concrete: `404.html` uses root-absolute paths (`/shared/css/...`)
-because the server serves that one file in response to a missing URL at any
-depth, and relative paths would resolve against a location that does not exist.
-The web manifest's `scope` has the same constraint. In a subfolder, the error
-page loads unstyled and installing to a home screen misbehaves.
-
-**To create the subdomain:** hPanel → **Domains → Subdomains** → enter `hisab` →
-Create. Note the folder it reports, usually:
+### 1.1 Where it lives — DONE
 
 ```
-/home/uXXXXXXXX/domains/hisab.yourdomain.com/public_html
+hisab.gulfrabit.com  →  /home/u239665931/domains/gulfrabit.com/public_html/hisab
 ```
+
+Note what that path means: the subdomain's document root is **physically inside
+gulfrabit.com's web root**. That is Hostinger's default for a subdomain and it
+is fine, but it creates a second address for the same files —
+`https://gulfrabit.com/hisab/` — and that address is genuinely broken:
+
+- `404.html` uses root-absolute paths (`/shared/css/...`), because the server
+  returns that one file for a missing URL at *any* depth and relative paths
+  would resolve against a location that does not exist. Under `/hisab/` those
+  resolve to `gulfrabit.com/shared/...` and 404.
+- The web manifest's `scope` has the same constraint, so home-screen install
+  misbehaves.
+- **Worse: `localStorage` is keyed per origin.** A ledger entered at
+  `gulfrabit.com/hisab/` is invisible at `hisab.gulfrabit.com` and vice versa.
+  That looks exactly like data loss, and the vault blob has the same problem.
+
+**This is already handled** — `.htaccess` §1 redirects any other host to
+`hisab.gulfrabit.com`, preserving the path. Nothing for you to do, but if the
+app ever moves, that rule has the hostname written into it in two places and
+both must change together.
+
+One consequence to be aware of: gulfrabit.com's own `.htaccess` is now a parent
+of this one. Header rules merge harmlessly; rewrite rules do not inherit unless
+that parent opts in. See `.htaccess` §0.1 for the symptom if it ever does.
 
 ### 1.2 Turn on SSL — this is not optional
 
@@ -106,7 +118,7 @@ hPanel → **Advanced → Git** → **Create a new repository**:
 |---|---|
 | Repository | `https://github.com/imran-me/hisab.git` |
 | Branch | `main` |
-| Directory | `domains/hisab.yourdomain.com/public_html` |
+| Directory | `domains/gulfrabit.com/public_html/hisab` |
 
 The repository is public, so no deploy key is needed. (If you make it private
 later, hPanel shows an SSH key on this page — add it to GitHub under
@@ -133,7 +145,7 @@ when you want the changes.
 2. Unzip it locally. You will get a folder `hisab-main` — the files you need are
    *inside* it, not the folder itself.
 3. hPanel → **Files → File Manager** → open
-   `domains/hisab.yourdomain.com/public_html`.
+   `domains/gulfrabit.com/public_html/hisab`.
 4. Delete Hostinger's `default.php` / placeholder `index.html` if present.
 5. Upload the **contents** of `hisab-main` — `index.html`, `404.html`,
    `.htaccess`, `site.webmanifest`, and the `assets/`, `shared/`, `modules/`
@@ -158,12 +170,13 @@ every common mistake.
 
 | URL | Expected |
 |---|---|
-| `http://hisab.yourdomain.com` | **redirects to https://** — if not, `.htaccess` is missing |
-| `https://hisab.yourdomain.com` | the Overview screen, dark, with icons and a bottom tab bar |
-| `https://hisab.yourdomain.com/context.md` | **403 Forbidden** — if you see the file, `.htaccess` is missing |
-| `https://hisab.yourdomain.com/tools/qa-viewport.html` | **403 Forbidden** |
-| `https://hisab.yourdomain.com/nonsense` | the styled "Nothing here" page, not Hostinger's default 404 |
-| `https://hisab.yourdomain.com/shared/icons/sprite.svg` | XML, not a download prompt |
+| `http://hisab.gulfrabit.com` | **redirects to https://** — if not, `.htaccess` is missing |
+| `https://hisab.gulfrabit.com` | the Overview screen, dark, with icons and a bottom tab bar |
+| `https://hisab.gulfrabit.com/context.md` | **403 Forbidden** — if you see the file, `.htaccess` is missing |
+| `https://hisab.gulfrabit.com/tools/qa-viewport.html` | **403 Forbidden** |
+| `https://hisab.gulfrabit.com/nonsense` | the styled "Nothing here" page, not Hostinger's default 404 |
+| `https://hisab.gulfrabit.com/shared/icons/sprite.svg` | XML, not a download prompt |
+| `https://gulfrabit.com/hisab/` | **redirects to `hisab.gulfrabit.com`** — closes the second entrance described in §1.1 |
 
 Then, on the Overview screen itself:
 
@@ -221,40 +234,30 @@ refresh may serve the old file.
 
 Do these now and the swap is quick when the Laravel layer is ready.
 
-### 7.1 Create the database
+### 7.1 The database — DONE
 
-hPanel → **Databases → Management** → *Create a new database*.
+```
+Database  u239665931_hisab
+User      u239665931_hisab
+Created   2026-09-05
+```
 
-| Field | Suggested |
+Correctly kept separate from `u239665931_eon`, which holds the ERP and the
+`eon_*` tables — different backup schedule, different blast radius, and this one
+will hold the vault.
+
+### 7.2 Still outstanding
+
+| | |
 |---|---|
-| Database name | `hisab` → becomes `uXXXXXXXX_hisab` |
-| Username | `hisab` → becomes `uXXXXXXXX_hisab` |
-| Password | generate a long one and save it in a password manager |
+| Database password | **Do not paste it here.** It goes into a `.env` created on the server. `.env` is in `.gitignore` and is never committed. |
+| PHP version | hPanel → Advanced → PHP Configuration — needs to be 8.2+ |
+| SSH Access? | hPanel → Advanced. Decides whether Composer runs on the server or `vendor/` is uploaded — a ~40 MB difference in deploy size |
+| Cron Jobs? | hPanel → Advanced. Needed for Laravel's scheduler later |
 
-> You already have `u239665931_eon` holding the ERP and `eon_*` tables. **Create
-> a separate database for Hisab rather than adding tables to that one.** They
-> have different backup schedules, different blast radius, and this one holds a
-> vault. If your plan caps the number of databases, the fallback is a table
-> prefix (`hisab_`) in the existing database — say so and the config will use it.
-
-### 7.2 Send me these five things
-
-```
-Domain / subdomain :  hisab.yourdomain.com
-PHP version        :  (hPanel → Advanced → PHP Configuration)
-Database name      :  uXXXXXXXX_hisab
-Database user      :  uXXXXXXXX_hisab
-Database host      :  localhost   (usually — hPanel shows it)
-```
-
-**Send the password separately, and not in a chat log.** It goes into a `.env`
-file that is in `.gitignore` and is created on the server, never committed.
-
-Also tell me:
-
-- Does **Advanced → SSH Access** exist on your plan? It decides whether Composer
-  can run on the server or whether `vendor/` has to be uploaded.
-- Does **Advanced → Cron Jobs** exist? Needed for scheduled work later.
+The `.env` will be written directly on the server via File Manager or SSH, at
+`/home/u239665931/domains/gulfrabit.com/hisab-app/.env` — above the web root, so
+it is not reachable even if `.htaccess` were removed.
 
 ### 7.3 The directory layout Phase 2 will use
 
@@ -263,8 +266,8 @@ only PHP reachable from the web, and the framework itself must sit **above** the
 document root:
 
 ```
-/home/uXXXXXXXX/domains/hisab.yourdomain.com/
-├── public_html/            ← document root, what the internet can reach
+/home/u239665931/domains/gulfrabit.com/
+├── public_html/hisab/      ← document root for hisab.gulfrabit.com
 │   ├── index.html              the frontend, exactly as it is today
 │   ├── 404.html
 │   ├── .htaccess               with §8 uncommented

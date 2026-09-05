@@ -30,19 +30,72 @@ Options -Indexes
 DirectoryIndex index.html index.php
 
 # -----------------------------------------------------------------------------
-# 1 · HTTPS
+# 0.1 · This directory sits under another site's document root
 #
-# Two conditions rather than one. %{HTTPS} is the direct signal and is what
-# LiteSpeed sets on Hostinger; X-Forwarded-Proto is what arrives when a request
-# has come through a proxy or CDN, where %{HTTPS} reads as off on an already
-# secure request and a single-condition rule redirects forever in a loop.
+# hisab.gulfrabit.com's root is /domains/gulfrabit.com/public_html/hisab, so
+# gulfrabit.com's own .htaccess is a PARENT of this one and its directives merge
+# into this directory.
+#
+# Header and FilesMatch directives from a parent are additive, which is
+# harmless here. mod_rewrite rules are the exception and are the reason this
+# file re-declares `RewriteEngine On` in every block: rewrite rules do not
+# inherit into a child directory unless the parent explicitly says
+# `RewriteOptions Inherit`, and re-enabling the engine here means this
+# directory's rules stand on their own.
+#
+# If GulfRabit's own .htaccess ever grows a catch-all front-controller rewrite
+# AND turns on inheritance, requests to this app would be swallowed by it. The
+# symptom would be GulfRabit's pages appearing on the hisab subdomain. The fix
+# is to add `RewriteOptions None` at the top of the block below.
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# 1 · One canonical address, over HTTPS
+#
+# CANONICAL_HOST is the only hostname this app answers on. Everything else
+# redirects to it.
+#
+# This matters more than it looks, because of where Hostinger puts a subdomain.
+# hisab.gulfrabit.com's document root is
+#
+#     /domains/gulfrabit.com/public_html/hisab
+#
+# which is INSIDE gulfrabit.com's own web root. So the identical files are also
+# reachable at https://gulfrabit.com/hisab/ — a second entrance to a private
+# app, where:
+#
+#   · root-absolute paths resolve against gulfrabit.com and 404 (this is what
+#     404.html and the manifest scope depend on)
+#   · localStorage is keyed to a different origin, so the ledger entered on one
+#     address is invisible on the other and looks like data loss
+#   · the vault's encrypted blob lives under whichever origin created it
+#
+# The rule below sends any other host to the canonical one, preserving the path.
+# Inside this directory's .htaccess the rewrite pattern is already relative to
+# the directory, so a request for gulfrabit.com/hisab/modules/ledger/list.html
+# matches as "modules/ledger/list.html" and lands correctly on the subdomain.
+#
+# CHANGE BOTH LINES TOGETHER if the app ever moves to another address.
+#
+# The HTTPS test uses two conditions rather than one: %{HTTPS} is the direct
+# signal and is what LiteSpeed sets on Hostinger, while X-Forwarded-Proto is
+# what arrives through a proxy or CDN — where %{HTTPS} reads as off on an
+# already-secure request and a single-condition rule redirects forever.
 # -----------------------------------------------------------------------------
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Not the canonical host (this also catches gulfrabit.com/hisab/…).
+  # The optional port group is not decoration: some proxies present HTTP_HOST
+  # as "host:443", which fails a bare anchored match and redirects the correct
+  # address to itself, forever.
+  RewriteCond %{HTTP_HOST} !^hisab\.gulfrabit\.com(:[0-9]+)?$ [NC]
+  RewriteRule ^(.*)$ https://hisab.gulfrabit.com/$1 [L,R=301,QSA]
+
+  # Right host, wrong scheme
   RewriteCond %{HTTPS} !=on
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
-  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+  RewriteRule ^ https://hisab.gulfrabit.com%{REQUEST_URI} [L,R=301]
 </IfModule>
 
 # -----------------------------------------------------------------------------
