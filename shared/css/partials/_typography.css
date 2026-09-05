@@ -1,0 +1,275 @@
+/* =========================================================================
+   Hisab · Typography
+   Named type roles. A component asks for a role — .money, .label, .figure —
+   and never sets a font-size, a family or a weight of its own.
+   ========================================================================= */
+
+/* ---- Web fonts ----------------------------------------------------------
+   Self-hosted in assets/fonts/, so the app renders identically offline and no
+   third party is told which pages an owner of a private ledger is opening.
+
+   font-display: swap on the body face and optional on the display face, on
+   purpose: body text must appear immediately even in a fallback, whereas a
+   heading that swaps a beat later is a visible re-flow of the biggest thing
+   on screen, so it is better skipped entirely on a slow connection.
+
+   size-adjust on the fallback metric below removes the layout shift when the
+   swap does happen — see the @font-face for the fallback family.
+   ------------------------------------------------------------------------ */
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../assets/fonts/ibm-plex-sans-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../assets/fonts/ibm-plex-sans-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../../../assets/fonts/ibm-plex-sans-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../../../assets/fonts/ibm-plex-mono-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../../../assets/fonts/ibm-plex-mono-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../../../assets/fonts/space-grotesk-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: optional;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../../../assets/fonts/space-grotesk-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: optional;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../../../assets/fonts/space-grotesk-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: optional;
+}
+
+/* Bengali. unicode-range means this file is only fetched when a Bangla
+   codepoint is actually on the page — which, for a category the owner typed
+   in Bangla, is exactly when it is needed and never otherwise. */
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  src: url('../../../assets/fonts/noto-sans-bengali-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0980-09FF, U+200C-200D, U+25CC;
+}
+
+/* ---- Headings -----------------------------------------------------------
+   Sizes step at 600px rather than fluidly: a clamp() heading changes size
+   while a table beside it does not, and the two stop agreeing. */
+h1, .h1 { font-size: var(--fs-28); font-weight: var(--fw-bold); }
+h2, .h2 { font-size: var(--fs-23); font-weight: var(--fw-semibold); }
+h3, .h3 { font-size: var(--fs-19); font-weight: var(--fw-semibold); }
+h4, .h4 { font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+
+@media (min-width: 600px) {
+  h1, .h1 { font-size: var(--fs-34); }
+  h2, .h2 { font-size: var(--fs-28); }
+  h3, .h3 { font-size: var(--fs-23); }
+}
+
+/* ---- Labels -------------------------------------------------------------
+   The small uppercase overline that titles a panel or a column. Tracked out,
+   because uppercase at 11px without extra tracking is a smear. */
+.label {
+  font-family: var(--font-body);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  line-height: var(--lh-snug);
+}
+
+.label--accent { color: var(--accent-ink); }
+
+/* ---- Supporting copy ---------------------------------------------------- */
+.meta {
+  font-size: var(--fs-12);
+  color: var(--ink-3);
+  line-height: var(--lh-snug);
+}
+
+.muted     { color: var(--ink-3); }
+.dim       { color: var(--ink-2); }
+.lead      { font-size: var(--fs-19); color: var(--ink-2); line-height: var(--lh-snug); }
+.prose     { max-width: var(--reading-max); }
+.prose p + p { margin-top: var(--s-4); }
+
+/* =========================================================================
+   MONEY
+
+   Every amount in the product carries .money. This is the single most
+   important type role in the file, and the reasons are all mechanical:
+
+   1. TABULAR FIGURES. Proportional digits make 1 narrower than 8, so a column
+      of amounts jitters left and right as the values change and the eye
+      cannot compare two rows by their shape. tabular-nums fixes the advance
+      width; slashed-zero keeps a 0 from reading as an O in an account number.
+   2. THE MONO FAMILY. Even with tabular figures, a proportional face sets the
+      minus sign, the decimal separator and the thousands separator at widths
+      that differ from the digits, so the decimal points still drift.
+   3. NEGATIVE TRACKING. The mono is wide; a large balance set at its natural
+      tracking overruns a 360px card.
+   ========================================================================= */
+.money {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  letter-spacing: var(--track-figure);
+  white-space: nowrap;
+}
+
+/* The currency code and the minor part are set smaller and dimmer than the
+   major part, so the number a person is actually reading is the number their
+   eye lands on. The .money__minor span is produced by formatMoney(). */
+.money__code {
+  font-size: 0.72em;
+  font-weight: var(--fw-medium);
+  color: var(--ink-3);
+  margin-inline-end: 0.35em;
+  letter-spacing: 0;
+}
+
+.money__minor {
+  font-size: 0.78em;
+  color: var(--ink-3);
+}
+
+.money__sign { margin-inline-end: 0.05em; }
+
+/* Sizes. .figure is the big one — one per screen. */
+.money--sm  { font-size: var(--fs-13); }
+.money--md  { font-size: var(--fs-16); }
+.money--lg  { font-size: var(--fs-23); font-weight: var(--fw-medium); }
+.money--xl  { font-size: var(--fs-34); font-weight: var(--fw-medium); line-height: var(--lh-flush); }
+.money--hero{ font-size: var(--fs-44); font-weight: var(--fw-medium); line-height: var(--lh-flush); }
+
+@media (max-width: 380px) {
+  /* A ten-digit balance in three currencies does not fit a 360px card at 44px.
+     Stepping the hero down here is cheaper than truncating the number, which
+     is the one thing a ledger must never do. */
+  .money--hero { font-size: var(--fs-34); }
+  .money--xl   { font-size: var(--fs-28); }
+}
+
+/* Directional colour. These are the only classes that colour a number, and
+   they map one-to-one onto the four transaction types, so a colour on a
+   figure always means the same thing on every screen. */
+.money--in    { color: var(--flow-in-ink); }
+.money--out   { color: var(--flow-out-ink); }
+.money--hold  { color: var(--flow-hold-ink); }
+.money--move  { color: var(--flow-move); }
+.money--flat  { color: var(--ink); }
+
+/* A converted figure is never presented as if it were the real one — it is
+   dimmed and marked, and the rate that produced it is in the title attribute.
+   Reading a roll-up as an exact balance is the mistake this prevents. */
+.money--converted {
+  color: var(--ink-2);
+  border-bottom: 1px dotted var(--ink-4);
+  cursor: help;
+}
+
+/* ---- Numeric text that is not money -------------------------------------
+   Counts, percentages, dates in a column, account numbers. Same tabular
+   treatment, no currency semantics. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  letter-spacing: 0;
+}
+
+/* A masked secret — a card number or a password at rest. The bullets are set
+   in the mono so the mask is exactly as wide as the value it hides, which
+   stops the row resizing when it is revealed. */
+.masked {
+  font-family: var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--ink-2);
+  user-select: none;
+}
+
+/* ---- Code / keys -------------------------------------------------------- */
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+code {
+  background: var(--surface-3);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-1);
+  padding: 0.1em 0.35em;
+  overflow-wrap: anywhere;
+}
+
+kbd {
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: var(--r-2);
+  padding: 0.15em 0.4em;
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+}
+
+/* ---- Truncation ---------------------------------------------------------
+   min-width:0 is the load-bearing half. A flex or grid child defaults to
+   min-width:auto, which means it cannot shrink below its content, so
+   text-overflow never fires and the row simply pushes past the viewport
+   instead. Every truncating cell in this product needs both declarations. */
+.truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

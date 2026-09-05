@@ -1,0 +1,107 @@
+/* =========================================================================
+   Hisab · Utilities
+   A deliberately short list. These exist for genuine one-offs on a single
+   element; on the third repeat the thing becomes a component in a partial
+   instead. Anything not here is not a utility — it is a missing component.
+   ========================================================================= */
+
+/* ---- Flow colour --------------------------------------------------------
+   The four meanings, as text colour, for anything that is not a .money
+   figure — an icon, a label, a heading over a section. */
+.t-in    { color: var(--flow-in-ink); }
+.t-out   { color: var(--flow-out-ink); }
+.t-hold  { color: var(--flow-hold-ink); }
+.t-biz   { color: var(--flow-biz-ink); }
+.t-move  { color: var(--flow-move); }
+.t-accent{ color: var(--accent-ink); }
+.t-warn  { color: var(--warn-ink); }
+.t-danger{ color: var(--danger-ink); }
+.t-vault { color: var(--vault-ink); }
+.t-ink   { color: var(--ink); }
+.t-ink-2 { color: var(--ink-2); }
+.t-ink-3 { color: var(--ink-3); }
+
+/* ---- Display ------------------------------------------------------------ */
+.u-hide  { display: none !important; }
+.u-flex  { display: flex; }
+.u-grid  { display: grid; }
+.u-block { display: block; }
+
+/* Shown only on a phone / only from 600px. Used sparingly: the same content
+   rendered twice is two things to keep in step, so this is for a genuinely
+   different presentation (a table versus a list), not for duplicated text. */
+@media (min-width: 600px) { .u-phone-only { display: none !important; } }
+@media (max-width: 599px) { .u-wide-only  { display: none !important; } }
+
+/* ---- Flex helpers ------------------------------------------------------- */
+.u-grow   { flex: 1 1 auto; min-width: 0; }
+.u-none   { flex: none; }
+.u-center { display: flex; align-items: center; justify-content: center; }
+.u-between{ display: flex; align-items: center; justify-content: space-between; }
+.u-end    { margin-inline-start: auto; }
+.u-wrap   { flex-wrap: wrap; }
+
+/* ---- Text --------------------------------------------------------------- */
+.u-right  { text-align: end; }
+.u-center-text { text-align: center; }
+.u-nowrap { white-space: nowrap; }
+.u-break  { overflow-wrap: anywhere; }
+.u-upper  { text-transform: uppercase; letter-spacing: var(--track-label); }
+
+/* ---- Spacing ------------------------------------------------------------
+   Only the values that are genuinely needed as one-offs; there is no
+   generated scale of forty margin classes, because a layout that needs one is
+   a layout that should be using .stack. */
+.mt-2 { margin-top: var(--s-2); }
+.mt-3 { margin-top: var(--s-3); }
+.mt-4 { margin-top: var(--s-4); }
+.mt-5 { margin-top: var(--s-5); }
+.mt-6 { margin-top: var(--s-6); }
+.mb-2 { margin-bottom: var(--s-2); }
+.mb-3 { margin-bottom: var(--s-3); }
+.mb-4 { margin-bottom: var(--s-4); }
+
+/* ---- Surfaces ----------------------------------------------------------- */
+.u-bordered { border: 1px solid var(--line); border-radius: var(--r-2); }
+.u-sunken   { background: var(--surface-3); border-radius: var(--r-2); }
+
+/* ---- Icons -------------------------------------------------------------
+   The sprite is stroked, not filled, so every icon inherits the current text
+   colour through `stroke: currentColor` and needs no per-colour variant.
+
+   width and height are set in em rather than px, so an icon beside a label
+   scales with the label instead of drifting out of alignment when the type
+   size changes.
+   ------------------------------------------------------------------------ */
+.icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* Optical centring against a text baseline. An icon aligned to the baseline
+     sits a touch high because its box includes no descender. */
+  vertical-align: -0.15em;
+}
+
+.icon--sm { width: 1em; height: 1em; }
+.icon--lg { width: 1.5em; height: 1.5em; }
+.icon--xl { width: 2rem; height: 2rem; stroke-width: 1.25; }
+
+/* An icon that is purely decorative is hidden from assistive tech in the
+   markup with aria-hidden. This rule makes a missed one visible while
+   developing: an <svg class="icon"> with a title but no label is fine, one
+   with neither is a control nobody can identify. */
+.icon:not([aria-hidden='true']):not([role='img']) { outline: 1px dashed var(--warn); }
+
+/* ---- Aspect / media ----------------------------------------------------- */
+.u-square { aspect-ratio: 1; }
+
+/* ---- Debug -------------------------------------------------------------
+   Toggled by tools/qa-viewport.html. Outlines every element so an overflow
+   can be traced to the one box that is too wide, instead of guessed at. */
+[data-debug='layout'] * { outline: 1px solid rgba(255, 107, 94, .28); }
+[data-debug='layout'] *:hover { outline-color: var(--flow-out); }

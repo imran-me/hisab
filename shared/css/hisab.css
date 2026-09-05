@@ -1,0 +1,40 @@
+/* =========================================================================
+   Hisab · Stylesheet entry
+   The only stylesheet a page links, besides its own module's CSS.
+
+   ORDER IS LOAD-BEARING. Tokens must be defined before anything reads them,
+   and utilities must come last so a one-off override actually wins without
+   needing !important. Do not reorder these lines to group them "logically".
+
+   @import rather than a bundler because the locked rules say no build step.
+   The browser fetches these eleven files in parallel once this one is parsed,
+   which on HTTP/2 costs one round trip — worth it to keep the partials
+   individually readable and individually deletable.
+   ========================================================================= */
+
+/* 1 · Tokens — nothing above this line may read a custom property */
+@import url('partials/_variables.css');
+
+/* 2 · Reset and element defaults */
+@import url('partials/_base.css');
+
+/* 3 · Type roles, including the money figure */
+@import url('partials/_typography.css');
+
+/* 4 · The page frame and layout primitives */
+@import url('partials/_layout.css');
+
+/* 5 · Components, in rough order of how often they appear */
+@import url('partials/_surfaces.css');
+@import url('partials/_buttons.css');
+@import url('partials/_forms.css');
+@import url('partials/_data.css');
+@import url('partials/_navigation.css');
+@import url('partials/_overlays.css');
+
+/* 6 · Motion — after the components it animates, so a keyframe name is
+       already resolvable where it is used */
+@import url('partials/_animations.css');
+
+/* 7 · Utilities last, so a single-element override beats the component */
+@import url('partials/_utilities.css');

@@ -1,0 +1,125 @@
+/* =========================================================================
+   Hisab · Motion
+   Every keyframe in the product. Motion here reports state — a value changed,
+   a surface arrived, a row was removed — and never decorates.
+
+   Nothing in this file declares a duration: the caller passes a token. That
+   is what makes the reduced-motion block in _variables.css able to disable
+   the entire product's motion by changing four numbers.
+   ========================================================================= */
+
+@keyframes hisab-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hisab-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+@keyframes hisab-sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes hisab-sheet-out {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+
+/* A dialog arrives by scale, not by slide: it has no edge to come from. The
+   start scale is 0.97 rather than something smaller — anything below about
+   0.95 reads as a bounce and blurs the text on the way in. */
+@keyframes hisab-dialog-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes hisab-menu-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes hisab-toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes hisab-toast-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(8px); }
+}
+
+/* The skeleton shimmer. 300% background-size with the highlight at 40% means
+   the sweep spends most of its cycle off-screen, which reads as a pass rather
+   than a strobe. */
+@keyframes hisab-shimmer {
+  from { background-position: 160% 0; }
+  to   { background-position: -60% 0; }
+}
+
+/* A live indicator. The dot itself does not move; a ring expands out of it,
+   so it stays readable while it pulses. */
+@keyframes hisab-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--flow-in); opacity: 1; }
+  70%  { box-shadow: 0 0 0 6px transparent; opacity: 0.85; }
+  100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+}
+
+/* A figure that just changed. The lift is 2px and the flash is a background
+   wash, not a colour change on the text — recolouring a number mid-update
+   makes it briefly unreadable, and this fires precisely when someone is
+   reading it. */
+@keyframes hisab-tick {
+  0%   { transform: translateY(3px); background-color: var(--accent-wash); }
+  100% { transform: translateY(0);   background-color: transparent; }
+}
+
+.is-ticking { animation: hisab-tick var(--t-slow) var(--ease-snap) both; border-radius: var(--r-1); }
+
+/* A row leaving the list. It collapses its own height as it fades, so the
+   rows below slide up into the space instead of jumping. */
+@keyframes hisab-row-out {
+  from { opacity: 1; max-height: 6rem; }
+  to   { opacity: 0; max-height: 0; padding-block: 0; }
+}
+
+.is-removing { animation: hisab-row-out var(--t-base) var(--ease-in) both; overflow: hidden; }
+
+/* ---- Reveal on scroll ---------------------------------------------------
+   Applied by shared/js/components/reveal.js via IntersectionObserver.
+
+   The hidden state is scoped to html:not(.no-js). Without that scope, a
+   visitor with JavaScript disabled or blocked gets a permanently blank page,
+   because nothing would ever arrive to remove the class. The enhancement must
+   not be a precondition for reading the page.
+   ------------------------------------------------------------------------ */
+html:not(.no-js) [data-reveal] {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity var(--t-slow) var(--ease-out), transform var(--t-slow) var(--ease-out);
+}
+
+html:not(.no-js) [data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not(.no-js) [data-reveal] { opacity: 1; transform: none; transition: none; }
+}
+
+/* ---- Spinner ------------------------------------------------------------
+   For an action in flight on a button. A skeleton is preferred for loading a
+   region; this is only for "the thing you just pressed is working".
+   ------------------------------------------------------------------------ */
+@keyframes hisab-spin { to { transform: rotate(360deg); } }
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--r-full);
+  opacity: 0.85;
+  animation: hisab-spin 640ms linear infinite;
+}
+
+/* A button in flight keeps its label — replacing the text with a spinner
+   changes the button's width mid-press and moves everything beside it. */
+.btn.is-busy { pointer-events: none; opacity: 0.7; }

@@ -1,0 +1,336 @@
+/* =========================================================================
+   Hisab · Data display
+   Stat tiles, tables, chips, meters, bar breakdowns, sparklines.
+   Everything here exists to make a number readable at a glance on a phone.
+   ========================================================================= */
+
+/* ---- Stat tile ----------------------------------------------------------
+   A label, a figure, and a delta. The order is deliberate: label above figure
+   so the eye reading down a column of tiles meets the question before the
+   answer, and never has to look back up to find out what it is looking at.
+   ------------------------------------------------------------------------ */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  min-width: 0;
+}
+
+.stat__label {
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.stat__value { min-width: 0; }
+
+.stat__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--ink-3);
+}
+
+/* A delta is coloured by whether it is GOOD, not by whether it is up. Spending
+   more is an increase and it is not good news, so the direction of the arrow
+   and the colour of the text are set independently — .is-good / .is-bad by
+   the caller, never inferred from the sign. */
+.stat__delta.is-good { color: var(--flow-in-ink); }
+.stat__delta.is-bad  { color: var(--flow-out-ink); }
+
+/* The tile strip on the dashboard: horizontally scrollable on a phone,
+   a grid from 600px. Two-up would halve each figure's width at 360px, which
+   is where a lakh-scale number starts truncating. */
+.stat-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(9.5rem, 1fr);
+  gap: var(--s-3);
+}
+
+@media (min-width: 600px) {
+  .stat-strip {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  }
+}
+
+/* ---- Chips / badges ----------------------------------------------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 2px var(--s-2);
+  border-radius: var(--r-1);
+  background: var(--surface-3);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-medium);
+  line-height: 1.5;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip--in    { background: var(--flow-in-wash);   color: var(--flow-in-ink);   border-color: transparent; }
+.chip--out   { background: var(--flow-out-wash);  color: var(--flow-out-ink);  border-color: transparent; }
+.chip--hold  { background: var(--flow-hold-wash); color: var(--flow-hold-ink); border-color: transparent; }
+.chip--biz   { background: var(--flow-biz-wash);  color: var(--flow-biz-ink);  border-color: transparent; }
+.chip--warn  { background: var(--warn-wash);      color: var(--warn-ink);      border-color: transparent; }
+.chip--vault { background: var(--vault-wash);     color: var(--vault-ink);     border-color: transparent; }
+
+/* Necessity bands, numbered rather than named, so re-labelling the bands in
+   the database does not require a CSS change. */
+.chip--need-1 { background: color-mix(in srgb, var(--need-1) 14%, transparent); color: var(--need-1); border-color: transparent; }
+.chip--need-2 { background: color-mix(in srgb, var(--need-2) 14%, transparent); color: var(--need-2); border-color: transparent; }
+.chip--need-3 { background: color-mix(in srgb, var(--need-3) 14%, transparent); color: var(--need-3); border-color: transparent; }
+.chip--need-4 { background: color-mix(in srgb, var(--need-4) 14%, transparent); color: var(--need-4); border-color: transparent; }
+
+/* A status dot, for a list where a full chip would be noise. */
+.dot { width: 7px; height: 7px; border-radius: var(--r-full); background: var(--ink-4); flex: none; }
+.dot--in { background: var(--flow-in); }
+.dot--out { background: var(--flow-out); }
+.dot--hold { background: var(--flow-hold); }
+.dot--biz { background: var(--flow-biz); }
+.dot--live { background: var(--flow-in); box-shadow: 0 0 0 0 var(--flow-in); animation: hisab-pulse 2.4s var(--ease) infinite; }
+
+/* ---- Filter pills ------------------------------------------------------- */
+.pills { display: flex; gap: var(--s-2); }
+
+.pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 34px;
+  padding-inline: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease);
+}
+
+.pill:hover { border-color: var(--line-hot); color: var(--ink); }
+
+.pill[aria-pressed='true'],
+.pill.is-active {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.pill__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--ink-3);
+  padding-inline-start: var(--s-1);
+}
+
+/* ---- Table -------------------------------------------------------------
+   Used from 600px up; below that the same data is a .list of rows, because a
+   four-column table at 360px is a scroll bar with numbers behind it.
+
+   The table ALWAYS lives inside .table-wrap. Overflow belongs to the wrapper,
+   never to the table, and never to the page.
+   ------------------------------------------------------------------------ */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--r-3);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-13);
+  /* Fixed layout so a long note in one cell cannot re-proportion every column
+     in the table. Widths come from the <col> group in the markup. */
+  table-layout: fixed;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  padding: var(--s-2) var(--s-3);
+  text-align: start;
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.table tbody td {
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+  min-width: 0;
+}
+
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover { background: var(--wash-hover); }
+
+.table tfoot td {
+  padding: var(--s-3);
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  font-weight: var(--fw-semibold);
+}
+
+/* Numeric columns are right-aligned and mono so the decimal points stack. */
+.table .col-num, .table th.col-num { text-align: end; font-family: var(--font-mono); font-variant-numeric: tabular-nums slashed-zero; }
+.table .col-tight { width: 1%; white-space: nowrap; }
+
+/* A sortable header is a button inside the th, not a click handler on the th
+   — a th is not focusable and cannot be reached from a keyboard. */
+.table th button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.table th[aria-sort] button { color: var(--ink-2); }
+.table th[aria-sort='ascending'] button,
+.table th[aria-sort='descending'] button { color: var(--accent-ink); }
+
+/* ---- Meter -------------------------------------------------------------
+   Budget used, savings goal, category share. A track and a fill, with the
+   fill's width set inline by JS as --meter-fill (a percentage) — the ONE
+   place a value reaches CSS from JS, because it is genuinely per-instance
+   data rather than styling.
+   ------------------------------------------------------------------------ */
+.meter {
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  overflow: hidden;
+  position: relative;
+}
+
+.meter__fill {
+  height: 100%;
+  width: var(--meter-fill, 0%);
+  border-radius: inherit;
+  background: var(--meter-color, var(--accent));
+  transition: width var(--t-slow) var(--ease-out);
+}
+
+.meter--in   { --meter-color: var(--flow-in); }
+.meter--out  { --meter-color: var(--flow-out); }
+.meter--hold { --meter-color: var(--flow-hold); }
+.meter--warn { --meter-color: var(--warn); }
+
+/* Over budget. The fill is capped at 100% by JS so the bar cannot overflow
+   its track; the overrun is communicated by colour and by the figure beside
+   it, not by a bar that runs off the card. */
+.meter.is-over { --meter-color: var(--danger); }
+.meter--tall { height: 10px; }
+
+/* ---- Breakdown bar ------------------------------------------------------
+   One horizontal bar split into category segments — where the month went, in
+   a single glance, without a pie chart. Segments are flex children whose
+   flex-grow is the share.
+   ------------------------------------------------------------------------ */
+.breakdown {
+  display: flex;
+  height: 10px;
+  border-radius: var(--r-full);
+  overflow: hidden;
+  background: var(--surface-3);
+  gap: 1px;   /* the gap IS the separator; a border would change the widths */
+}
+
+.breakdown__seg {
+  flex: var(--seg-share, 1) 1 0;
+  background: var(--seg-color, var(--ink-4));
+  min-width: 2px;   /* a 0.3% category must still be visible and hoverable */
+  transition: filter var(--t-fast) var(--ease);
+}
+
+.breakdown__seg:hover { filter: brightness(1.25); }
+
+/* The legend under it. Each entry carries its own colour as a custom property
+   set inline, so the legend and the bar cannot drift apart. */
+.legend { display: flex; flex-direction: column; gap: var(--s-2); }
+
+.legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-13);
+  min-width: 0;
+}
+
+.legend__swatch { width: 8px; height: 8px; border-radius: 2px; background: var(--seg-color, var(--ink-4)); flex: none; }
+.legend__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.legend__value { flex: none; font-family: var(--font-mono); font-size: var(--fs-12); }
+.legend__pct { flex: none; font-family: var(--font-mono); font-size: var(--fs-11); color: var(--ink-3); width: 3.2rem; text-align: end; }
+
+/* ---- Sparkline / bar chart ---------------------------------------------
+   Drawn as inline SVG by shared/js/components/spark.js. The stylesheet owns
+   the appearance; the script owns only the geometry.
+   ------------------------------------------------------------------------ */
+.spark { display: block; width: 100%; height: 40px; overflow: visible; }
+.spark__line { fill: none; stroke: var(--spark-color, var(--accent)); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.spark__area { fill: var(--spark-color, var(--accent)); opacity: 0.10; }
+.spark__dot  { fill: var(--spark-color, var(--accent)); }
+.spark__zero { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 3; }
+
+.bars { display: flex; align-items: flex-end; gap: 2px; height: 56px; }
+
+.bars__bar {
+  flex: 1 1 0;
+  min-width: 2px;
+  height: var(--bar-height, 0%);
+  min-height: 2px;    /* a zero month is still a visible tick, not a gap */
+  background: var(--bar-color, var(--ink-4));
+  border-radius: 2px 2px 0 0;
+  transition: height var(--t-slow) var(--ease-out), background-color var(--t-fast) var(--ease);
+}
+
+.bars__bar.is-current { background: var(--accent); }
+
+/* ---- Key / value ------------------------------------------------------- */
+.kv { display: grid; grid-template-columns: minmax(0, 8rem) 1fr; gap: var(--s-2) var(--s-4); font-size: var(--fs-13); }
+.kv dt { color: var(--ink-3); min-width: 0; }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 400px) {
+  /* Two columns at 360px leaves a 6rem value column, which is narrower than
+     an account number. One column, label above value, is honest about it. */
+  .kv { grid-template-columns: 1fr; gap: var(--s-1); }
+  .kv dd { margin-bottom: var(--s-2); }
+}

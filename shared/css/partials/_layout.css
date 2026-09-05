@@ -1,0 +1,203 @@
+/* =========================================================================
+   Hisab · Layout
+   The page frame and a small set of layout primitives. A module composes from
+   these; it does not invent a grid of its own.
+   ========================================================================= */
+
+/* ---- The frame ----------------------------------------------------------
+   .app is the grid the whole product sits in. On a phone it is one column
+   with a fixed header above and a fixed tab bar below. At 900px the tab bar
+   becomes a rail on the left and the grid grows a second column.
+
+   Named grid areas rather than order/flex, because the same markup has to
+   produce both arrangements without JS moving a node — moving the nav on
+   resize would drop focus and re-announce it to a screen reader. */
+.app {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    'header'
+    'main';
+  min-height: 100dvh;
+}
+
+@media (min-width: 900px) {
+  .app {
+    grid-template-columns: 15rem 1fr;
+    grid-template-areas:
+      'rail header'
+      'rail main';
+  }
+}
+
+.app-header { grid-area: header; }
+.app-rail   { grid-area: rail; }
+.app-main   { grid-area: main; min-width: 0; }   /* min-width:0 — see below */
+
+/* min-width:0 on the main column is not optional. A grid track sizes to
+   min-content by default, so one wide table or one long unbroken IBAN inside
+   the page makes the WHOLE column wider than the viewport and the page scrolls
+   sideways. This single declaration is what keeps 360px honest. */
+
+/* ---- The page container -------------------------------------------------
+   One horizontal padding rule for the entire product. The gutter widens with
+   the viewport here and nowhere else, so a module never sets page padding. */
+.page {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: max(var(--gutter), var(--safe-left), var(--safe-right));
+  padding-block: var(--s-5) var(--s-7);
+  min-width: 0;
+}
+
+@media (min-width: 600px)  { :root { --gutter: var(--s-5); } }
+@media (min-width: 1024px) { :root { --gutter: var(--s-6); } }
+
+.page--tight  { padding-block: var(--s-4) var(--s-6); }
+.page--narrow { max-width: var(--reading-max); }
+
+/* ---- Primitives ---------------------------------------------------------
+   Four of them. Between them they express every layout in the product, which
+   is the point: a fifth would mean two ways to do the same thing.           */
+
+/* STACK — vertical rhythm. The gap is a property of the container, so no
+   child ever carries a margin and nothing collapses. */
+.stack { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.stack--1 { gap: var(--s-1); }
+.stack--2 { gap: var(--s-2); }
+.stack--3 { gap: var(--s-3); }
+.stack--5 { gap: var(--s-5); }
+.stack--6 { gap: var(--s-6); }
+.stack--7 { gap: var(--s-7); }
+
+/* CLUSTER — things in a row that wrap when they run out of room. Used for
+   chips, filter pills, button groups, meta lines. */
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.cluster--3   { gap: var(--s-3); }
+.cluster--4   { gap: var(--s-4); }
+.cluster--top { align-items: flex-start; }
+
+/* SPLIT — one thing left, one thing right, sharing a baseline. The left child
+   truncates and the right child does not, which is the correct behaviour
+   roughly every time: the label gives way, the amount never does. */
+.split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.split > :first-child { min-width: 0; }
+.split > :last-child  { flex: none; }
+.split--top   { align-items: flex-start; }
+.split--base  { align-items: baseline; }
+
+/* GRID — the responsive card grid. auto-fit with minmax(0, …) rather than
+   minmax(<size>, …): a track whose minimum is a fixed size cannot shrink
+   below it, so at 360px a 16rem minimum overflows by exactly the difference.
+   The min() keeps the intent (roughly 16rem columns) without the overflow. */
+.grid {
+  display: grid;
+  gap: var(--s-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  min-width: 0;
+}
+
+.grid--sm { grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr)); }
+.grid--lg { grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr)); }
+
+/* A fixed two-up that stays two-up even on the narrowest phone. For paired
+   figures — in and out, opening and closing — where the comparison IS the
+   content and stacking them destroys it. */
+.grid--pair { grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+
+.grid > .span-2 { grid-column: span 2; }
+@media (max-width: 599px) { .grid > .span-2 { grid-column: span 1; } }
+
+/* ---- Section headers ----------------------------------------------------
+   A title on the left, an action on the right, and a rule underneath drawn by
+   the container rather than by a border on the title — so a section with no
+   action still gets the same rule in the same place. */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+
+.section-head__title { min-width: 0; display: flex; align-items: baseline; gap: var(--s-2); }
+.section-head__count { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--ink-3); }
+.section-head__action { flex: none; }
+
+/* ---- Sticky sub-bar -----------------------------------------------------
+   Filters, month pickers, tab strips. Sits directly under the header, so its
+   offset is the header height and its z-index is one below it. */
+.sticky-bar {
+  position: sticky;
+  top: calc(var(--header-h) + var(--safe-top));
+  z-index: var(--z-sticky);
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid var(--line);
+  /* The bar spans the full width while the page inside it keeps the gutter,
+     so the rule runs edge to edge instead of stopping short. */
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+  padding-block: var(--s-2);
+}
+
+/* ---- Horizontal scrollers ----------------------------------------------
+   Anything wider than the viewport scrolls INSIDE its own container. The page
+   body itself must never scroll sideways — that is the one layout bug this
+   product treats as a defect rather than a nuisance. */
+.scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  /* Snap so a swipe through a row of month chips lands on a chip rather than
+     halfway across one. */
+  scroll-snap-type: x proximity;
+  /* Bleed to the screen edge, so the first and last item can sit under the
+     gutter and it reads as a strip rather than a boxed-in row. */
+  margin-inline: calc(var(--gutter) * -1);
+  padding-inline: var(--gutter);
+}
+
+.scroll-x > * { scroll-snap-align: start; }
+
+/* Fades at both edges say "there is more this way" without a scrollbar. The
+   mask is on a wrapper rather than the scroller because a mask on the
+   scrolling box itself scrolls with the content. */
+.scroll-x-fade {
+  position: relative;
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent 100%);
+}
+
+/* ---- Dividers ----------------------------------------------------------- */
+.rule    { height: 1px; background: var(--line); border: 0; }
+.rule--soft { background: var(--line-soft); }
+
+/* A vertical hairline between two figures in a pair. Drawn on the second
+   child so it never appears before the first. */
+.pair-rule > * + * {
+  border-inline-start: 1px solid var(--line-soft);
+  padding-inline-start: var(--s-4);
+}
+
+/* ---- Safe-area padding for anything fixed to the bottom ---------------- */
+.pb-safe { padding-bottom: calc(var(--s-4) + var(--safe-bottom)); }

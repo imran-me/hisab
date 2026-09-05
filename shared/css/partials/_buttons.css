@@ -1,0 +1,225 @@
+/* =========================================================================
+   Hisab · Buttons
+   One .btn, five variants, three sizes. A button in this product is a
+   rectangle with a hairline and a 6px radius — never a pill, never a
+   gradient, never a drop shadow. The affordance is the edge and the label.
+   ========================================================================= */
+
+.btn {
+  /* inline-flex, not flex: a .btn used inside a sentence or a table cell must
+     not become a full-width block. Width is opted into with .btn--block. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+
+  /* min-height rather than height, so a button that wraps to two lines grows
+     instead of clipping its own label — which is what happens to a translated
+     label in a fixed-height button. */
+  min-height: var(--tap-min);
+  padding: var(--s-2) var(--s-4);
+
+  font-family: var(--font-body);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color     var(--t-fast) var(--ease),
+    color            var(--t-fast) var(--ease),
+    transform        var(--t-instant) var(--ease);
+}
+
+/* A 1px press is enough to feel on a phone and small enough not to reflow
+   anything around it. Scale would blur the label mid-transition. */
+.btn:active:not(:disabled) { transform: translateY(1px); }
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ---- Variants -----------------------------------------------------------
+   PRIMARY is a solid accent fill and there is at most ONE on a screen. If a
+   second appears, one of them is not the primary action. */
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn--primary:hover:not(:disabled) { background: var(--accent-ink); border-color: var(--accent-ink); }
+
+/* SECONDARY — the default for almost everything. A hairline box. */
+.btn--secondary {
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.btn--secondary:hover:not(:disabled) { background: var(--surface-3); border-color: var(--line-hot); }
+
+/* GHOST — a button that is only a label until you touch it. Toolbars, table
+   row actions, anything that would otherwise put twenty boxes on a screen. */
+.btn--ghost { color: var(--ink-2); }
+.btn--ghost:hover:not(:disabled) { background: var(--wash-hover); color: var(--ink); }
+
+/* DANGER is outlined, not filled. A filled red button is the same visual
+   weight as the primary action, and the destructive one should never be the
+   thing the eye lands on first. It fills only on hover, at which point the
+   pointer is already on it and the weight is a warning rather than an
+   invitation. */
+.btn--danger {
+  border-color: var(--danger);
+  color: var(--danger-ink);
+  background: transparent;
+}
+
+.btn--danger:hover:not(:disabled) { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* VAULT — the only button style that carries the vault's gold. Used for
+   unlock and reveal, so those two actions never look like ordinary ones. */
+.btn--vault {
+  background: var(--vault-wash);
+  border-color: var(--vault);
+  color: var(--vault-ink);
+}
+
+.btn--vault:hover:not(:disabled) { background: var(--vault); color: var(--void); }
+
+/* ---- Sizes -------------------------------------------------------------- */
+.btn--sm {
+  min-height: 34px;
+  padding: var(--s-1) var(--s-3);
+  font-size: var(--fs-13);
+}
+
+.btn--lg {
+  min-height: 52px;
+  padding: var(--s-3) var(--s-5);
+  font-size: var(--fs-16);
+}
+
+.btn--block { display: flex; width: 100%; }
+
+/* ---- Icon-only ----------------------------------------------------------
+   Square, and it MUST carry an aria-label — there is no visible text to read.
+   The rule below makes a missing one visible during development instead of
+   silently shipping an unlabelled control. */
+.btn--icon {
+  padding: 0;
+  width: var(--tap-min);
+  min-width: var(--tap-min);
+  height: var(--tap-min);
+  color: var(--ink-2);
+}
+
+.btn--icon:hover:not(:disabled) { background: var(--wash-hover); color: var(--ink); }
+.btn--icon.btn--sm { width: 34px; min-width: 34px; height: 34px; }
+
+/* Development guard: an icon button with no accessible name gets a red ring.
+   It costs nothing in production and it has caught several. */
+.btn--icon:not([aria-label]):not([aria-labelledby]):not([title]) {
+  outline: 2px dashed var(--danger);
+  outline-offset: 2px;
+}
+
+.btn .icon { flex: none; }
+
+/* ---- Groups -------------------------------------------------------------
+   Segmented control. Buttons share a border, so the seam between two is one
+   hairline rather than two touching. */
+.btn-group {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.btn-group > .btn {
+  border-radius: 0;
+  border: 0;
+  border-inline-start: 1px solid var(--line);
+  min-height: 38px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.btn-group > .btn:first-child { border-inline-start: 0; }
+
+.btn-group > .btn[aria-pressed='true'],
+.btn-group > .btn[aria-selected='true'],
+.btn-group > .btn.is-active {
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+
+/* ---- The floating compose action ---------------------------------------
+   "Add a transaction" is the single most-used control in the product, so it
+   is thumb-reachable on a phone and it follows the tab bar rather than the
+   page. Right-aligned because the right thumb is the common case; it moves to
+   the left under [data-hand="left"].
+
+   It is a real <button> in the tab bar's markup — not a separate fixed
+   element — so the tab order stays in one place. */
+.fab {
+  position: fixed;
+  inset-block-end: calc(var(--tabbar-h) + var(--safe-bottom) + var(--s-4));
+  inset-inline-end: calc(var(--gutter) + var(--safe-right));
+  z-index: var(--z-tabbar);
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 52px;
+  padding-inline: var(--s-4);
+
+  background: var(--accent);
+  color: var(--on-accent);
+  border: 0;
+  border-radius: var(--r-3);
+  box-shadow: var(--e-2);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-14);
+  cursor: pointer;
+
+  transition: transform var(--t-base) var(--ease-out), opacity var(--t-fast) var(--ease);
+}
+
+[data-hand='left'] .fab {
+  inset-inline-end: auto;
+  inset-inline-start: calc(var(--gutter) + var(--safe-left));
+}
+
+.fab:active { transform: scale(0.97); }
+
+/* Retracts while the page is scrolling down, so it never covers the row you
+   are reading toward. Restored by shared/js/components/fab.js on scroll stop. */
+.fab.is-tucked {
+  transform: translateY(calc(100% + var(--s-6)));
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (min-width: 900px) {
+  /* With the rail in place there is no tab bar to sit above, and the compose
+     action lives in the rail instead. */
+  .fab { display: none; }
+}

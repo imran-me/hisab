@@ -1,0 +1,260 @@
+/* =========================================================================
+   Hisab · Navigation
+   One header, one tab bar, one rail. The tab bar and the rail render from the
+   SAME markup — see shared/components/nav.html — because moving a node on
+   resize drops focus and makes a screen reader re-announce the whole bar.
+   ========================================================================= */
+
+/* ---- Header -------------------------------------------------------------
+   56px, sticky, glass. It holds the page title and at most two actions: a
+   phone header with five icons is a header nobody can hit.
+   ------------------------------------------------------------------------ */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  height: calc(var(--header-h) + var(--safe-top));
+  padding-top: var(--safe-top);
+  padding-inline: max(var(--gutter), var(--safe-left), var(--safe-right));
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  background: var(--glass);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+
+/* backdrop-filter is not universal — Firefox on Android has shipped it
+   disabled by default more than once. Without a fallback the header is
+   semi-transparent with no blur and the content scrolls through it as an
+   unreadable mess, so an opaque background is used wherever it is missing. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-header, .sticky-bar, .tabbar { background: var(--surface); }
+}
+
+.app-header__lead { flex: none; display: flex; align-items: center; gap: var(--s-2); }
+.app-header__title { flex: 1 1 auto; min-width: 0; font-family: var(--font-display); font-size: var(--fs-16); font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-header__actions { flex: none; display: flex; align-items: center; gap: var(--s-1); }
+
+/* The wordmark. Set in the display face with the two syllables weighted
+   differently — the mark IS the typography, so there is no logo file to load
+   and nothing to go blurry on a high-density screen. */
+.wordmark {
+  font-family: var(--font-display);
+  font-size: var(--fs-19);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+}
+
+.wordmark__b { color: var(--accent); }
+
+/* A thin scroll-progress rule along the bottom edge of the header. Width is
+   set by shared/js/components/header.js. On a long transaction list it is the
+   only indication of position once the scrollbar auto-hides. */
+.app-header__progress {
+  position: absolute;
+  inset-block-end: -1px;
+  inset-inline-start: 0;
+  height: 2px;
+  width: var(--scroll-progress, 0%);
+  background: var(--accent);
+  opacity: 0.9;
+  transition: width var(--t-instant) linear;
+}
+
+/* ---- Tab bar (phone) ----------------------------------------------------
+   Five destinations, fixed to the bottom, inside the safe area. Five is the
+   ceiling: a sixth makes each target narrower than a thumb.
+   ------------------------------------------------------------------------ */
+.tabbar {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: var(--z-tabbar);
+  display: flex;
+  align-items: stretch;
+  height: calc(var(--tabbar-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  padding-inline: max(0px, var(--safe-left), var(--safe-right));
+  background: var(--glass);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-top: 1px solid var(--line);
+}
+
+.tab {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: var(--s-1) 2px;
+  color: var(--ink-3);
+  text-decoration: none;
+  font-size: var(--fs-10);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.01em;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--t-fast) var(--ease);
+}
+
+.tab__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab:active { color: var(--ink-2); }
+
+/* aria-current is the source of truth for "you are here" — the same attribute
+   the screen reader reads, so the visual state cannot disagree with it. */
+.tab[aria-current='page'] { color: var(--accent-ink); }
+
+/* The active marker is a 2px bar at the TOP of the tab, against the border.
+   A filled pill behind the icon would put a coloured blob under a thumb that
+   is already covering it. */
+.tab[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 22%;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--accent);
+}
+
+/* An unread / attention count on a tab. */
+.tab__badge {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-start: 54%;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 4px;
+  border-radius: var(--r-full);
+  background: var(--flow-out);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: var(--fw-semibold);
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+@media (min-width: 900px) {
+  .tabbar { display: none; }
+}
+
+/* ---- Rail (tablet and desktop) -----------------------------------------
+   The same links, vertical, always visible. Sticky rather than fixed so it
+   scrolls with a long page on a short screen instead of clipping its own
+   last item.
+   ------------------------------------------------------------------------ */
+.app-rail { display: none; }
+
+@media (min-width: 900px) {
+  .app-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100dvh;
+    padding: var(--s-4) var(--s-3);
+    background: var(--surface);
+    border-inline-end: 1px solid var(--line);
+    overflow-y: auto;
+  }
+
+  .app-rail .tab {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--s-3);
+    min-height: var(--tap);
+    padding-inline: var(--s-3);
+    border-radius: var(--r-2);
+    font-size: var(--fs-14);
+    font-weight: var(--fw-medium);
+  }
+
+  .app-rail .tab:hover { background: var(--wash-hover); color: var(--ink); }
+
+  .app-rail .tab[aria-current='page'] {
+    background: var(--accent-wash);
+    color: var(--accent-ink);
+  }
+
+  /* The marker becomes a vertical bar on the leading edge. */
+  .app-rail .tab[aria-current='page']::before {
+    inset-block: 20%;
+    inset-inline: 0 auto;
+    width: 2px;
+    height: auto;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .app-rail .tab__badge { position: static; margin-inline-start: auto; }
+
+  .rail__head { padding: var(--s-2) var(--s-3) var(--s-4); }
+  .rail__group { margin-top: var(--s-4); }
+  .rail__group-label { padding: var(--s-2) var(--s-3); }
+  .rail__foot { margin-top: auto; padding-top: var(--s-4); border-top: 1px solid var(--line-soft); }
+}
+
+/* ---- Back link ---------------------------------------------------------- */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  color: var(--ink-2);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+  min-height: var(--tap-min);
+}
+
+.back:hover { color: var(--ink); }
+
+/* ---- Tab strip (in-page) ------------------------------------------------
+   Personal / Business, or the vault's categories. Scrollable, never wrapped
+   — a tab strip that reflows to two lines moves the tab you were aiming at.
+   ------------------------------------------------------------------------ */
+.tabstrip {
+  display: flex;
+  gap: var(--s-1);
+  border-bottom: 1px solid var(--line);
+}
+
+.tabstrip__tab {
+  flex: none;
+  min-height: 42px;
+  padding-inline: var(--s-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--ink-3);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+
+.tabstrip__tab:hover { color: var(--ink-2); }
+
+.tabstrip__tab[aria-selected='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}

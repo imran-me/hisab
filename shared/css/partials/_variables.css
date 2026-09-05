@@ -1,0 +1,476 @@
+/* =========================================================================
+   Hisab · Design tokens
+   The single source of truth for colour, type, spacing, radius, elevation and
+   motion. No other file in this repository writes a hex, a shadow, a radius or
+   a duration — it reads a token from here.
+
+   Two themes. NIGHT is the default and the one the product is designed in: this
+   is an instrument you read numbers off, usually one-handed, often at night.
+   DAY exists because a phone in Gulf sunlight is unreadable otherwise, and it
+   is a genuine re-cut of the ramp rather than an inversion — see §2.
+   ========================================================================= */
+
+:root {
+  /* ---------------------------------------------------------------------
+     1 · CANVAS — night (default)
+
+     Near-black with a blue cast (#06080B), not neutral grey and not pure
+     black. Pure black on an OLED panel makes every hairline vibrate against
+     it and turns scrolling into smearing; a slight blue lift settles both and
+     reads colder, which is the intent.
+
+     Surfaces step up in LUMINANCE, never in shadow. Four steps is the whole
+     vocabulary — if a fifth is needed, the layout is too deep.
+     --------------------------------------------------------------------- */
+  --void:        #06080B;   /* the page itself, behind everything          */
+  --surface:     #0B0F15;   /* panels, cards, the tab bar                  */
+  --surface-2:   #111823;   /* raised: menus, sheets, popovers             */
+  --surface-3:   #18212E;   /* inputs, wells, pressed and hovered rows     */
+  --surface-inv: #ECF1F6;   /* deliberate light blocks (rare, print, QR)   */
+
+  /* Hairlines do the work shadows do elsewhere. Three weights only:
+     --line      a real division between two regions
+     --line-soft a grouping hint inside one region
+     --line-hot  the edge of something focused or selected                 */
+  --line:      #1D2634;
+  --line-soft: #141B25;
+  --line-hot:  #2C3A4D;
+
+  /* ---------------------------------------------------------------------
+     2 · INK — the text ramp
+
+     Four steps, each measured against --surface, not against the void: text
+     mostly sits on a panel. Contrast ratios are noted so a future change has
+     to argue with a number rather than a taste.
+     --------------------------------------------------------------------- */
+  --ink:       #E9EEF4;   /* headings, figures, anything read     15.9:1   */
+  --ink-2:     #A3B0BF;   /* labels, supporting copy               8.1:1   */
+  --ink-3:     #6B7A8B;   /* meta, timestamps, disabled            4.6:1   */
+  --ink-4:     #3C4757;   /* rules drawn in text colour, watermarks        */
+  --ink-inv:   #0A0E13;   /* text on --surface-inv                        */
+
+  /* ---------------------------------------------------------------------
+     3 · FLOW — the only colours with meaning
+
+     A colour on this screen always says something about money. Nothing is
+     tinted for taste, which is why the palette is four hues wide and not
+     twelve. Each has an -ink cut for text (legible on --surface) and a -wash
+     for fills; the raw hue is for strokes, dots and sparklines.
+     --------------------------------------------------------------------- */
+
+  /* IN — money arriving. Mint rather than a signal green: green next to red
+     is the one pairing that deuteranopia collapses, and every screen here
+     puts inflow beside outflow. Mint holds its distance from coral in
+     luminance as well as hue, so the two stay separable in greyscale. */
+  --flow-in:        #3FE3AE;
+  --flow-in-ink:    #5DEEC0;
+  --flow-in-wash:   rgba(63, 227, 174, .12);
+
+  /* OUT — money gone. */
+  --flow-out:       #FF6B5E;
+  --flow-out-ink:   #FF8B80;
+  --flow-out-wash:  rgba(255, 107, 94, .12);
+
+  /* HOLD — money moved into savings, DPS, FDR, shares. Still yours, which is
+     why it is neither the in colour nor the out colour. */
+  --flow-hold:      #8B7BFF;
+  --flow-hold-ink:  #A79BFF;
+  --flow-hold-wash: rgba(139, 123, 255, .12);
+
+  /* BUSINESS — the business book, as opposed to the personal one. The two
+     books are never summed, so they are never the same colour. */
+  --flow-biz:       #4FA8FF;
+  --flow-biz-ink:   #74BCFF;
+  --flow-biz-wash:  rgba(79, 168, 255, .12);
+
+  /* NEUTRAL flow — transfers. A transfer is net zero by definition, so it
+     gets the ink ramp rather than a hue. */
+  --flow-move:      #7A8898;
+  --flow-move-wash: rgba(122, 136, 152, .10);
+
+  /* ---------------------------------------------------------------------
+     4 · ACCENT & STATE
+
+     --accent is the interface's own colour: focus rings, the active tab, the
+     primary action. Deliberately NOT one of the flow hues — if the button you
+     press were mint, "confirm" and "income" would be the same signal.
+     --------------------------------------------------------------------- */
+  --accent:       #00C2D4;   /* cyan — interactive, focus, selection       */
+  --accent-ink:   #35DCEB;   /* the same on text                           */
+  --accent-wash:  rgba(0, 194, 212, .14);
+  --accent-glow:  rgba(0, 194, 212, .32);
+  --on-accent:    #02171B;   /* text sitting ON an accent fill             */
+
+  --warn:      #F2B23C;
+  --warn-ink:  #FFC960;
+  --warn-wash: rgba(242, 178, 60, .13);
+
+  --danger:      #FF4D4D;
+  --danger-ink:  #FF7676;
+  --danger-wash: rgba(255, 77, 77, .13);
+
+  /* The vault's own colour. It appears nowhere else, so a screen that is
+     handling secrets is identifiable at a glance from across a room. */
+  --vault:      #C8A34B;
+  --vault-ink:  #E0BE68;
+  --vault-wash: rgba(200, 163, 75, .12);
+
+  /* Necessity bands — the "was it worth it?" scale, best to worst. Ordered
+     tokens rather than named colours, so the bands can be re-tuned in one
+     place and the chips follow. */
+  --need-1: #3FE3AE;   /* essential     */
+  --need-2: #4FA8FF;   /* important     */
+  --need-3: #F2B23C;   /* discretionary */
+  --need-4: #FF6B5E;   /* avoidable     */
+
+  /* ---------------------------------------------------------------------
+     5 · WASHES, SCRIMS, GLASS
+     --------------------------------------------------------------------- */
+  --wash-hover:   rgba(233, 238, 244, .045);
+  --wash-press:   rgba(233, 238, 244, .085);
+  --wash-stripe:  rgba(233, 238, 244, .022);  /* alternating table rows   */
+  --scrim:        rgba(3, 5, 8, .72);         /* behind a modal or sheet  */
+  --glass:        rgba(11, 15, 21, .86);      /* sticky header / tab bar  */
+  --scroll-thumb: #222D3C;
+
+  /* ---------------------------------------------------------------------
+     6 · TYPE
+
+     Three families, each with a job.
+
+     DISPLAY  Space Grotesk — figures and headings that carry weight. Chosen
+              for its single-storey 'a' and squared terminals: it reads drawn
+              rather than typed, which is the whole point of not looking
+              default.
+     BODY     IBM Plex Sans — engineered rather than friendly, and specifically
+              not the sans every dashboard already uses.
+     MONO     IBM Plex Mono — EVERY money figure. Tabular by construction, so
+              a column of amounts aligns on the decimal without a table.
+
+     Noto Sans Bengali rides in the body stack rather than inside a [lang="bn"]
+     wrapper, because a Bangla category name typed into a form appears in the
+     middle of an English sentence and must not fall back mid-line.
+     --------------------------------------------------------------------- */
+  --font-display: 'Space Grotesk', 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-body:    'IBM Plex Sans', 'Noto Sans Bengali', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  /* Type scale · 1.2 minor third from a 16px base. A dense instrument panel
+     needs the small end of the scale to be finely graded and the large end to
+     be short — there are five sizes below body and three above, on purpose. */
+  --fs-10: 0.625rem;   /* 10 — unit suffixes, axis labels          */
+  --fs-11: 0.6875rem;  /* 11 — table micro-labels, overlines       */
+  --fs-12: 0.75rem;    /* 12 — meta, chips, timestamps             */
+  --fs-13: 0.8125rem;  /* 13 — dense table body, secondary rows    */
+  --fs-14: 0.875rem;   /* 14 — the default UI size on mobile       */
+  --fs-16: 1rem;       /* 16 — body, form controls (never smaller: */
+                       /*      iOS zooms an input below 16px)      */
+  --fs-19: 1.1875rem;  /* 19 — card titles                         */
+  --fs-23: 1.4375rem;  /* 23 — section headings                    */
+  --fs-28: 1.75rem;    /* 28 — page title                          */
+  --fs-34: 2.125rem;   /* 34 — the headline balance                */
+  --fs-44: 2.75rem;    /* 44 — the one hero figure per screen      */
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  --lh-flush:  1;      /* big figures — leading would only add air   */
+  --lh-tight:  1.18;
+  --lh-snug:   1.35;
+  --lh-normal: 1.55;
+
+  /* Tracking. Small uppercase labels need positive tracking to stay readable;
+     big figures need negative tracking or they look loose. */
+  --track-label:  0.08em;
+  --track-figure: -0.02em;
+
+  /* ---------------------------------------------------------------------
+     7 · SPACE — hard 8px grid, with 4px available for optical work only
+
+     Nothing is spaced by eye. If a value that is not on this scale is needed,
+     the component is wrong, not the scale.
+     --------------------------------------------------------------------- */
+  --s-1:  0.25rem;   /*  4 — optical nudges, icon-to-label          */
+  --s-2:  0.5rem;    /*  8 — inside a chip, between stacked labels  */
+  --s-3:  0.75rem;   /* 12 — inside a dense row                     */
+  --s-4:  1rem;      /* 16 — the default gutter                     */
+  --s-5:  1.5rem;    /* 24 — between cards                          */
+  --s-6:  2rem;      /* 32 — between sections                       */
+  --s-7:  3rem;      /* 48 — between major regions                  */
+  --s-8:  4rem;      /* 64 — page top and tail                      */
+
+  /* The frame. --gutter is the only horizontal page padding in the product;
+     it widens with the viewport in _layout.css rather than at each call site. */
+  --gutter:      var(--s-4);
+  --page-max:    78rem;    /* 1248px — wider and the tables read as a wall */
+  --reading-max: 44rem;    /* prose and single-column forms                */
+
+  /* ---------------------------------------------------------------------
+     8 · RADIUS
+
+     4 to 10px. Nothing here is pill-shaped except a true chip, and nothing is
+     rounded past 12px: a 24px radius on a data panel is the single loudest
+     tell of a generated interface, and it also wastes the corner, which on a
+     360px screen is real space.
+     --------------------------------------------------------------------- */
+  --r-1: 3px;    /* chips, tags, the tiniest controls */
+  --r-2: 6px;    /* buttons, inputs, table cells      */
+  --r-3: 10px;   /* cards, panels, sheets             */
+  --r-4: 14px;   /* the bottom sheet's top corners    */
+  --r-full: 999px;
+
+  /* ---------------------------------------------------------------------
+     9 · ELEVATION
+
+     Shadow is used for one thing only: saying that a surface is FLOATING
+     above the page and can be dismissed. A card that merely sits on the page
+     gets a hairline, not a shadow.
+     --------------------------------------------------------------------- */
+  --e-0: none;
+  --e-1: 0 1px 2px rgba(0, 0, 0, .40);                                 /* popover */
+  --e-2: 0 8px 24px -6px rgba(0, 0, 0, .55);                           /* menu    */
+  --e-3: 0 24px 56px -12px rgba(0, 0, 0, .70);                         /* sheet   */
+  --e-focus: 0 0 0 2px var(--void), 0 0 0 4px var(--accent);           /* ring    */
+  --e-glow:  0 0 0 1px var(--accent), 0 0 18px -2px var(--accent-glow);
+
+  /* ---------------------------------------------------------------------
+     10 · MOTION
+
+     Durations are short because this is a tool. The curve is the same
+     everywhere so the whole interface feels like one mechanism: a fast start
+     and a long settle, which reads as weight rather than as animation.
+     --------------------------------------------------------------------- */
+  --t-instant: 90ms;
+  --t-fast:    150ms;
+  --t-base:    220ms;
+  --t-slow:    380ms;
+
+  --ease:      cubic-bezier(.22, .61, .36, 1);   /* the default              */
+  --ease-out:  cubic-bezier(.16, 1, .30, 1);     /* things entering          */
+  --ease-in:   cubic-bezier(.55, 0, 1, .45);     /* things leaving           */
+  --ease-snap: cubic-bezier(.34, 1.56, .64, 1);  /* a value ticking over     */
+
+  /* ---------------------------------------------------------------------
+     11 · LAYERS
+
+     Every z-index in the product is one of these. A number written inline is
+     a bug: it will collide eventually and the collision will be intermittent.
+     --------------------------------------------------------------------- */
+  --z-base:     0;
+  --z-sticky:   10;   /* sticky table headers, section bars   */
+  --z-header:   40;
+  --z-tabbar:   45;
+  --z-dropdown: 60;
+  --z-scrim:    70;
+  --z-sheet:    80;
+  --z-toast:    90;
+  --z-lock:    100;   /* the vault lock screen covers all of it */
+
+  /* ---------------------------------------------------------------------
+     12 · FRAME METRICS
+
+     Read by JS as well as CSS (getComputedStyle), so the two never disagree
+     about how tall the header is.
+
+     --tabbar-h is 56px of control plus the home-indicator inset. Without the
+     env() term the last row of a list sits under the bar on every iPhone, and
+     it is invisible in a desktop browser, which is where it gets missed.
+     --------------------------------------------------------------------- */
+  --header-h: 56px;
+  --tabbar-h: 56px;
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+
+  /* Touch targets. 44px is the floor, not the target — a row you tap while
+     walking wants 48. */
+  --tap-min: 44px;
+  --tap:     48px;
+
+  color-scheme: dark;
+}
+
+/* =========================================================================
+   DAY
+
+   Not an inversion. A ramp that is correct on black is not correct on white:
+   the flow hues that glow on --void go muddy on paper, so mint, coral, violet
+   and azure are all re-cut darker and slightly desaturated to hold 4.5:1 as
+   text. The surface steps also reverse direction — on white, a raised surface
+   is the one that stays white while the page around it goes grey.
+   ========================================================================= */
+[data-theme="day"] {
+  --void:        #F2F5F8;
+  --surface:     #FFFFFF;
+  --surface-2:   #FFFFFF;
+  --surface-3:   #EEF2F6;
+  --surface-inv: #0B0F15;
+
+  --line:      #DCE3EA;
+  --line-soft: #EAEFF4;
+  --line-hot:  #B8C4D0;
+
+  --ink:     #0D1219;
+  --ink-2:   #46535F;   /* 8.0:1 on white */
+  --ink-3:   #6B7887;   /* 4.6:1 on white */
+  --ink-4:   #AAB6C2;
+  --ink-inv: #ECF1F6;
+
+  --flow-in:        #0E9E74;
+  --flow-in-ink:    #067A58;
+  --flow-in-wash:   rgba(14, 158, 116, .10);
+
+  --flow-out:       #D6392C;
+  --flow-out-ink:   #B92C20;
+  --flow-out-wash:  rgba(214, 57, 44, .09);
+
+  --flow-hold:      #5A45D6;
+  --flow-hold-ink:  #4A37BC;
+  --flow-hold-wash: rgba(90, 69, 214, .09);
+
+  --flow-biz:       #1668C4;
+  --flow-biz-ink:   #0F55A6;
+  --flow-biz-wash:  rgba(22, 104, 196, .09);
+
+  --flow-move:      #64717F;
+  --flow-move-wash: rgba(100, 113, 127, .08);
+
+  --accent:      #007C93;
+  --accent-ink:  #00697D;
+  --accent-wash: rgba(0, 124, 147, .10);
+  --accent-glow: rgba(0, 124, 147, .22);
+  --on-accent:   #FFFFFF;
+
+  --warn:      #A96A00;
+  --warn-ink:  #8A5600;
+  --warn-wash: rgba(169, 106, 0, .10);
+
+  --danger:      #C62828;
+  --danger-ink:  #A81E1E;
+  --danger-wash: rgba(198, 40, 40, .09);
+
+  --vault:      #8A6A15;
+  --vault-ink:  #745810;
+  --vault-wash: rgba(138, 106, 21, .10);
+
+  --need-1: #0E9E74;
+  --need-2: #1668C4;
+  --need-3: #A96A00;
+  --need-4: #D6392C;
+
+  --wash-hover:  rgba(13, 18, 25, .04);
+  --wash-press:  rgba(13, 18, 25, .08);
+  --wash-stripe: rgba(13, 18, 25, .02);
+  --scrim:       rgba(13, 18, 25, .40);
+  --glass:       rgba(255, 255, 255, .88);
+  --scroll-thumb: #C3CDD7;
+
+  /* On white the hairline can no longer carry a card on its own, so day mode
+     is the only place a resting shadow is allowed — and it is kept to one
+     step so it never becomes the look. */
+  --e-1: 0 1px 2px rgba(13, 18, 25, .07);
+  --e-2: 0 6px 18px -6px rgba(13, 18, 25, .16);
+  --e-3: 0 20px 44px -12px rgba(13, 18, 25, .22);
+
+  color-scheme: light;
+}
+
+/* Following the device when the user has expressed no preference. The
+   attribute above always wins, in both directions: someone who chose night on
+   a phone set to light must get night, so this is scoped to :not([data-theme]).
+   ========================================================================= */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --void:        #F2F5F8;
+    --surface:     #FFFFFF;
+    --surface-2:   #FFFFFF;
+    --surface-3:   #EEF2F6;
+    --surface-inv: #0B0F15;
+    --line:        #DCE3EA;
+    --line-soft:   #EAEFF4;
+    --line-hot:    #B8C4D0;
+    --ink:         #0D1219;
+    --ink-2:       #46535F;
+    --ink-3:       #6B7887;
+    --ink-4:       #AAB6C2;
+    --ink-inv:     #ECF1F6;
+    --flow-in:        #0E9E74;
+    --flow-in-ink:    #067A58;
+    --flow-in-wash:   rgba(14, 158, 116, .10);
+    --flow-out:       #D6392C;
+    --flow-out-ink:   #B92C20;
+    --flow-out-wash:  rgba(214, 57, 44, .09);
+    --flow-hold:      #5A45D6;
+    --flow-hold-ink:  #4A37BC;
+    --flow-hold-wash: rgba(90, 69, 214, .09);
+    --flow-biz:       #1668C4;
+    --flow-biz-ink:   #0F55A6;
+    --flow-biz-wash:  rgba(22, 104, 196, .09);
+    --flow-move:      #64717F;
+    --flow-move-wash: rgba(100, 113, 127, .08);
+    --accent:      #007C93;
+    --accent-ink:  #00697D;
+    --accent-wash: rgba(0, 124, 147, .10);
+    --accent-glow: rgba(0, 124, 147, .22);
+    --on-accent:   #FFFFFF;
+    --warn:      #A96A00;
+    --warn-ink:  #8A5600;
+    --warn-wash: rgba(169, 106, 0, .10);
+    --danger:      #C62828;
+    --danger-ink:  #A81E1E;
+    --danger-wash: rgba(198, 40, 40, .09);
+    --vault:      #8A6A15;
+    --vault-ink:  #745810;
+    --vault-wash: rgba(138, 106, 21, .10);
+    --need-1: #0E9E74;
+    --need-2: #1668C4;
+    --need-3: #A96A00;
+    --need-4: #D6392C;
+    --wash-hover:  rgba(13, 18, 25, .04);
+    --wash-press:  rgba(13, 18, 25, .08);
+    --wash-stripe: rgba(13, 18, 25, .02);
+    --scrim:       rgba(13, 18, 25, .40);
+    --glass:       rgba(255, 255, 255, .88);
+    --scroll-thumb: #C3CDD7;
+    --e-1: 0 1px 2px rgba(13, 18, 25, .07);
+    --e-2: 0 6px 18px -6px rgba(13, 18, 25, .16);
+    --e-3: 0 20px 44px -12px rgba(13, 18, 25, .22);
+    color-scheme: light;
+  }
+}
+
+/* =========================================================================
+   Density
+
+   The same screen, tighter, for someone who reads a hundred rows a day on a
+   tablet. It changes the RHYTHM, never the tap target: --tap stays 44px
+   minimum because a finger does not get smaller when the table does.
+   ========================================================================= */
+[data-density="compact"] {
+  --s-3: 0.5rem;
+  --s-4: 0.75rem;
+  --s-5: 1rem;
+  --s-6: 1.5rem;
+  --fs-14: 0.8125rem;
+  --tap: 44px;
+}
+
+/* =========================================================================
+   Reduced motion
+
+   Zeroing the duration tokens turns off every transition in the product from
+   one place, because nothing anywhere writes its own duration. Kept at 1ms
+   rather than 0 so transitionend still fires — several components wait on it
+   to unmount, and at 0 they would wait forever.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-instant: 1ms;
+    --t-fast:    1ms;
+    --t-base:    1ms;
+    --t-slow:    1ms;
+  }
+}

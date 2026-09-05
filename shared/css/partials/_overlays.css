@@ -1,0 +1,261 @@
+/* =========================================================================
+   Hisab · Overlays
+   Bottom sheet, dialog, menu, toast.
+
+   All of them are built on <dialog>. The reason is not brevity: the top layer
+   gives a real focus trap, an Escape handler, inert-ing of the page behind,
+   and correct stacking regardless of what transform or filter an ancestor
+   has — a fixed-position div inside a transformed parent is positioned
+   against that parent, not the viewport, which is the bug that eventually
+   breaks every hand-rolled modal.
+   ========================================================================= */
+
+/* ---- The shared backdrop ----------------------------------------------- */
+.sheet::backdrop,
+.dialog::backdrop {
+  background: var(--scrim);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: hisab-fade-in var(--t-base) var(--ease) both;
+}
+
+/* ---- Bottom sheet -------------------------------------------------------
+   The primary way anything is created or edited on a phone. It rises from the
+   bottom, is dragged down to dismiss, and is capped so the page behind stays
+   partly visible — a full-screen sheet reads as a navigation and loses the
+   sense that the list is still there underneath.
+   ------------------------------------------------------------------------ */
+.sheet {
+  /* A <dialog> is width:fit-content and centred by default; this pins it to
+     the bottom edge across the full width. */
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  max-height: min(92dvh, 46rem);
+  padding: 0;
+
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: var(--r-4) var(--r-4) 0 0;
+  box-shadow: var(--e-3);
+  color: var(--ink);
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet[open] { animation: hisab-sheet-in var(--t-base) var(--ease-out) both; }
+
+/* Set by sheet.js for the duration of the closing animation, because a
+   <dialog> stops rendering the instant close() is called and would otherwise
+   vanish without one. */
+.sheet.is-closing { animation: hisab-sheet-out var(--t-fast) var(--ease-in) both; }
+.sheet.is-closing::backdrop { animation: hisab-fade-out var(--t-fast) var(--ease-in) both; }
+
+/* The grab handle. Decorative — the real dismiss controls are the Escape key,
+   the backdrop, and the close button — so it is hidden from assistive tech. */
+.sheet__grip {
+  flex: none;
+  padding: var(--s-2) 0 var(--s-1);
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;   /* the drag handler owns the gesture, not the scroller */
+}
+
+.sheet__grip::before {
+  content: '';
+  width: 36px;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: var(--line-hot);
+}
+
+.sheet__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4) var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+  min-width: 0;
+}
+
+.sheet__title { font-size: var(--fs-16); font-weight: var(--fw-semibold); min-width: 0; }
+
+.sheet__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;   /* scrolling to the end must not scroll the page behind */
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-height: 0;                  /* a flex child will not scroll without it */
+}
+
+/* While being dragged, the sheet follows the finger with no transition — a
+   transition here makes the drag feel like it is on elastic. */
+.sheet.is-dragging { transition: none; transform: translateY(var(--drag-y, 0px)); }
+
+@media (min-width: 700px) {
+  /* On a wide screen the sheet becomes a centred dialog: rising from the
+     bottom edge of a 1440px display is a long way for the eye to travel. */
+  .sheet {
+    inset: 0;
+    margin: auto;
+    max-height: min(86dvh, 52rem);
+    border-radius: var(--r-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .sheet[open] { animation: hisab-dialog-in var(--t-base) var(--ease-out) both; }
+  .sheet__grip { display: none; }
+}
+
+/* ---- Dialog (confirm / alert) ------------------------------------------
+   Small, centred, never dismissible by the backdrop when it is destructive —
+   confirming a delete must be a deliberate act, and a stray tap outside is
+   not one.
+   ------------------------------------------------------------------------ */
+.dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(26rem, calc(100vw - var(--s-6)));
+  max-height: 80dvh;
+  padding: var(--s-5);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  box-shadow: var(--e-3);
+  color: var(--ink);
+}
+
+.dialog[open] { animation: hisab-dialog-in var(--t-base) var(--ease-out) both; }
+.dialog__title { font-size: var(--fs-19); margin-bottom: var(--s-2); }
+.dialog__text { font-size: var(--fs-14); color: var(--ink-2); line-height: var(--lh-normal); }
+.dialog__actions { display: flex; gap: var(--s-3); margin-top: var(--s-5); }
+.dialog__actions > .btn { flex: 1 1 auto; }
+
+/* ---- Menu / popover ----------------------------------------------------
+   Row actions, the account switcher, the sort picker. Anchored by JS, which
+   sets --menu-top / --menu-left after measuring — including the flip when the
+   menu would otherwise open past the bottom of the viewport.
+   ------------------------------------------------------------------------ */
+.menu {
+  position: fixed;
+  top: var(--menu-top, 0);
+  left: var(--menu-left, 0);
+  z-index: var(--z-dropdown);
+  min-width: 11rem;
+  max-width: min(20rem, calc(100vw - var(--s-4)));
+  padding: var(--s-1);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  box-shadow: var(--e-2);
+  animation: hisab-menu-in var(--t-fast) var(--ease-out) both;
+  /* transform-origin follows the flip, so a menu that opened upward animates
+     from its bottom edge instead of appearing to fall out of the trigger. */
+  transform-origin: var(--menu-origin, top);
+}
+
+.menu[hidden] { display: none; }
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 40px;
+  padding: var(--s-2) var(--s-3);
+  background: none;
+  border: 0;
+  border-radius: var(--r-1);
+  color: var(--ink-2);
+  font-size: var(--fs-14);
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.menu__item:hover { background: var(--wash-hover); color: var(--ink); }
+.menu__item--danger { color: var(--flow-out-ink); }
+.menu__item--danger:hover { background: var(--flow-out-wash); }
+.menu__sep { height: 1px; background: var(--line-soft); margin: var(--s-1) 0; }
+
+/* ---- Toast -------------------------------------------------------------
+   Above the tab bar, never over it. Announced through a live region in the
+   markup, so a confirmation is not silent for a screen-reader user.
+   ------------------------------------------------------------------------ */
+.toast-stack {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: calc(var(--tabbar-h) + var(--safe-bottom) + var(--s-2));
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding-inline: var(--gutter);
+  pointer-events: none;   /* the stack must not block the list underneath */
+}
+
+@media (min-width: 900px) {
+  .toast-stack { inset-block-end: var(--s-5); align-items: flex-end; padding-inline: var(--s-5); }
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  max-width: 28rem;
+  padding: var(--s-3);
+  background: var(--surface-3);
+  border: 1px solid var(--line-hot);
+  border-radius: var(--r-2);
+  box-shadow: var(--e-2);
+  font-size: var(--fs-13);
+  animation: hisab-toast-in var(--t-base) var(--ease-out) both;
+}
+
+.toast.is-leaving { animation: hisab-toast-out var(--t-fast) var(--ease-in) both; }
+.toast__glyph { flex: none; color: var(--ink-3); }
+.toast__body { flex: 1 1 auto; min-width: 0; }
+.toast__action { flex: none; }
+
+.toast--good { border-color: var(--flow-in); }
+.toast--good .toast__glyph { color: var(--flow-in-ink); }
+.toast--bad  { border-color: var(--flow-out); }
+.toast--bad  .toast__glyph { color: var(--flow-out-ink); }
+.toast--warn { border-color: var(--warn); }
+.toast--warn .toast__glyph { color: var(--warn-ink); }
+
+/* ---- Lock screen -------------------------------------------------------
+   The vault's cover. Above everything including the header, because a locked
+   vault must not be navigable around.
+   ------------------------------------------------------------------------ */
+.lock {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-lock);
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: var(--void);
+  /* No blur here. A blurred screenshot of a secret is still a screenshot of a
+     secret, and iOS renders the app switcher's thumbnail from the live view —
+     the content is REPLACED, not obscured. */
+}
+
+.lock[hidden] { display: none; }
+.lock__panel { width: min(24rem, 100%); text-align: center; }

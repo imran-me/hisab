@@ -1,0 +1,245 @@
+/* =========================================================================
+   Hisab · Base
+   Reset, element defaults, and the handful of global behaviours that are not
+   components. Everything here reads tokens; nothing here invents a value.
+   ========================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Margin is opted into, never inherited. Every vertical rhythm in the product
+   comes from a layout primitive (.stack, .grid) so that two components placed
+   next to each other cannot produce an unpredictable gap from margin
+   collapsing. */
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;   /* iOS inflates text in landscape without it */
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* The header is sticky, so an in-page anchor would otherwise land with its
+     heading hidden underneath it. */
+  scroll-padding-top: calc(var(--header-h) + var(--safe-top) + var(--s-4));
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  min-height: 100%;
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-16);
+  line-height: var(--lh-normal);
+  font-weight: var(--fw-regular);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Discretionary ligatures off: 'ffi' and friends belong in prose, not in an
+     account name that a person is scanning for a difference of one letter. */
+  font-variant-ligatures: common-ligatures;
+  /* The tab bar is fixed, so the last row of every list needs clearance or it
+     is permanently unreachable. Applied here rather than per page so a new
+     page cannot forget it. */
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom));
+  overscroll-behavior-y: none;   /* no rubber-band bounce revealing the void */
+}
+
+@media (min-width: 900px) {
+  /* The tab bar becomes a sidebar at this width, so the bottom clearance is
+     no longer earning anything. */
+  body { padding-bottom: 0; }
+}
+
+/* ---- Media --------------------------------------------------------------
+   A replaced element defaults to inline, which leaves a descender gap under
+   every image and is the source of the classic "4px I cannot find". */
+img, svg, video, canvas {
+  display: block;
+  max-width: 100%;
+}
+
+img { height: auto; }
+
+/* ---- Form controls ------------------------------------------------------
+   Fonts do not inherit into form controls, which is why an un-styled <select>
+   is the one element on a page still set in the system font. */
+input, button, textarea, select {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 6rem;
+}
+
+/* Safari renders a native search input with an inset shadow and a rounded cap
+   that ignores border-radius entirely. */
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Chrome's autofill paints its own background over the field and cannot be
+   overridden by background-color at all. An inset shadow the size of the box
+   is the only way to repaint it, and the long transition delay stops the
+   yellow flashing through on the way in. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink);
+  -webkit-box-shadow: 0 0 0 100px var(--surface-3) inset;
+  caret-color: var(--ink);
+  transition: background-color 100000s ease 0s;
+}
+
+/* ---- Text ---------------------------------------------------------------
+   Long headings and unbroken tokens (an IBAN, a card number, a URL in a vault
+   entry) are the two things that push a 360px layout sideways. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-figure);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+p, li, dd, dt { text-wrap: pretty; }
+
+a {
+  color: var(--accent-ink);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: color var(--t-fast) var(--ease);
+}
+
+a:hover { color: var(--accent); }
+
+/* A link that is a button, a card or a row is not underlined — the affordance
+   is the surface, and an underline through a table row is noise. */
+a.u-plain,
+a:where(.btn, .card, .row-link, .tab, .nav-link) {
+  text-decoration: none;
+  color: inherit;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: var(--s-5) 0;
+}
+
+/* ---- Focus --------------------------------------------------------------
+   :focus-visible only, so a mouse click on a card does not leave a ring, but
+   every keyboard path still shows one. The ring is drawn with box-shadow
+   rather than outline so it follows border-radius on every browser. */
+:focus { outline: none; }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--e-focus);
+  border-radius: var(--r-2);
+  /* The ring is drawn outside the element; without this it is clipped by any
+     ancestor with overflow hidden, which is most scrollable regions. */
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- Selection ---------------------------------------------------------- */
+::selection {
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+
+/* ---- Scrollbars ---------------------------------------------------------
+   Thin and quiet, but never hidden: a horizontally scrollable table with no
+   visible scrollbar is a table whose remaining columns nobody finds. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: var(--r-full);
+  /* A transparent border plus background-clip gives the thumb breathing room
+     inside the track without a second element. */
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover { background-color: var(--line-hot); background-clip: content-box; }
+
+/* ---- Accessibility helpers --------------------------------------------- */
+
+/* Removed from the page visually, still read by a screen reader. clip-path
+   alone is not enough on older WebKit, which is why the clip rect is kept. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The skip link is the first focusable thing on every page. It is invisible
+   until focused, and it must sit above the sticky header when it appears. */
+.skip-link {
+  position: fixed;
+  top: var(--s-2);
+  left: var(--s-2);
+  z-index: calc(var(--z-lock) + 1);
+  padding: var(--s-2) var(--s-4);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: var(--r-2);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+  transform: translateY(calc(-100% - var(--s-4)));
+  transition: transform var(--t-fast) var(--ease-out);
+}
+
+.skip-link:focus-visible { transform: translateY(0); }
+
+/* Set on <body> while a sheet, modal or menu owns the screen. Fixing the body
+   is the only method that actually stops iOS Safari scrolling the page behind
+   an overlay; overflow:hidden alone does not. The scroll position is restored
+   by JS, which is why the top offset is a custom property. */
+body.is-locked {
+  position: fixed;
+  inset: 0 0 auto 0;
+  width: 100%;
+  top: var(--scroll-lock-top, 0);
+  overflow: hidden;
+}
+
+/* Anything that must not print — the whole vault, for a start. */
+@media print {
+  .no-print, .app-header, .tabbar, .sheet, .toast-stack { display: none !important; }
+  body { background: #fff; color: #000; padding: 0; }
+}

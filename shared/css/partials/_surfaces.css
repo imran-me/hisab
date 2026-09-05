@@ -1,0 +1,250 @@
+/* =========================================================================
+   Hisab · Surfaces
+   Cards, panels, list rows, empty and loading states. A surface that sits on
+   the page gets a hairline; only a surface that FLOATS above it gets a shadow.
+   ========================================================================= */
+
+/* ---- Card / panel ------------------------------------------------------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  padding: var(--s-4);
+  min-width: 0;   /* so a wide child truncates instead of widening the card */
+}
+
+.card--flush { padding: 0; overflow: hidden; }   /* a card that is all table or all list */
+.card--tight { padding: var(--s-3); }
+.card--roomy { padding: var(--s-5); }
+.card--sunken { background: var(--surface-3); border-color: var(--line-soft); }
+
+/* An interactive card. The lift is 1px and the border brightens — no scale,
+   no shadow bloom. On a phone :hover never fires, so the pressed state is
+   what actually communicates, and it is the one tuned first. */
+.card--action {
+  display: block;
+  width: 100%;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), transform var(--t-instant) var(--ease);
+}
+
+.card--action:hover { border-color: var(--line-hot); background: var(--surface-2); }
+.card--action:active { transform: translateY(1px); background: var(--surface-3); }
+
+/* The accent edge. A 2px inline-start border in a flow colour, used to say
+   which book or which flow a card belongs to at a glance. Drawn with a
+   pseudo-element so it does not fight the card's own 1px border radius. */
+.card--edge { position: relative; padding-inline-start: calc(var(--s-4) + 3px); }
+
+.card--edge::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  border-start-start-radius: var(--r-3);
+  border-end-start-radius: var(--r-3);
+  background: var(--edge-color, var(--line-hot));
+}
+
+.card--edge-in    { --edge-color: var(--flow-in); }
+.card--edge-out   { --edge-color: var(--flow-out); }
+.card--edge-hold  { --edge-color: var(--flow-hold); }
+.card--edge-biz   { --edge-color: var(--flow-biz); }
+.card--edge-vault { --edge-color: var(--vault); }
+
+.card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-3);
+  min-width: 0;
+}
+
+.card__title { font-size: var(--fs-14); font-weight: var(--fw-semibold); min-width: 0; }
+.card__body  { min-width: 0; }
+.card__foot  { margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--line-soft); }
+
+/* ---- List --------------------------------------------------------------
+   The transaction list, the account list, the vault list. Rows are separated
+   by a hairline drawn between them — not a border on every row, which would
+   double up at the join and put a stray rule under the last one.
+
+   The list is a real <ul>; a row is a <li> containing a <button> or <a>. A
+   div soup here loses keyboard navigation and the "list, 12 items"
+   announcement, and this list is the primary way the product is read.
+   ------------------------------------------------------------------------ */
+.list { list-style: none; padding: 0; margin: 0; min-width: 0; }
+.list > li + li { border-top: 1px solid var(--line-soft); }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-3) var(--s-4);
+  background: transparent;
+  border: 0;
+  color: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  min-width: 0;
+  transition: background-color var(--t-fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.row:hover  { background: var(--wash-hover); }
+.row:active { background: var(--wash-press); }
+
+/* A row that is not clickable — a summary line, a total. Same metrics, no
+   affordance, so columns still line up with the rows above it. */
+.row--static { cursor: default; }
+.row--static:hover { background: transparent; }
+
+.row--stripe:nth-child(even) { background: var(--wash-stripe); }
+
+/* The leading glyph. A square with a wash, never a circle: circles read as
+   avatars, and none of these are people. */
+.row__glyph {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-2);
+  display: grid;
+  place-items: center;
+  background: var(--surface-3);
+  color: var(--ink-2);
+  border: 1px solid var(--line-soft);
+}
+
+.row__glyph--in    { background: var(--flow-in-wash);   color: var(--flow-in-ink);   border-color: transparent; }
+.row__glyph--out   { background: var(--flow-out-wash);  color: var(--flow-out-ink);  border-color: transparent; }
+.row__glyph--hold  { background: var(--flow-hold-wash); color: var(--flow-hold-ink); border-color: transparent; }
+.row__glyph--move  { background: var(--flow-move-wash); color: var(--flow-move);     border-color: transparent; }
+.row__glyph--biz   { background: var(--flow-biz-wash);  color: var(--flow-biz-ink);  border-color: transparent; }
+.row__glyph--vault { background: var(--vault-wash);     color: var(--vault-ink);     border-color: transparent; }
+
+/* The middle column. flex:1 with min-width:0 — the min-width is what lets the
+   title truncate; without it the amount on the right is pushed off screen. */
+.row__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.row__title { font-size: var(--fs-14); font-weight: var(--fw-medium); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row__sub { font-size: var(--fs-12); color: var(--ink-3); display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.row__sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The trailing column — the amount, and under it the running balance. Right
+   aligned and never allowed to shrink. */
+.row__end { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+
+/* A chevron on a row that navigates. Hidden from assistive tech — the link
+   text already says where it goes. */
+.row__chev { flex: none; color: var(--ink-4); transition: transform var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.row:hover .row__chev { color: var(--ink-2); transform: translateX(2px); }
+
+/* ---- Day / group heading inside a list --------------------------------
+   Sticky, so while scrolling a month of transactions the date you are looking
+   at stays visible at the top of the list. */
+.list-group-head {
+  position: sticky;
+  top: calc(var(--header-h) + var(--safe-top));
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  background: var(--surface-2);
+  border-block: 1px solid var(--line-soft);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---- Empty state -------------------------------------------------------
+   Every empty state names the thing that is missing AND offers the action
+   that fills it. An empty state with no action is a dead end, and a ledger
+   full of dead ends is why the last expense tracker got abandoned.
+   ------------------------------------------------------------------------ */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--s-3);
+  padding: var(--s-7) var(--s-4);
+  color: var(--ink-3);
+}
+
+.empty__glyph {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-3);
+  display: grid;
+  place-items: center;
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  color: var(--ink-4);
+}
+
+.empty__title { font-size: var(--fs-16); font-weight: var(--fw-semibold); color: var(--ink-2); }
+.empty__text  { font-size: var(--fs-13); max-width: 26rem; line-height: var(--lh-normal); }
+
+/* ---- Skeleton ----------------------------------------------------------
+   Shown while a module's api.js is resolving. It mirrors the SHAPE of the
+   real row — glyph, two lines, an amount — so the layout does not jump when
+   the data lands. A spinner in the middle of the screen would not.
+   ------------------------------------------------------------------------ */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-3) 0%, var(--surface-2) 40%, var(--surface-3) 80%);
+  background-size: 300% 100%;
+  border-radius: var(--r-1);
+  animation: hisab-shimmer 1.4s var(--ease) infinite;
+  color: transparent !important;
+  user-select: none;
+  pointer-events: none;
+}
+
+.skeleton--text  { height: 0.7em; width: 100%; }
+.skeleton--line  { height: 0.7em; width: 60%; }
+.skeleton--glyph { width: 38px; height: 38px; border-radius: var(--r-2); }
+.skeleton--fig   { height: 1em; width: 5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background: var(--surface-3); }
+}
+
+/* ---- Callout -----------------------------------------------------------
+   An insight, a warning, a note. Four tones, tied to the same meanings as
+   everywhere else.
+   ------------------------------------------------------------------------ */
+.callout {
+  display: flex;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+  font-size: var(--fs-13);
+  line-height: var(--lh-snug);
+  min-width: 0;
+}
+
+.callout__glyph { flex: none; margin-top: 1px; color: var(--ink-3); }
+.callout__body  { min-width: 0; }
+.callout__body strong { font-weight: var(--fw-semibold); }
+
+.callout--good { background: var(--flow-in-wash);   border-color: transparent; }
+.callout--good  .callout__glyph { color: var(--flow-in-ink); }
+.callout--warn { background: var(--warn-wash);      border-color: transparent; }
+.callout--warn  .callout__glyph { color: var(--warn-ink); }
+.callout--bad  { background: var(--flow-out-wash);  border-color: transparent; }
+.callout--bad   .callout__glyph { color: var(--flow-out-ink); }
+.callout--info { background: var(--flow-biz-wash);  border-color: transparent; }
+.callout--info  .callout__glyph { color: var(--flow-biz-ink); }
+.callout--hold { background: var(--flow-hold-wash); border-color: transparent; }
+.callout--hold  .callout__glyph { color: var(--flow-hold-ink); }

@@ -1,0 +1,343 @@
+/* =========================================================================
+   Hisab · Forms
+   Entering a transaction on a phone with one hand is the most repeated action
+   in this product, so the form controls get more care than anything else in
+   the stylesheet.
+   ========================================================================= */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* Required is marked on the label, not by placeholder text or by colour
+   alone — colour is not available to every reader, and a placeholder
+   disappears the moment typing starts. */
+.field__req {
+  color: var(--flow-out-ink);
+  font-size: var(--fs-12);
+  line-height: 1;
+}
+
+.field__hint  { font-size: var(--fs-12); color: var(--ink-3); }
+.field__error { font-size: var(--fs-12); color: var(--flow-out-ink); display: flex; gap: var(--s-1); align-items: flex-start; }
+
+/* ---- The control -------------------------------------------------------- */
+.input,
+.select,
+.textarea {
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-2) var(--s-3);
+
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  color: var(--ink);
+
+  /* 16px exactly, and never smaller. iOS Safari zooms the whole viewport when
+     a focused input's font-size is below 16px, and it does not zoom back out
+     — the page is left scaled and scrolled sideways for the rest of the
+     session. This one value is why --fs-16 is the form base everywhere. */
+  font-size: var(--fs-16);
+  line-height: var(--lh-snug);
+
+  transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.input::placeholder,
+.textarea::placeholder { color: var(--ink-4); }
+
+.input:hover:not(:disabled),
+.select:hover:not(:disabled),
+.textarea:hover:not(:disabled) { border-color: var(--line-hot); }
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* aria-invalid is the source of truth for the error state — not a class — so
+   the styling and the screen-reader announcement can never disagree. */
+.input[aria-invalid='true'],
+.select[aria-invalid='true'],
+.textarea[aria-invalid='true'] {
+  border-color: var(--flow-out);
+  background: var(--flow-out-wash);
+}
+
+/* ---- Select -------------------------------------------------------------
+   The native chevron is removed by appearance:none above; this draws one that
+   matches the icon set. Inline SVG in a data URI rather than a sprite use,
+   because a background-image cannot reference a sprite symbol.
+
+   The arrow colour is baked into the data URI and therefore cannot follow the
+   theme token — the two hexes below are the only hardcoded colours in the
+   stylesheet, and they are duplicated in the [data-theme] block for that
+   reason. */
+.select {
+  padding-inline-end: var(--s-6);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%236B7A8B' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--s-3) center;
+  cursor: pointer;
+}
+
+[data-theme='day'] .select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%236B7887' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+}
+
+/* The option list is drawn by the OS and inherits almost nothing. Setting the
+   background here is what stops a dark-theme select from rendering white
+   text on white in Firefox on Windows. */
+.select option {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* ---- Amount input -------------------------------------------------------
+   The most important control in the app. Mono, tabular, right-aligned, large,
+   with the currency code sitting inside the field rather than beside it.
+
+   inputmode="decimal" (in the markup) gives a phone the numeric pad with a
+   decimal point — type="number" is deliberately NOT used: it strips leading
+   zeros while typing, it accepts 'e' and '+' as valid characters, and its
+   spinner arrows are a target you hit by accident on a touchscreen. */
+.amount-field {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface-3);
+  transition: border-color var(--t-fast) var(--ease);
+}
+
+.amount-field:focus-within { border-color: var(--accent); background: var(--surface-2); }
+
+.amount-field__currency {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding-inline: var(--s-3);
+  border-inline-end: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.amount-field__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: var(--s-2) var(--s-3);
+  text-align: end;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-size: var(--fs-28);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--track-figure);
+  color: var(--ink);
+  min-height: 60px;
+}
+
+.amount-field__input:focus { outline: none; box-shadow: none; }
+
+/* Directional tint: the field itself says whether this is money in or money
+   out, so the person entering it cannot mistake one for the other while
+   moving fast. Driven by a data attribute on the form, set by the type
+   selector. */
+[data-flow='income']   .amount-field__input { color: var(--flow-in-ink); }
+[data-flow='expense']  .amount-field__input { color: var(--flow-out-ink); }
+[data-flow='deposit']  .amount-field__input { color: var(--flow-hold-ink); }
+[data-flow='transfer'] .amount-field__input { color: var(--flow-move); }
+
+/* ---- Input with a leading icon ----------------------------------------- */
+.input-wrap { position: relative; display: flex; align-items: center; min-width: 0; }
+
+.input-wrap > .icon {
+  position: absolute;
+  inset-inline-start: var(--s-3);
+  color: var(--ink-3);
+  pointer-events: none;   /* the icon must not eat the tap that focuses the field */
+}
+
+.input-wrap > .input { padding-inline-start: calc(var(--s-6) + var(--s-1)); }
+
+/* A trailing button inside the field — clear, reveal, scan. */
+.input-wrap > .input-action {
+  position: absolute;
+  inset-inline-end: var(--s-1);
+}
+
+.input-wrap:has(> .input-action) > .input { padding-inline-end: calc(var(--tap-min) + var(--s-1)); }
+
+/* ---- Checkbox and radio -------------------------------------------------
+   Drawn rather than native. The reason is not taste: a native checkbox under
+   `color-scheme: dark` paints itself near-black on a near-black surface in
+   Chrome and is genuinely invisible. */
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  min-height: var(--tap-min);
+  padding-block: var(--s-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.check__box {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;                 /* optical alignment to the first text line */
+  border: 1.5px solid var(--line-hot);
+  border-radius: var(--r-1);
+  background: var(--surface-3);
+  display: grid;
+  place-items: center;
+  transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+
+.check__box--radio { border-radius: var(--r-full); }
+
+.check input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+.check input:checked + .check__box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* The tick is a clipped pseudo-element rather than an SVG, so it inherits the
+   button colour and needs no second file. */
+.check input:checked + .check__box::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid var(--on-accent);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+
+.check__box--radio::after { border: 0 !important; width: 8px !important; height: 8px !important; border-radius: var(--r-full); background: var(--on-accent); transform: none !important; }
+
+.check input:focus-visible + .check__box { box-shadow: var(--e-focus); }
+.check__text { font-size: var(--fs-14); line-height: var(--lh-snug); }
+
+/* ---- Switch ------------------------------------------------------------- */
+.switch { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); min-height: var(--tap); cursor: pointer; }
+
+.switch__track {
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  border: 1px solid var(--line-hot);
+  position: relative;
+  transition: background-color var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
+}
+
+.switch__track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-full);
+  background: var(--ink-3);
+  transition: transform var(--t-base) var(--ease-snap), background-color var(--t-base) var(--ease);
+}
+
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch input:checked + .switch__track { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + .switch__track::after { transform: translateX(18px); background: var(--on-accent); }
+.switch input:focus-visible + .switch__track { box-shadow: var(--e-focus); }
+
+/* ---- Choice chips -------------------------------------------------------
+   Radio buttons that look like chips — the transaction type picker, the
+   necessity band, the account filter. A real radio group underneath, so
+   arrow keys work and a screen reader announces "2 of 4". */
+.choices { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+.choice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 40px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease);
+}
+
+.choice input { position: absolute; opacity: 0; width: 0; height: 0; }
+.choice:hover { border-color: var(--line-hot); color: var(--ink); }
+.choice:has(input:focus-visible) { box-shadow: var(--e-focus); }
+
+.choice:has(input:checked) {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Per-flow colouring, so the type picker is colour-coded to the same four
+   meanings used everywhere else. */
+.choice--in:has(input:checked)   { background: var(--flow-in-wash);   border-color: var(--flow-in);   color: var(--flow-in-ink); }
+.choice--out:has(input:checked)  { background: var(--flow-out-wash);  border-color: var(--flow-out);  color: var(--flow-out-ink); }
+.choice--hold:has(input:checked) { background: var(--flow-hold-wash); border-color: var(--flow-hold); color: var(--flow-hold-ink); }
+.choice--move:has(input:checked) { background: var(--flow-move-wash); border-color: var(--flow-move); color: var(--ink-2); }
+
+/* ---- Fieldset ----------------------------------------------------------- */
+.fieldset { border: 0; padding: 0; min-width: 0; }
+.fieldset > legend { padding: 0; margin-bottom: var(--s-2); }
+
+/* ---- Form footer --------------------------------------------------------
+   Sticky at the bottom of a sheet so the save button is reachable without
+   scrolling past a long form. */
+.form-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: var(--s-3);
+  padding-top: var(--s-4);
+  padding-bottom: calc(var(--s-4) + var(--safe-bottom));
+  margin-top: auto;
+  background: linear-gradient(to bottom, transparent, var(--surface-2) var(--s-4));
+}
+
+.form-actions > .btn { flex: 1 1 auto; }
+.form-actions > .btn--keep { flex: none; }
