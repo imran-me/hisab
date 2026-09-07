@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+# =============================================================================
+# Hisab · self-contained deploy, driven by cron
+#
+#   bash deploy.sh            deploy if GitHub has moved
+#   bash deploy.sh --force    deploy even if it has not
+#   bash deploy.sh --status   print what is deployed, change nothing
+#
+# Hostinger's hPanel has a Git integration and a webhook. This exists instead
+# because a cron job is the one mechanism available on every plan: it needs no
+# deploy key, no webhook reachable from GitHub, and no button pressed by a
+# human. It pulls rather than waiting to be pushed to.
+#
+# THE SOURCE TREE IS NEVER THE DOCUMENT ROOT.
+#
+# Cloning straight into public_html/hisab is the obvious arrangement and the
+# wrong one: it puts .git inside the web root, where a single missing .htaccess
+# exposes the whole history, and it publishes tools/ and docs/, which are not
+# for the web. So the checkout lives one level ABOVE the web root and only the
+# files the app actually owns are copied down - the same shape Phase 2 uses for
+# the Laravel layer.
+#
+#   domains/gulfrabit.com/
+#   |-- hisab-deploy/           <- here. Not reachable over HTTP.
+#   |   |-- deploy.sh           this file
+#   |   |-- src/                the checkout
+#   |   |-- state               the deployed commit
+#   |   `-- deploy.log
+#   `-- public_html/hisab/      <- the document root. Only OWNED is written.
+#
+# Anything in the document root that is not in OWNED is left alone, which is
+# deliberate: Phase 2's api/ directory, .well-known/, and anything Hostinger
+# puts there must survive a deploy.
+# =============================================================================
+set -uo pipefail
+
+REPO_URL="https://github.com/imran-me/hisab.git"
+REPO_SLUG="imran-me/hisab"
+BRANCH="main"
+
+# Everything resolves from this file's own location, so moving the whole
+# hisab-deploy directory does not mean editing a path.
+HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SRC="$HERE/src"
+STATE="$HERE/state"
+LOG="$HERE/deploy.log"
+LOCK="$HERE/.lock"
+
+# The document root. Overridable so this can be pointed at a staging copy.
+DOCROOT="${HISAB_DOCROOT:-$(cd -- "$HERE/.." && pwd)/public_html/hisab}"
+
+# What this app owns in the document root. A deploy replaces exactly these and
+# touches nothing else. Adding a top-level file to the repo means adding it
+# here, and that is on purpose: publishing into a live web root should be an
+# explicit list rather than whatever happens to be lying in the tree.
+OWNED_FILES=(index.html 404.html .htaccess site.webmanifest)
+OWNED_DIRS=(assets shared modules)
+
+LOCKED=""
+
+log() { printf '%s  %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG" 2>/dev/null; }
+say() { printf '%s\n' "$*"; log "$*"; }
+release() { [ -n "$LOCKED" ] && rmdir "$LOCK" 2>/dev/null; return 0; }
+die() { printf 'ERROR: %s\n' "$*" >&2; log "ERROR: $*"; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# --- one run at a time -------------------------------------------------------
+# mkdir is atomic on every filesystem that matters; a lock FILE tested with -f
+# races. A five-minute cron and a deploy that takes longer than five minutes
+# would otherwise run over itself and leave a half-copied web root.
+if mkdir "$LOCK" 2>/dev/null; then
+  LOCKED=1
+  trap release EXIT INT TERM
+else
+  # A crashed run leaves the lock behind. Anything older than an hour is not a
+  # deploy still in progress.
+  if [ -n "$(find "$LOCK" -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
+    rmdir "$LOCK" 2>/dev/null
+    if mkdir "$LOCK" 2>/dev/null; then
+      LOCKED=1
+      trap release EXIT INT TERM
+    fi
+  fi
+  if [ -z "$LOCKED" ]; then
+    echo "another deploy is running"
+    exit 0
+  fi
+fi
+
+MODE="${1:-}"
+
+deployed_sha() {
+  if [ -f "$STATE" ]; then cat "$STATE"; else echo ""; fi
+}
+
+# git ls-remote is one round trip, needs no checkout and is not rate limited.
+# The API is the fallback for a host with no git client; unauthenticated it
+# allows 60 requests an hour per IP, which a five-minute cron fits inside.
+remote_sha() {
+  if have git; then
+    git ls-remote "$REPO_URL" "refs/heads/$BRANCH" 2>/dev/null | awk '{print $1}' | head -1
+  elif have curl; then
+    curl -fsSL -H 'Accept: application/vnd.github.sha' \
+      "https://api.github.com/repos/$REPO_SLUG/commits/$BRANCH" 2>/dev/null
+  else
+    echo ""
+  fi
+}
+
+fetch_source() {
+  if have git; then
+    if [ -d "$SRC/.git" ]; then
+      git -C "$SRC" fetch --quiet origin "$BRANCH" || return 1
+      git -C "$SRC" reset --hard --quiet "origin/$BRANCH" || return 1
+      # A file deleted from the repo must disappear from the checkout too, or
+      # it lives on in the web root forever.
+      git -C "$SRC" clean -qfd || return 1
+    else
+      rm -rf "$SRC"
+      git clone --quiet --depth 1 --branch "$BRANCH" "$REPO_URL" "$SRC" || return 1
+    fi
+    return 0
+  fi
+
+  # No git: the codeload tarball. Extracted into a fresh directory and swapped
+  # in, so a failed download never leaves a half-written source tree.
+  if ! have curl && ! have wget; then return 1; fi
+  local tmp="$HERE/.fetch.$$"
+  rm -rf "$tmp"
+  mkdir -p "$tmp" || return 1
+  local url="https://codeload.github.com/$REPO_SLUG/tar.gz/refs/heads/$BRANCH"
+  if have curl; then
+    curl -fsSL "$url" -o "$tmp/s.tgz" || { rm -rf "$tmp"; return 1; }
+  else
+    wget -qO "$tmp/s.tgz" "$url" || { rm -rf "$tmp"; return 1; }
+  fi
+  tar -xzf "$tmp/s.tgz" -C "$tmp" --strip-components=1 || { rm -rf "$tmp"; return 1; }
+  rm -f "$tmp/s.tgz"
+  rm -rf "$SRC"
+  mv "$tmp" "$SRC" || { rm -rf "$tmp"; return 1; }
+  return 0
+}
+
+# Directories go through rsync --delete where it exists, because it removes a
+# deleted file without ever emptying the directory first. The fallback does have
+# a window where a directory is briefly gone, which is exactly why .htaccess is
+# never in it: files are overwritten in place with cp, so the protection rules
+# are never absent from the web root, not even for an instant.
+publish() {
+  mkdir -p "$DOCROOT" || die "cannot create $DOCROOT"
+
+  local f d stale
+  for f in "${OWNED_FILES[@]}"; do
+    if [ ! -f "$SRC/$f" ]; then log "missing from source, skipped: $f"; continue; fi
+    cp -f "$SRC/$f" "$DOCROOT/$f" || die "failed to copy $f"
+  done
+
+  for d in "${OWNED_DIRS[@]}"; do
+    if [ ! -d "$SRC/$d" ]; then log "missing from source, skipped: $d/"; continue; fi
+    if have rsync; then
+      rsync -a --delete "$SRC/$d/" "$DOCROOT/$d/" || die "rsync failed on $d/"
+    else
+      rm -rf "${DOCROOT:?}/$d" && cp -a "$SRC/$d" "$DOCROOT/$d" || die "failed to copy $d/"
+    fi
+  done
+
+  # Hostinger drops a placeholder into a new subdomain's root. It is not ours so
+  # it is not in OWNED, and it would otherwise sit there forever - but index.php
+  # comes before index.html in LiteSpeed's DirectoryIndex order, so leaving it
+  # means the placeholder keeps answering / after a perfectly good deploy.
+  for stale in default.php index.php default.html; do
+    if [ -f "$DOCROOT/$stale" ] && [ ! -f "$SRC/$stale" ]; then
+      rm -f "$DOCROOT/$stale" && say "removed placeholder: $stale"
+    fi
+  done
+}
+
+NOW="$(remote_sha)"
+WAS="$(deployed_sha)"
+
+if [ "$MODE" = "--status" ]; then
+  echo "docroot : $DOCROOT"
+  echo "source  : $SRC"
+  echo "branch  : $BRANCH"
+  echo "deployed: ${WAS:-<nothing>}"
+  echo "remote  : ${NOW:-<unreachable>}"
+  if [ -n "$NOW" ] && [ "$NOW" = "$WAS" ]; then
+    echo "status  : up to date"
+  else
+    echo "status  : behind, or GitHub unreachable"
+  fi
+  exit 0
+fi
+
+[ -n "$NOW" ] || die "cannot reach GitHub (no git, curl or wget, or the network is down)"
+
+if [ "$NOW" = "$WAS" ] && [ "$MODE" != "--force" ]; then
+  # Quiet on purpose. This is the common case, twelve times an hour, and a log
+  # line for it would bury the deploys that actually happened.
+  exit 0
+fi
+
+say "deploying ${NOW:0:8} (was ${WAS:0:8})"
+fetch_source || die "could not fetch $BRANCH from $REPO_URL"
+publish
+printf '%s' "$NOW" > "$STATE"
+say "deployed ${NOW:0:8} to $DOCROOT"
+exit 0

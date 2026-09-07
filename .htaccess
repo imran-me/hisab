@@ -301,7 +301,7 @@ ErrorDocument 403 /404.html
 # The front controller lives in public/, and public/ is NOT the document root
 # here — Hostinger fixes the document root at public_html, and moving the whole
 # framework above it is the alternative arrangement documented in
-# docs/DEPLOY-HOSTINGER.md §7.
+# docs/DEPLOY-HOSTINGER.md §8.
 #
 # <IfModule mod_rewrite.c>
 #   RewriteEngine On

@@ -74,7 +74,7 @@ hisab/
 │           ├── Controllers/ Models/ Services/ Requests/ Migrations/
 │           └── routes.php
 │
-├── tools/                validators and QA harnesses (not deployed)
+├── tools/                validators, QA harnesses, deploy.sh (not deployed)
 └── docs/                 deployment and status (not deployed)
 ```
 

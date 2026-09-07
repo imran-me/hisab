@@ -33,7 +33,7 @@ lands.
 > being left to be discovered.
 
 Phase 2 (the Laravel backend + MySQL) is what turns this into one ledger that
-follows you across devices. Section 7 says what to set up now so that swap is
+follows you across devices. Section 8 says what to set up now so that swap is
 quick when it is ready.
 
 ---
@@ -90,12 +90,16 @@ hPanel → **Advanced → PHP Configuration** → select **PHP 8.2 or newer**.
 Nothing in Phase 1 uses PHP. Do it now anyway — Laravel 12 requires 8.2+, and
 finding out later that the account is pinned to 8.0 is an avoidable delay.
 
-### 1.4 Check whether your plan has SSH and Git
+### 1.4 Confirm Cron Jobs exists
 
-hPanel → **Advanced**. Look for **SSH Access** and **Git**.
+hPanel → **Advanced → Cron Jobs**. That is the only one of these the
+recommended path actually needs, and every plan has it.
 
-- **Git present** → use Option A below. Much better.
-- **Neither** → use Option B. It works fine, it is just manual.
+While you are on that page, note whether **SSH Access** and **Git** are also
+there. Neither is required — `tools/deploy.sh` uses `git` when the server has
+it and falls back to downloading a tarball when it does not, and both paths are
+tested — but SSH is what lets you run `deploy.sh --status` by hand later, and it
+is what Phase 2 will want for Composer.
 
 ### 1.5 Optional but recommended — put a password on the whole site
 
@@ -108,9 +112,100 @@ hPanel → **Security → Password Protect Directories** → select the subdomai
 
 ---
 
-## 2 · Option A — Git deployment (recommended)
+## 2 · Option A — deploy by cron (recommended)
 
-### 2.1 Connect the repository
+The app deploys itself. A cron job asks GitHub every five minutes whether
+`main` has moved and, when it has, pulls the change down. Push to `main` and the
+site updates within five minutes with nothing else pressed.
+
+This is the option that works on **every** Hostinger plan. hPanel's Git
+integration (§3) is fine where it exists, but it needs a webhook reachable from
+GitHub to be automatic; this needs nothing but cron.
+
+### 2.1 What it does, and why it is not a clone into the web root
+
+`tools/deploy.sh` is the whole mechanism. The important decision inside it:
+
+> **The checkout is never the document root.**
+
+Cloning straight into `public_html/hisab` is the obvious arrangement and the
+wrong one. It puts `.git` inside the web root — where one missing `.htaccess`
+exposes the entire history — and it publishes `tools/` and `docs/`, which are
+not for the web. So the source lives one level **above** the web root and only
+the files the app owns are copied down:
+
+```
+domains/gulfrabit.com/
+├── hisab-deploy/          ← not reachable over HTTP
+│   ├── deploy.sh
+│   ├── src/               the checkout
+│   ├── state              the deployed commit SHA
+│   └── deploy.log
+└── public_html/hisab/     ← the document root; only owned files are written
+```
+
+What it copies down is an explicit list — `index.html`, `404.html`, `.htaccess`,
+`site.webmanifest`, and the `assets/`, `shared/`, `modules/` directories.
+**Anything else already in the document root is left alone**, which is
+deliberate: Phase 2's `api/` directory and `.well-known/` must survive a deploy.
+
+It also removes Hostinger's `default.php` placeholder on the first run.
+That matters more than it sounds: LiteSpeed serves `index.php` *before*
+`index.html`, so leaving the placeholder means it keeps answering `/` after a
+perfectly successful deploy.
+
+### 2.2 Add the cron job
+
+hPanel → **Advanced → Cron Jobs**. Set the schedule to **every 5 minutes**
+(`*/5 * * * *`) and paste this as the command, as one line:
+
+```sh
+D=/home/u239665931/domains/gulfrabit.com/hisab-deploy; mkdir -p $D && curl -fsSL https://raw.githubusercontent.com/imran-me/hisab/main/tools/deploy.sh -o $D/.new && bash -n $D/.new && mv $D/.new $D/deploy.sh; bash $D/deploy.sh
+```
+
+There is no separate installation step — that command creates the directory and
+fetches the script itself, so the first run bootstraps and deploys in one go.
+
+Read left to right, it also explains its own safety: the script is downloaded to
+a temporary name, **syntax-checked with `bash -n` before replacing** the working
+copy, and only then run. A truncated download or a GitHub outage leaves the
+previous working `deploy.sh` in place rather than a half-written file that cron
+would happily execute. Because it re-fetches each run, an improvement to the
+deploy script deploys itself along with everything else.
+
+### 2.3 What you will see
+
+The script is **silent when there is nothing to do** — which is eleven runs out
+of twelve, and the reason cron will not fill your inbox. It prints only when it
+actually deploys:
+
+```
+deploying 3f48097a (was 64ccb56c)
+removed placeholder: default.php
+deployed 3f48097a to /home/u239665931/domains/gulfrabit.com/public_html/hisab
+```
+
+Every deploy is also appended to `hisab-deploy/deploy.log`.
+
+To check the state by hand, over SSH if you have it:
+
+```sh
+bash ~/domains/gulfrabit.com/hisab-deploy/deploy.sh --status   # what is live
+bash ~/domains/gulfrabit.com/hisab-deploy/deploy.sh --force    # redeploy anyway
+```
+
+### 2.4 The five-minute delay
+
+It is a poll, not a push, so a change takes up to five minutes to appear. If
+that ever matters, `*/2` is fine too — the no-op run costs one HTTPS request and
+no checkout. Do not go below a minute: the run is quick but not instant, and
+overlapping runs are only prevented because the script takes a lock.
+
+---
+
+## 3 · Option B — hPanel's Git integration
+
+### 3.1 Connect the repository
 
 hPanel → **Advanced → Git** → **Create a new repository**:
 
@@ -124,11 +219,11 @@ The repository is public, so no deploy key is needed. (If you make it private
 later, hPanel shows an SSH key on this page — add it to GitHub under
 **Settings → Deploy keys** on the repo.)
 
-### 2.2 Deploy
+### 3.2 Deploy
 
 Press **Deploy** on that same page. It clones the branch into the directory.
 
-### 2.3 Set up one-click updates afterwards
+### 3.3 Set up one-click updates afterwards
 
 The Git page shows a **webhook URL**. Copy it into GitHub → your repo →
 **Settings → Webhooks → Add webhook**, content type `application/json`, event
@@ -139,7 +234,7 @@ when you want the changes.
 
 ---
 
-## 3 · Option B — upload the files
+## 4 · Option C — upload the files
 
 1. Download the repository: GitHub → **Code → Download ZIP**.
 2. Unzip it locally. You will get a folder `hisab-main` — the files you need are
@@ -163,7 +258,7 @@ when you want the changes.
 
 ---
 
-## 4 · Verify the deployment
+## 5 · Verify the deployment
 
 Open each of these and check what you get. This takes two minutes and catches
 every common mistake.
@@ -188,7 +283,7 @@ Then, on the Overview screen itself:
       totals change.
 - [ ] Reload the page. The entry is still there.
 - [ ] Open DevTools → Console (or Safari → Develop). **It should be empty.** A
-      CSP violation here means the `.htaccess` hash is stale — see §6.
+      CSP violation here means the `.htaccess` hash is stale — see §7.
 
 ### Install it to your phone
 
@@ -202,12 +297,15 @@ It launches full-screen with no browser chrome, on the dark theme.
 
 ---
 
-## 5 · Updating it later
+## 6 · Updating it later
 
-**With Git:** push to `main`. If you set the webhook, it is already live; if not,
-hPanel → Advanced → Git → **Deploy**.
+**With the cron job (Option A):** push to `main`. That is the whole procedure —
+it is live within five minutes. Nothing to press.
 
-**Without Git:** re-upload the changed files.
+**With hPanel's Git (Option B):** push to `main`. If you set the webhook it is
+already live; if not, hPanel → Advanced → Git → **Deploy**.
+
+**Uploading by hand (Option C):** re-upload the changed files.
 
 Either way: **hard-refresh once** (Ctrl+Shift+R, or on iOS close and reopen the
 installed app). CSS and JS are cached for an hour by `.htaccess` §5, so a normal
@@ -215,7 +313,7 @@ refresh may serve the old file.
 
 ---
 
-## 6 · Troubleshooting
+## 7 · Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -230,11 +328,11 @@ refresh may serve the old file.
 
 ---
 
-## 7 · Phase 2 — preparing for the backend
+## 8 · Phase 2 — preparing for the backend
 
 Do these now and the swap is quick when the Laravel layer is ready.
 
-### 7.1 The database — DONE
+### 8.1 The database — DONE
 
 ```
 Database  u239665931_hisab
@@ -246,7 +344,7 @@ Correctly kept separate from `u239665931_eon`, which holds the ERP and the
 `eon_*` tables — different backup schedule, different blast radius, and this one
 will hold the vault.
 
-### 7.2 Still outstanding
+### 8.2 Still outstanding
 
 | | |
 |---|---|
@@ -259,7 +357,7 @@ The `.env` will be written directly on the server via File Manager or SSH, at
 `/home/u239665931/domains/gulfrabit.com/hisab-app/.env` — above the web root, so
 it is not reachable even if `.htaccess` were removed.
 
-### 7.3 The directory layout Phase 2 will use
+### 8.3 The directory layout Phase 2 will use
 
 For reference, so nothing is a surprise. Laravel's front controller must be the
 only PHP reachable from the web, and the framework itself must sit **above** the
@@ -283,7 +381,7 @@ document root:
 The `.htaccess` in this repository already has the `/api/*` rewrite written and
 commented out, at the bottom of the file.
 
-### 7.4 What changes for you when Phase 2 lands
+### 8.4 What changes for you when Phase 2 lands
 
 Nothing about how you use it. The frontend calls `modules/<feature>/backend/api.js`
 either way; those files answer from the browser today and from `/api` tomorrow,
@@ -296,7 +394,7 @@ backend rather than after it.
 
 ---
 
-## 8 · A note on backups
+## 9 · A note on backups
 
 **Export does not exist yet.** Being direct about it because a backup section
 that describes a button which is not there is worse than no section at all.
