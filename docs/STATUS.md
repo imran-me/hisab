@@ -4,7 +4,7 @@ What is built, what is not, and what has actually been executed as opposed to
 merely written. `CONVENTIONS.md` requires this file: authored is not verified,
 and a gap that is written down is a decision rather than an oversight.
 
-Last updated: 2026-09-07
+Last updated: 2026-09-08
 
 ---
 
@@ -20,18 +20,24 @@ Things that have been run, with the result.
 | `python tools/check-pages.py` | 6 pages, pre-paint block identical, CSP hash matches `.htaccess`. |
 | `tools/qa-viewport.html` | **15/15 pass** — no horizontal overflow on any of the three screens at 360 / 390 / 414 / 768 / 1280. |
 | Headless Chrome render | Overview, Ledger and Accounts all load with an empty console. |
+| `php artisan test` | **4 tests, 6 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
+| `php artisan migrate` | Laravel's own three migrations run against **real MySQL** (MariaDB 10.4), not only the SQLite the test suite uses. |
+| `tools/deploy.sh` | Exercised against a simulated server on both branches — with git, and with git hidden so it takes the tarball. Only owned paths published; `.git`, `docs/` and `tools/` do not leak; a deleted file is swept; `api/` survives; a second run is a silent no-op; two concurrent runs leave one working. |
 
 ## Not executed
 
-**No PHP in this repository has ever run.** There is no PHP in this repository
-yet at all, which makes that easy to say honestly today; it will stop being
-trivially true the moment the Laravel layer is authored, and this section will
-say so then.
+**PHP now runs here.** That sentence replaces the opposite one, which stood
+until 2026-09-08: the machine has PHP 8.3.33 and Composer installed to a
+toolchain outside the repository, matching the server's PHP version exactly, so
+the Laravel layer is executed rather than authored blind. See `context.md` §3.
 
-The authoring machine has PHP 8.0.30 (XAMPP) and no Composer. Laravel 12 needs
-PHP 8.2+. When the backend is written it will be validated for syntax shape,
-PSR-4 path agreement and unused imports — not for behaviour — until it runs on a
-server with the right version.
+What has not run is anything module-specific, because none of it is written yet:
+no controllers, models, services, requests or migrations beyond Laravel's own.
+
+**The backend has never run on the server.** It has not been deployed there at
+all — `composer install`, the `.env` and the `/api` rewrite are all outstanding.
+Passing locally on an identical PHP version is good evidence and is not the same
+thing as having run in production.
 
 The FastAPI analytics service has not been written or run.
 

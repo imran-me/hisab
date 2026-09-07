@@ -50,6 +50,30 @@ The name: *hisab* (হিসাব) — the account, the reckoning.
 Newest first. A decision recorded here is not re-argued; it is superseded by a
 new dated entry if it turns out to be wrong.
 
+### 2026-09-08 — Laravel 13 on a pinned local toolchain, not Laravel 12 unverified
+
+The plan said Laravel 12, chosen when the authoring machine had PHP 8.0.30 and
+no Composer and therefore could not run any of it. That constraint produced the
+worst possible arrangement: a backend that could be written but never executed,
+with `docs/STATUS.md` carrying the disclaimer permanently.
+
+So the constraint was removed rather than worked around. PHP 8.3.33 and Composer
+are installed to `D:\My Lab\.toolchain` — outside the repository, outside XAMPP
+and off the PATH, so nothing about the machine's existing setup changes. 8.3.33
+is not an arbitrary current version: it is byte-for-byte the version Hostinger
+reports on hisab.gulfrabit.com, so local behaviour and deployed behaviour differ
+by hosting, not by interpreter.
+
+Composer then resolved `laravel/laravel` to 13.30.1 rather than 12, and that was
+kept. Laravel 13 requires PHP ^8.3, which the server satisfies exactly. The
+version numbers in the older docs were written before any of this could be
+checked; they now say 13.
+
+The consequence is the point: the backend is verified by running from its first
+commit. `php artisan test` and real MySQL migrations, not a syntax checker.
+`tools/php-check.py` — referenced in §7 below and never written — is not needed
+and will not be.
+
 ### 2026-09-05 — Vault uses two layers of encryption, not one
 
 Client-side envelope encryption (WebCrypto, AES-256-GCM, key derived from the
@@ -177,6 +201,18 @@ Status is one of: `planned`, `frontend` (running on the mock seam), `backend`
 
 Newest first. One entry per committed item.
 
+### 2026-09-08
+
+- Insights given a real destination page; it was one of the five primary tabs
+  and every press of it landed on the 404. Found that a page needs its own
+  script to mount the shell — `main.js` does not — which passes every validator
+  and only shows up on render.
+- Deploy by cron: `tools/deploy.sh`, pulled from GitHub, publishing an explicit
+  list of owned paths into the web root from a checkout kept above it.
+- Laravel 13 foundation: skeleton at the repository root, module PSR-4 map,
+  `/api` routing, a front controller that resolves its own application root,
+  and four tests that pin the shape of the backend.
+
 ### 2026-09-05
 
 - Repository initialised at `D:\My Lab\hisab`, remote
@@ -188,10 +224,19 @@ Newest first. One entry per committed item.
 
 ## 7. What has NOT been executed
 
-Honesty section — see `docs/STATUS.md` for the live version. As of the first
-commit: no PHP in this repository has ever run. The authoring machine has PHP
-8.0.30 (XAMPP) and no Composer; Laravel 12 needs PHP 8.2+. The Laravel layer is
-authored against the documented contract and validated by `tools/php-check.py`,
-which checks syntax shape, PSR-4 path agreement and unused imports — not
-behaviour. This is stated again in `docs/STATUS.md` and in every commit that
-touches PHP.
+Honesty section — see `docs/STATUS.md` for the live version.
+
+**This section used to say that no PHP in this repository had ever run. That
+stopped being true on 2026-09-08** and the reason is recorded as a decision in
+§3: the machine now has PHP 8.3.33 and Composer, matching the server's PHP
+exactly, so the Laravel layer is executed rather than merely authored. Laravel
+boots, `/api/ping` answers, migrations run against real MySQL, and `php artisan
+test` passes.
+
+`tools/php-check.py` was named here as the substitute for running the code. It
+was never written, and it is no longer needed.
+
+What genuinely has not run yet: any module's backend, because none is written.
+There are no controllers, models, services, requests or migrations beyond
+Laravel's own. The frontend still answers entirely from browser storage, and
+will keep doing so until a module's `api.js` is pointed at the API.

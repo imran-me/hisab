@@ -29,6 +29,30 @@ is unavailable entirely. The app warns about this once in the console.
 `localhost` counts as a secure context, so everything including the vault works
 in development. In production it must be **https** — see below.
 
+### The backend
+
+The API is Laravel 13 and needs PHP 8.3+ with Composer. This machine's XAMPP PHP
+is 8.0, so a separate toolchain lives at `D:\My Lab\.toolchain` — outside the
+repository, off the PATH, leaving XAMPP untouched. It pins **PHP 8.3.33**, which
+is the exact version Hostinger runs, so local and deployed behaviour differ by
+hosting rather than by interpreter.
+
+```bash
+PHP="D:/My Lab/.toolchain/php83/php.exe"
+"$PHP" "D:/My Lab/.toolchain/composer.phar" install
+cp .env.example .env && "$PHP" artisan key:generate
+"$PHP" artisan migrate
+"$PHP" artisan serve            # http://127.0.0.1:8000/api/ping
+"$PHP" artisan test
+```
+
+`vendor/` is not committed — 83 MB of it — so `composer install` is the first
+step on any machine, the server included.
+
+The frontend does not need any of this. It answers from browser storage until a
+module's `api.js` is pointed at the API, which is the entire reason Phase 1 could
+ship on its own.
+
 ### Tests and checks
 
 ```bash
