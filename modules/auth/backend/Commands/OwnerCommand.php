@@ -4,6 +4,7 @@ namespace Hisab\Auth\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Validator;
@@ -37,6 +38,23 @@ class OwnerCommand extends Command
     private function createOwner(): int
     {
         $this->info('No owner exists yet. Creating one.');
+
+        // Seed FIRST, and unconditionally.
+        //
+        // Creating the owner is what triggers each module to lay down that
+        // owner's starting rows, and some of those rows have foreign keys into
+        // reference data - an account points at a currency. On a database that
+        // has been migrated but never seeded, those references do not resolve,
+        // and the accounts seeder skips every row rather than failing. The
+        // result is an owner who signs in to an app with no accounts in it and
+        // no error anywhere explaining why.
+        //
+        // db:seed is idempotent, so paying for it here costs a few hundred
+        // milliseconds once and removes an ordering dependency that is
+        // invisible until it has already gone wrong. It names no module - see
+        // App\Support\ModuleSeeders.
+        $this->line('Seeding reference data…');
+        Artisan::call('db:seed', ['--force' => true], $this->getOutput()->getVerbosity() > 1 ? $this->output : null);
 
         $name = (string) $this->ask('Name');
         $email = (string) $this->ask('Email');

@@ -20,7 +20,7 @@ Things that have been run, with the result.
 | `python tools/check-pages.py` | 6 pages, pre-paint block identical, CSP hash matches `.htaccess`. |
 | `tools/qa-viewport.html` | **15/15 pass** — no horizontal overflow on any of the three screens at 360 / 390 / 414 / 768 / 1280. |
 | Headless Chrome render | Overview, Ledger and Accounts all load with an empty console. |
-| `php artisan test` | **39 tests, 123 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
+| `php artisan test` | **55 tests, 180 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
 | `php artisan migrate` | Laravel's own three migrations run against **real MySQL** (MariaDB 10.4), not only the SQLite the test suite uses. |
 | `hisab:owner` on an unseeded database | Creating the owner on a database that had been migrated but never seeded used to fail with a foreign-key violation naming a table nobody asked about. Owner-seeding now establishes the reference data it needs; verified against MySQL from `migrate:fresh` with no `db:seed`. |
 | FX on both drivers | Seeder is idempotent (10 currencies / 10 rates after three runs) and KWD lands at `minor_unit` 3, JPY at 0. The rate write path was then re-run against **real MySQL** as well, because the bug found here only appeared on SQLite. |
@@ -66,6 +66,15 @@ The FastAPI analytics service has not been written or run.
 ### Module APIs on the mock seam
 `fx`, `categories`, `accounts`, `ledger` — all four return the shape documented
 in `shared/backend/api-contract.md`, so swapping in Laravel changes no consumer.
+
+### Accounts (backend)
+Follows the contract that was already written in
+`modules/accounts/backend/endpoints.md`. The client mints the ULID and the
+server re-validates it as well-formed and unused. **No balance is stored and
+none is returned** — balances are derived by the ledger, so exactly one thing
+computes them. A credit limit is kept only on a card, one account is default per
+book, and neither the currency nor the book can be changed after creation
+because both would reinterpret history rather than correct it.
 
 ### Categories (backend)
 Three types — `income`, `expense`, `deposit` — and `transfer` deliberately not a

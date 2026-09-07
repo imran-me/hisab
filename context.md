@@ -212,6 +212,10 @@ Newest first. One entry per committed item.
 - Laravel 13 foundation: skeleton at the repository root, module PSR-4 map,
   `/api` routing, a front controller that resolves its own application root,
   and four tests that pin the shape of the backend.
+- Accounts module backend, against the contract written before it. Found that
+  `$account->book` is null before the first save, because 'personal' is a
+  DATABASE default — so the query that clears the previous default matched
+  nothing and two accounts could both be marked default.
 - Categories module backend: reference tables, per-owner defaults seeded on
   owner creation, archival deletion. Found that creating an owner on a migrated
   but unseeded database failed on a foreign key — the seeding order was an
