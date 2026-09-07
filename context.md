@@ -212,6 +212,11 @@ Newest first. One entry per committed item.
 - Laravel 13 foundation: skeleton at the repository root, module PSR-4 map,
   `/api` routing, a front controller that resolves its own application root,
   and four tests that pin the shape of the backend.
+- Auth module: session-cookie authentication, CSRF, two-key login throttling,
+  a constant-time generic failure, and `hisab:owner` in place of a registration
+  endpoint. Found that Laravel mints LOWERCASE ULIDs while the frontend mints
+  and validates uppercase ones — the two halves disagreed, and it would have
+  surfaced far from where it was introduced.
 
 ### 2026-09-05
 

@@ -20,8 +20,9 @@ Things that have been run, with the result.
 | `python tools/check-pages.py` | 6 pages, pre-paint block identical, CSP hash matches `.htaccess`. |
 | `tools/qa-viewport.html` | **15/15 pass** — no horizontal overflow on any of the three screens at 360 / 390 / 414 / 768 / 1280. |
 | Headless Chrome render | Overview, Ledger and Accounts all load with an empty console. |
-| `php artisan test` | **4 tests, 6 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
+| `php artisan test` | **14 tests, 41 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
 | `php artisan migrate` | Laravel's own three migrations run against **real MySQL** (MariaDB 10.4), not only the SQLite the test suite uses. |
+| Auth over real HTTP | The whole flow against `artisan serve`: session 200 while signed out, `XSRF-TOKEN` issued, **POST without the CSRF header rejected 419**, POST with it 200, session persists, logout 204, session cleared, limiter cutting in. The session cookie carries `httponly; samesite=lax`. Done over HTTP because Laravel skips CSRF inside the test suite, so a feature test would pass whether the middleware were wired or not. |
 | `tools/deploy.sh` | Exercised against a simulated server on both branches — with git, and with git hidden so it takes the tarball. Only owned paths published; `.git`, `docs/` and `tools/` do not leak; a deleted file is swept; `api/` survives; a second run is a silent no-op; two concurrent runs leave one working. |
 
 ## Not executed
@@ -64,6 +65,15 @@ The FastAPI analytics service has not been written or run.
 `fx`, `categories`, `accounts`, `ledger` — all four return the shape documented
 in `shared/backend/api-contract.md`, so swapping in Laravel changes no consumer.
 
+### Auth (backend)
+One owner, session cookie rather than a bearer token — a token has to live where
+script can read it, and that is where the vault's blob already is. CSRF on every
+write, login rate-limited on the email and the IP together, a deliberately
+uninformative failure that also burns the same CPU when the account does not
+exist, and no registration endpoint: the owner is created by `php artisan
+hisab:owner`. **There is no login screen yet** — the API is complete, the UI is
+not, so nothing in the app calls it.
+
 ### Vault
 Complete and tested. `crypto.js` and `SECURITY.md` cover the key hierarchy; the
 screens on top of them are the lock screen, the entry list, entry detail with
@@ -81,9 +91,11 @@ hash-based CSP. `docs/DEPLOY-HOSTINGER.md`. `404.html`.
 Listed so a gap does not look like an oversight later.
 
 ### Next
-1. **Export and import** — the only way to move a Phase 1 ledger off a device,
+1. **The login screen**, and pointing a module's `api.js` at the API. The auth
+   endpoints exist and are tested; nothing in the UI calls them yet
+2. **Export and import** — the only way to move a Phase 1 ledger off a device,
    and the reason it comes before the backend rather than after
-2. **Settings** — theme, density, currency, hand, rate entry, data management
+3. **Settings** — theme, density, currency, hand, rate entry, data management
 
 ### After that
 3. **Reports** — the Insights tab now reaches a real page that states the

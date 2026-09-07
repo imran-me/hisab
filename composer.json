@@ -29,6 +29,7 @@
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
             "Hisab\\Accounts\\": "modules/accounts/backend/",
+            "Hisab\\Auth\\": "modules/auth/backend/",
             "Hisab\\Categories\\": "modules/categories/backend/",
             "Hisab\\Fx\\": "modules/fx/backend/",
             "Hisab\\Ledger\\": "modules/ledger/backend/",

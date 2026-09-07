@@ -12,7 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
+            // A ULID, not an auto-increment id. CONVENTIONS.md requires public
+            // keys to be ULIDs everywhere they appear in a URL or a payload,
+            // and a user id that is 1 tells anyone who sees it how many owners
+            // this installation has. ULIDs also sort by creation time, which
+            // auto-increment gives for free and UUIDv4 does not.
+            $table->ulid('id')->primary();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
@@ -29,7 +34,7 @@ return new class extends Migration
 
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
+            $table->foreignUlid('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->longText('payload');
