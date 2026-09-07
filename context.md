@@ -212,6 +212,10 @@ Newest first. One entry per committed item.
 - Laravel 13 foundation: skeleton at the repository root, module PSR-4 map,
   `/api` routing, a front controller that resolves its own application root,
   and four tests that pin the shape of the backend.
+- Categories module backend: reference tables, per-owner defaults seeded on
+  owner creation, archival deletion. Found that creating an owner on a migrated
+  but unseeded database failed on a foreign key — the seeding order was an
+  unstated dependency, and `hisab:owner` would have hit it in production.
 - FX module backend: currencies and rates, seeded from the frontend's own JSON
   so there is one list rather than two. Found that Laravel's `date` cast writes
   'Y-m-d H:i:s' into a DATE column — MySQL truncates it and hides the problem,
