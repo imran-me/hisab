@@ -4,7 +4,7 @@ What is built, what is not, and what has actually been executed as opposed to
 merely written. `CONVENTIONS.md` requires this file: authored is not verified,
 and a gap that is written down is a decision rather than an oversight.
 
-Last updated: 2026-09-05
+Last updated: 2026-09-07
 
 ---
 
@@ -17,7 +17,7 @@ Things that have been run, with the result.
 | `node tools/test-money.mjs` | **66 assertions pass.** Found a parser bug where `12.999` read as 12,999 — a hundredfold error on an ordinary typo. |
 | `node tools/test-crypto.mjs` | **41 assertions pass.** Round trips, tamper detection, wrong-password rejection, IV uniqueness, password rotation. KDF measured at 443 ms for 600,000 iterations on the authoring machine. |
 | `python tools/check-sprite.py` | 57 symbols, all referenced names resolve. |
-| `python tools/check-pages.py` | 4 pages, pre-paint block identical, CSP hash matches `.htaccess`. |
+| `python tools/check-pages.py` | 6 pages, pre-paint block identical, CSP hash matches `.htaccess`. |
 | `tools/qa-viewport.html` | **15/15 pass** — no horizontal overflow on any of the three screens at 360 / 390 / 414 / 768 / 1280. |
 | Headless Chrome render | Overview, Ledger and Accounts all load with an empty console. |
 
@@ -59,9 +59,10 @@ The FastAPI analytics service has not been written or run.
 in `shared/backend/api-contract.md`, so swapping in Laravel changes no consumer.
 
 ### Vault
-Cryptography only. `crypto.js` and `SECURITY.md` are complete and tested. **There
-is no vault user interface yet** — the tab exists in the navigation and leads
-nowhere.
+Complete and tested. `crypto.js` and `SECURITY.md` cover the key hierarchy; the
+screens on top of them are the lock screen, the entry list, entry detail with
+reveal and copy, and the editor. Plaintext never leaves the tab, and the vault
+requires HTTPS — `crypto.subtle` does not exist outside a secure context.
 
 ### Deployment
 `.htaccess` with HTTPS enforcement, file protection, MIME types, caching and a
@@ -74,20 +75,20 @@ hash-based CSP. `docs/DEPLOY-HOSTINGER.md`. `404.html`.
 Listed so a gap does not look like an oversight later.
 
 ### Next
-1. **Vault screens** — unlock, list, entry detail, reveal, copy, auto-lock
-2. **Export and import** — the only way to move a Phase 1 ledger off a device,
+1. **Export and import** — the only way to move a Phase 1 ledger off a device,
    and the reason it comes before the backend rather than after
-3. **Settings** — theme, density, currency, hand, rate entry, data management
+2. **Settings** — theme, density, currency, hand, rate entry, data management
 
 ### After that
-4. **Reports** — the Insights tab is in the navigation and leads nowhere
-5. **Business books** — separate ledgers per business, per-business profit
-6. **Investments** — holdings, cost basis, partner splits, returns
-7. **Budgets** — per-category budgets, savings goals, month close
-8. **Categories screen** — the module works; there is no UI to edit them
-9. **Laravel backend** — every module's `Controllers/`, `Models/`, `Services/`,
+3. **Reports** — the Insights tab now reaches a real page that states the
+   feature is unwritten, rather than a 404. The reports themselves are not built
+4. **Business books** — separate ledgers per business, per-business profit
+5. **Investments** — holdings, cost basis, partner splits, returns
+6. **Budgets** — per-category budgets, savings goals, month close
+7. **Categories screen** — the module works; there is no UI to edit them
+8. **Laravel backend** — every module's `Controllers/`, `Models/`, `Services/`,
    `Requests/`, `Migrations/` are empty directories today
-10. **FastAPI analytics sidecar** — forecasting and spend-pattern work
+9. **FastAPI analytics sidecar** — forecasting and spend-pattern work
 
 ### Deliberately not planned
 Stated so nobody looks for them:
@@ -112,5 +113,6 @@ Stated so nobody looks for them:
 - **The overflow measurements were taken against an empty ledger.** A very long
   payee or a ten-digit balance in a narrow column has not been measured at 360px
   with real data in place. A stress fixture is worth adding to `qa-viewport.html`.
-- **Insights and Vault are in the tab bar and lead nowhere.** They are wired into
-  the navigation ahead of the screens existing.
+- **Insights is a tab with no feature behind it.** It reaches a real page that
+  says so, rather than a 404, but there are no reports yet. Every other primary
+  tab is a working screen.
