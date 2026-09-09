@@ -156,22 +156,42 @@ perfectly successful deploy.
 
 ### 2.2 Add the cron job
 
-hPanel → **Advanced → Cron Jobs**. Set the schedule to **every 5 minutes**
-(`*/5 * * * *`) and paste this as the command, as one line:
+First, install the script once over SSH — this is also how you deploy by hand:
 
 ```sh
-D=/home/u239665931/domains/gulfrabit.com/hisab-deploy; mkdir -p $D && curl -fsSL https://raw.githubusercontent.com/imran-me/hisab/main/tools/deploy.sh -o $D/.new && bash -n $D/.new && mv $D/.new $D/deploy.sh; bash $D/deploy.sh
+cd ~/domains/gulfrabit.com
+mkdir -p hisab-deploy
+curl -fsSL https://raw.githubusercontent.com/imran-me/hisab/main/tools/deploy.sh -o hisab-deploy/deploy.sh
+bash hisab-deploy/deploy.sh
 ```
 
-There is no separate installation step — that command creates the directory and
-fetches the script itself, so the first run bootstraps and deploys in one go.
+Then hPanel → **Advanced → Cron Jobs**, type **Custom** (not PHP), schedule
+**every 5 minutes** (`*/5 * * * *`), command:
 
-Read left to right, it also explains its own safety: the script is downloaded to
-a temporary name, **syntax-checked with `bash -n` before replacing** the working
-copy, and only then run. A truncated download or a GitHub outage leaves the
-previous working `deploy.sh` in place rather than a half-written file that cron
-would happily execute. Because it re-fetches each run, an improvement to the
-deploy script deploys itself along with everything else.
+```sh
+/bin/bash /home/u239665931/domains/gulfrabit.com/hisab-deploy/deploy.sh
+```
+
+### Why a plain path, and no shell variables
+
+An earlier version of this guide used a single self-bootstrapping line that
+began `D=/home/...; ... bash $D/deploy.sh`. **It does not work on Hostinger.**
+The variable does not survive into the job, `$D` expands to nothing, and the
+run fails with:
+
+```
+bash: /deploy.sh: No such file or directory
+```
+
+which names a path nobody wrote and gives no hint that a variable was the
+problem. A plain absolute path has nothing to expand and cannot fail that way.
+
+The self-updating behaviour was worth keeping, so it moved **into** the script:
+after each successful deploy, `deploy.sh` compares itself with `tools/deploy.sh`
+in the fresh checkout and replaces itself when they differ — syntax-checking the
+incoming file first, and using `mv` rather than `cp` because the script is
+running. `mv` is an atomic rename, so bash finishes the current run against the
+file it started with.
 
 ### 2.3 What you will see
 

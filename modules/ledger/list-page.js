@@ -17,9 +17,9 @@ import { mountShell, periodStepper } from '../../shared/js/components/shell.js';
 import * as ledger from './backend/api.js';
 import * as accounts from '../accounts/backend/api.js';
 import * as fx from '../fx/backend/api.js';
-import { openEntrySheet } from './entry-sheet.js';
+import { openEntrySheet, entryActions } from './entry-sheet.js';
 
-mountShell({ title: 'Ledger' });
+mountShell({ title: 'Ledger', actions: entryActions() });
 qs('[data-period-slot]')?.append(periodStepper());
 
 const filters = { type: '', q: '' };
@@ -30,7 +30,11 @@ if (new URLSearchParams(location.search).get('compose')) {
   openEntrySheet({ onSaved: refresh });
 }
 
-delegate(document.body, 'click', '[data-compose]', () => openEntrySheet({ onSaved: refresh }));
+/* One handler for three buttons. The FAB carries a bare data-compose and so
+   asks for no particular type; the header's Out and In name one. */
+delegate(document.body, 'click', '[data-compose]', (_event, button) => {
+  openEntrySheet({ type: button.dataset.compose || undefined, onSaved: refresh });
+});
 
 delegate(document.body, 'click', '[data-type]', (_event, button) => {
   filters.type = button.dataset.type;

@@ -17,9 +17,9 @@ import { sparkline, breakdownBar, segmentColor } from '../../shared/js/component
 import * as accounts from '../accounts/backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import * as fx from '../fx/backend/api.js';
-import { openEntrySheet } from '../ledger/entry-sheet.js';
+import { openEntrySheet, entryActions } from '../ledger/entry-sheet.js';
 
-mountShell({ title: 'Overview' });
+mountShell({ title: 'Overview', actions: entryActions() });
 
 qs('[data-period-slot]')?.append(periodStepper());
 
@@ -30,7 +30,11 @@ for (const event of [
   EVENTS.PERIOD_CHANGED, EVENTS.BOOK_CHANGED, EVENTS.CURRENCY_CHANGED,
 ]) on(event, () => refresh());
 
-delegate(document.body, 'click', '[data-compose]', () => openEntrySheet({ onSaved: refresh }));
+/* One handler for three buttons. The FAB carries a bare data-compose and so
+   asks for no particular type; the header's Out and In name one. */
+delegate(document.body, 'click', '[data-compose]', (_event, button) => {
+  openEntrySheet({ type: button.dataset.compose || undefined, onSaved: refresh });
+});
 
 refresh();
 

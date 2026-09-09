@@ -69,6 +69,13 @@ export async function openEntrySheet(opts = {}) {
     occurred_on: today(),
   };
 
+  // Asking for a type is explicit — the header's Out and In buttons are nothing
+  // but that request — so it beats the type a restored draft happens to carry.
+  // The half-typed amount is kept; what is not kept is the abandoned draft
+  // quietly turning a press of In into an expense. The FAB passes no type and
+  // so still restores the draft whole.
+  if (!editing && opts.type) initial.type = opts.type;
+
   const form = el('form', { class: 'entry stack stack--4', novalidate: true });
   form.dataset.flow = initial.type;
 
@@ -90,6 +97,34 @@ export async function openEntrySheet(opts = {}) {
   });
 
   return sheet;
+}
+
+/**
+ * The header's two direct-entry buttons: Out and In.
+ *
+ * A markup string rather than a component, because mountShell() takes its
+ * `actions` as one — and exported from HERE rather than from the shell so that
+ * deleting this module takes the buttons with it. The shell knows what a header
+ * is; it does not know what a transaction is.
+ *
+ * TWO buttons, not four. The header holds at most two actions before it stops
+ * being hittable on a phone (see the note above .app-header), and out and in
+ * are the two that get entered while standing in a shop. Deposit and transfer
+ * are one tap further, in the sheet's own type picker, and are used a fraction
+ * as often.
+ *
+ * They carry an aria-label as well as a visible word because "Out" alone is not
+ * an action — the label says which of the four kinds of entry this opens, and
+ * it is also what is left to read once the narrow-width rule hides the word.
+ */
+export function entryActions() {
+  return `
+    <button type="button" class="btn btn--sm btn--flow-out" data-compose="expense" aria-label="Add an expense">
+      ${icon('arrow-out', { class: 'icon icon--sm' })}<span class="btn__label">Out</span>
+    </button>
+    <button type="button" class="btn btn--sm btn--flow-in" data-compose="income" aria-label="Add income">
+      ${icon('arrow-in', { class: 'icon icon--sm' })}<span class="btn__label">In</span>
+    </button>`;
 }
 
 /* =========================================================================

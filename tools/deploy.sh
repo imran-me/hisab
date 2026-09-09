@@ -223,5 +223,34 @@ say "deploying ${NOW:0:8} (was ${WAS:0:8})"
 fetch_source || die "could not fetch $BRANCH from $REPO_URL"
 publish
 printf '%s' "$NOW" > "$STATE"
+# --- keep this script current -------------------------------------------------
+# The checkout contains tools/deploy.sh - the newer version of this very file.
+# Copying it over ourselves means the cron entry can be a plain path with no
+# variables in it, which is what Hostinger's cron actually tolerates: a `D=...;`
+# assignment in the crontab does not survive, $D expands to nothing, and the job
+# fails with "bash: /deploy.sh: No such file or directory".
+#
+# mv rather than cp, because this script is running. mv is an atomic rename
+# within one filesystem, and bash keeps reading through its open descriptor to
+# the OLD inode - so the running run finishes against the code it started with
+# and the next run picks up the new file. A cp would rewrite the file underneath
+# the interpreter, which reads scripts incrementally, and bash would resume at a
+# byte offset that now lands mid-line in different code.
+self_update() {
+  local incoming="$SRC/tools/deploy.sh"
+
+  [ -f "$incoming" ] || return 0
+  cmp -s "$incoming" "$0" && return 0
+
+  # Never install a script that would not parse. A truncated or half-written
+  # file here disables every future deploy, and fixing it needs SSH.
+  bash -n "$incoming" 2>/dev/null || { log "new deploy.sh failed its syntax check, keeping the current one"; return 0; }
+
+  cp -f "$incoming" "$HERE/.deploy.next" || return 0
+  mv -f "$HERE/.deploy.next" "$0" && say "deploy.sh updated itself"
+}
+
+self_update
+
 say "deployed ${NOW:0:8} to $DOCROOT"
 exit 0

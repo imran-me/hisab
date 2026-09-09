@@ -102,6 +102,29 @@
 
 .btn--vault:hover:not(:disabled) { background: var(--vault); color: var(--void); }
 
+/* FLOW — the direction of money, in the same two colours the entry sheet uses
+   for its type picker and the ledger uses for its amounts. Washed rather than
+   filled: these sit in the header next to a title, and two solid blocks of
+   coral and mint there read as an alert rather than as two buttons.
+
+   The pair is only ever used as a pair. A lone --flow-in button is a green
+   button, and green means "confirm" everywhere else in this product. */
+.btn--flow-out {
+  background: var(--flow-out-wash);
+  border-color: var(--flow-out);
+  color: var(--flow-out-ink);
+}
+
+.btn--flow-out:hover:not(:disabled) { background: var(--flow-out); color: var(--void); }
+
+.btn--flow-in {
+  background: var(--flow-in-wash);
+  border-color: var(--flow-in);
+  color: var(--flow-in-ink);
+}
+
+.btn--flow-in:hover:not(:disabled) { background: var(--flow-in); color: var(--void); }
+
 /* ---- Sizes -------------------------------------------------------------- */
 .btn--sm {
   min-height: 34px;
