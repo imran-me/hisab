@@ -46,6 +46,11 @@ class RateController extends Controller
     private function shape(FxRate $rate): array
     {
         return [
+            // The client sends this id back when it snapshots a rate onto a
+            // transaction. api-contract.md §7: it sends the RATE ID, never a
+            // rate - a client that can post its own rate can post any figure it
+            // likes into a converted total.
+            'id' => $rate->id,
             'base' => $rate->base,
             'quote' => $rate->quote,
             // A STRING, not a float. api-contract.md: a rate is a decimal, and

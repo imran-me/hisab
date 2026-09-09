@@ -5,6 +5,7 @@ use Hisab\Accounts\AccountsServiceProvider;
 use Hisab\Auth\AuthServiceProvider;
 use Hisab\Categories\CategoriesServiceProvider;
 use Hisab\Fx\FxServiceProvider;
+use Hisab\Ledger\LedgerServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -12,4 +13,5 @@ return [
     FxServiceProvider::class,
     CategoriesServiceProvider::class,
     AccountsServiceProvider::class,
+    LedgerServiceProvider::class,
 ];

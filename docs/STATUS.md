@@ -20,7 +20,7 @@ Things that have been run, with the result.
 | `python tools/check-pages.py` | 6 pages, pre-paint block identical, CSP hash matches `.htaccess`. |
 | `tools/qa-viewport.html` | **15/15 pass** — no horizontal overflow on any of the three screens at 360 / 390 / 414 / 768 / 1280. |
 | Headless Chrome render | Overview, Ledger and Accounts all load with an empty console. |
-| `php artisan test` | **55 tests, 180 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
+| `php artisan test` | **78 tests, 251 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
 | `php artisan migrate` | Laravel's own three migrations run against **real MySQL** (MariaDB 10.4), not only the SQLite the test suite uses. |
 | `hisab:owner` on an unseeded database | Creating the owner on a database that had been migrated but never seeded used to fail with a foreign-key violation naming a table nobody asked about. Owner-seeding now establishes the reference data it needs; verified against MySQL from `migrate:fresh` with no `db:seed`. |
 | FX on both drivers | Seeder is idempotent (10 currencies / 10 rates after three runs) and KWD lands at `minor_unit` 3, JPY at 0. The rate write path was then re-run against **real MySQL** as well, because the bug found here only appeared on SQLite. |
@@ -66,6 +66,18 @@ The FastAPI analytics service has not been written or run.
 ### Module APIs on the mock seam
 `fx`, `categories`, `accounts`, `ledger` — all four return the shape documented
 in `shared/backend/api-contract.md`, so swapping in Laravel changes no consumer.
+
+### Ledger (backend)
+The transaction record; everything else is a view over it. One row is one leg.
+A transfer always writes two legs sharing a `group_id`, inside one database
+transaction, and deleting or editing either one rewrites the pair — a
+half-applied transfer is money that left one account and arrived nowhere. The
+counting rules the contract calls easy to get wrong are each covered by a test
+that states the rule: a deposit is summed **once**, on its `out` leg, and is not
+an expense; a transfer is in no total at all but still moves both balances.
+Category names are snapshotted onto the row so a rename cannot rewrite last
+year's report. `GET /api/ledger/balances` is the only place a balance is
+computed.
 
 ### Accounts (backend)
 Follows the contract that was already written in
@@ -119,11 +131,16 @@ hash-based CSP. `docs/DEPLOY-HOSTINGER.md`. `404.html`.
 Listed so a gap does not look like an oversight later.
 
 ### Next
-1. **The login screen**, and pointing a module's `api.js` at the API. The auth
-   endpoints exist and are tested; nothing in the UI calls them yet
-2. **Export and import** — the only way to move a Phase 1 ledger off a device,
+1. **The login screen**, and pointing each module's `api.js` at the API. The
+   backend is now complete enough to serve the whole app — auth, currencies,
+   categories, accounts and the ledger — and **nothing in the UI calls any of
+   it**. That seam is the last thing between Phase 1 and Phase 2
+2. **Deploying the backend**: `composer install`, the `.env`, the `/api` rewrite
+   in `.htaccess` §8, and `hisab:owner` on the server. None of it has been run
+   there
+3. **Export and import** — the only way to move a Phase 1 ledger off a device,
    and the reason it comes before the backend rather than after
-3. **Settings** — theme, density, currency, hand, rate entry, data management
+4. **Settings** — theme, density, currency, hand, rate entry, data management
 
 ### After that
 3. **Reports** — the Insights tab now reaches a real page that states the

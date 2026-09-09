@@ -212,6 +212,10 @@ Newest first. One entry per committed item.
 - Laravel 13 foundation: skeleton at the repository root, module PSR-4 map,
   `/api` routing, a front controller that resolves its own application root,
   and four tests that pin the shape of the backend.
+- Ledger module backend: legs, pairs written atomically, derived balances and
+  the period summary. The counting rules each have a test whose only job is to
+  fail if the rule is ever collapsed — a deposit summed twice or folded into
+  expense, a transfer counted as income.
 - Accounts module backend, against the contract written before it. Found that
   `$account->book` is null before the first save, because 'personal' is a
   DATABASE default — so the query that clears the previous default matched
