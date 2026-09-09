@@ -42,7 +42,14 @@ $root = (static function (): string {
     $candidates = [
         // public/index.php - local, and `php artisan serve`
         __DIR__.'/..',
-        // public_html/hisab/api/index.php - Hostinger, app above the web root
+        // public_html/hisab/api/index.php - Hostinger, app above the web root.
+        // This IS the deploy checkout: vendor/ and .env are gitignored, and
+        // neither `git reset --hard` nor `git clean -fd` touches ignored files,
+        // so both survive every deploy. That is why there is no separate copy
+        // of the application to keep in step with the checkout.
+        __DIR__.'/../../../hisab-deploy/src',
+        // The layout docs/DEPLOY-HOSTINGER.md §8.3 describes, kept as a
+        // fallback for an installation that was set up that way.
         __DIR__.'/../../../hisab-app',
     ];
 

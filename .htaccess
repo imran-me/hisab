@@ -303,9 +303,18 @@ ErrorDocument 403 /404.html
 # framework above it is the alternative arrangement documented in
 # docs/DEPLOY-HOSTINGER.md §8.
 #
-# <IfModule mod_rewrite.c>
-#   RewriteEngine On
-#   RewriteCond %{REQUEST_URI} ^/api
-#   RewriteRule ^api/?(.*)$ public/index.php [L,QSA]
-# </IfModule>
+# It is no longer commented out, because it disables ITSELF when the backend is
+# absent: the first condition requires api/index.php to exist, so on a
+# frontend-only deployment this block does nothing at all and /api/* falls
+# through to the 404 page. That is what lets one .htaccess serve both phases
+# without anyone remembering to edit it on the day the backend lands.
+#
+# The second condition is what stops the rewrite looping: without it,
+# api/index.php rewrites to itself.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{DOCUMENT_ROOT}/api/index.php -f
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^api/?(.*)$ api/index.php [L,QSA]
+</IfModule>
 # -----------------------------------------------------------------------------

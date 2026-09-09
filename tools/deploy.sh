@@ -164,6 +164,25 @@ publish() {
     fi
   done
 
+  # The API front controller, and ONLY when the backend is actually installed.
+  #
+  # vendor/ is not in the repository - it is 83 MB, and `composer install` is
+  # run on the server once. Until that has happened there is no application to
+  # route to, and publishing api/index.php anyway would turn every /api request
+  # into a 500 instead of the 404 that honestly says "no backend here".
+  #
+  # .htaccess only rewrites /api/* when this file exists, so the two agree:
+  # both halves of the switch are the presence of one file.
+  if [ -f "$SRC/vendor/autoload.php" ] && [ -f "$SRC/public/index.php" ]; then
+    mkdir -p "$DOCROOT/api"
+    cp -f "$SRC/public/index.php" "$DOCROOT/api/index.php" || die "failed to publish the API front controller"
+  else
+    # Removed rather than left behind, so uninstalling the backend - or a
+    # deploy that runs before composer install - cannot leave a controller
+    # pointing at an application that is not there.
+    rm -f "$DOCROOT/api/index.php"
+  fi
+
   # Hostinger drops a placeholder into a new subdomain's root. It is not ours so
   # it is not in OWNED, and it would otherwise sit there forever - but index.php
   # comes before index.html in LiteSpeed's DirectoryIndex order, so leaving it
