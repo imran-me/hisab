@@ -233,7 +233,40 @@ fi
 
 [ -n "$NOW" ] || die "cannot reach GitHub (no git, curl or wget, or the network is down)"
 
+# Has the DOCUMENT ROOT drifted from what this commit should have published?
+#
+# Comparing commits alone is not enough, and the gap is not hypothetical: the
+# API front controller is only published once vendor/ exists, and vendor/ is
+# created by `composer install` run BY HAND, long after the commit that made it
+# possible. Cron sees a matching commit, exits early, and the API never appears
+# - so the one thing the person is waiting for is the one thing a five-minute
+# cron will never do for them, and the only way out is SSH.
+#
+# So the state of the web root is checked too, and a mismatch republishes even
+# when GitHub has not moved.
+needs_publish() {
+  # The backend became installable, or was removed, since the last publish.
+  if [ -f "$SRC/vendor/autoload.php" ] && [ ! -f "$DOCROOT/api/index.php" ]; then return 0; fi
+  if [ ! -f "$SRC/vendor/autoload.php" ] && [ -f "$DOCROOT/api/index.php" ]; then return 0; fi
+
+  # An owned file has gone missing from the web root - a half-finished upload,
+  # a stray delete in File Manager, an interrupted deploy.
+  local f
+  for f in "${OWNED_FILES[@]}"; do
+    if [ -f "$SRC/$f" ] && [ ! -f "$DOCROOT/$f" ]; then return 0; fi
+  done
+
+  return 1
+}
+
 if [ "$NOW" = "$WAS" ] && [ "$MODE" != "--force" ]; then
+  if needs_publish; then
+    say "same commit, but the web root is out of step - republishing"
+    publish
+    say "republished ${NOW:0:8} to $DOCROOT"
+    exit 0
+  fi
+
   # Quiet on purpose. This is the common case, twelve times an hour, and a log
   # line for it would bury the deploys that actually happened.
   exit 0
