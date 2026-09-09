@@ -5,6 +5,7 @@ namespace Hisab\Accounts\Services;
 use App\Models\User;
 use Hisab\Accounts\Models\Account;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -79,6 +80,29 @@ class AccountBook
         $account->save();
 
         return $account;
+    }
+
+    /**
+     * Reorder, from a list of ids in the order they should appear.
+     *
+     * Positions come from the POSITION IN THE ARRAY rather than from numbers
+     * the client sends. A client that supplies its own sort_order values can
+     * send two accounts the same one, and the list then reorders itself
+     * differently on each render depending on how the database breaks the tie.
+     *
+     * Ids that are not this owner's are ignored rather than rejected: the list
+     * is a statement of order, and one stale id in it should not refuse to
+     * reorder the rest.
+     *
+     * @param  list<string>  $ids
+     */
+    public function reorder(User $user, array $ids): void
+    {
+        DB::transaction(function () use ($user, $ids): void {
+            foreach (array_values($ids) as $position => $id) {
+                $this->owned($user)->whereKey($id)->update(['sort_order' => $position]);
+            }
+        });
     }
 
     /**

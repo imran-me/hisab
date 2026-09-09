@@ -15,11 +15,13 @@ use Tests\TestCase;
  */
 class ApiFoundationTest extends TestCase
 {
-    public function test_ping_answers_in_the_documented_envelope(): void
+    public function test_health_answers_in_the_documented_envelope(): void
     {
-        // shared/backend/api-contract.md §2: every successful response is an
-        // object with a `data` key, never a bare value and never a bare array.
-        $this->getJson('/api/ping')
+        // Two things at once. api-contract.md §2: every successful response is
+        // an object with a `data` key. And the PATH: http.js probes exactly
+        // this to decide whether a backend exists, so if this route is ever
+        // renamed the frontend silently falls back to browser storage.
+        $this->getJson('/api/health')
             ->assertOk()
             ->assertExactJson(['data' => ['ok' => true]]);
     }

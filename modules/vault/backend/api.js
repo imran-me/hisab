@@ -95,6 +95,33 @@ export async function exists() {
   return (await readHeader()) !== null;
 }
 
+/**
+ * Does this server offer vault sync at all?
+ *
+ * hasBackend() answers "is there an API", which is not the same question. Hisab
+ * ships its backend one module at a time, so there is a real and long-lived
+ * state where the ledger is on a server and the vault is not — every /vault/*
+ * route 404s while /api/accounts works perfectly.
+ *
+ * Without this, that state BREAKS THE VAULT. A write returns 404, the module
+ * reads a non-'offline' failure as a real error, and setting up or saving to a
+ * vault fails on a device where it had been working — with the blob already
+ * written to local storage, so the person is told it failed while it partly
+ * did not.
+ *
+ * A 404 on a vault WRITE is unambiguous: you cannot fail to find the thing you
+ * are creating, so it can only mean the route does not exist. That makes this
+ * narrow rather than a blanket "ignore errors" — 401, 422 and 5xx are all still
+ * real failures and still surface.
+ *
+ * The consequence is deliberate and is the Phase 1 behaviour, unchanged: the
+ * vault stays on this device. It is NOT silent about being unsynced elsewhere —
+ * docs/STATUS.md records that the vault has no server storage yet.
+ */
+function serverHasNoVault(res) {
+  return res.reason === 'missing';
+}
+
 async function readHeader() {
   const local = storage.get(KEYS.VAULT_META, null);
   if (local) return local;
@@ -131,7 +158,7 @@ export async function create(password, { iterations = null } = {}) {
 
   if (await hasBackend()) {
     const res = await post('/vault/header', header);
-    if (!res.ok && res.reason !== 'offline') return res;
+    if (!res.ok && res.reason !== 'offline' && !serverHasNoVault(res)) return res;
   }
   return { ok: true, data: null };
 }
@@ -292,7 +319,7 @@ export async function save(input) {
 
   if (await hasBackend()) {
     const res = existing ? await put(`/vault/${entry.id}`, { blob }) : await post('/vault', row);
-    if (!res.ok && res.reason !== 'offline') return res;
+    if (!res.ok && res.reason !== 'offline' && !serverHasNoVault(res)) return res;
   }
 
   return { ok: true, data: entry };
@@ -311,7 +338,7 @@ export async function destroy(id) {
 
   if (await hasBackend()) {
     const res = await del(`/vault/${id}`);
-    if (!res.ok && res.reason !== 'offline') return res;
+    if (!res.ok && res.reason !== 'offline' && !serverHasNoVault(res)) return res;
   }
   return { ok: true, data: null };
 }

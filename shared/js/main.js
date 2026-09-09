@@ -10,7 +10,8 @@
  * the one place where that would quietly stop being true.
  */
 
-import { siteURL, IS_FILE_PROTOCOL } from './core/paths.js';
+import { siteURL, IS_FILE_PROTOCOL, currentPath } from './core/paths.js';
+import { requireSession } from './core/session.js';
 import { applyTheme } from './core/state.js';
 import { on, EVENTS } from './core/bus.js';
 import { toastWarn } from './components/toast.js';
@@ -120,8 +121,39 @@ function warnFileProtocol() {
   );
 }
 
+/**
+ * The session gate.
+ *
+ * This is the one piece of data fetching in this file, and it is here despite
+ * the note at the top, because it is not a module's data — it is the question
+ * of whether this page may show any at all, and every page has to ask it before
+ * rendering rather than each module asking separately.
+ *
+ * It does NOT gate a static deployment. session() reports three states, and
+ * only "there is a server, and you are not signed in" redirects — a build with
+ * no API behind it keeps working exactly as Phase 1 did, with the ledger in the
+ * browser. Treating "not authenticated" as enough would lock every static copy
+ * of this app out of itself.
+ *
+ * The login page is excluded for the obvious reason.
+ *
+ * Deliberately not awaited by boot(): the shell, the theme and the reveal
+ * observer must not wait on a round trip. The redirect replaces the document
+ * when it lands, and anything rendered in the meantime goes with it.
+ */
+function initSessionGate() {
+  if (currentPath().startsWith('modules/auth/')) return;
+
+  requireSession().catch(() => {
+    // A failed probe is not a failed sign-in. session() already reports an
+    // unreachable server as "no backend", so there is nothing to do here but
+    // let the page carry on against local data.
+  });
+}
+
 function boot() {
   warnFileProtocol();
+  initSessionGate();
   initReveal();
   initFab();
   initConnectivity();

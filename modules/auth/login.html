@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <script>
+    /* PRE-PAINT. Inline, and first, on purpose: a deferred script runs after
+       the first paint, and the first paint is exactly what this exists to get
+       right. A night-theme user who sees one white frame on every navigation
+       has a broken app, however correct it looks a moment later.
+
+       This block is the twin of applyTheme() in shared/js/core/state.js. If one
+       changes, so must the other. It is duplicated into every page rather than
+       imported because an import cannot run before paint.
+
+       It is byte-identical in every page, and tools/check-pages.py asserts
+       that, because duplicated code drifts. That tool also prints the
+       Content-Security-Policy hash for this exact block; if the two disagree,
+       the browser blocks the script and every page paints the white frame this
+       is here to prevent.
+
+       .no-js is removed here too, so [data-reveal] content is only hidden when
+       JavaScript is actually present to reveal it. */
+    document.documentElement.classList.remove('no-js');
+    try {
+      var root = document.documentElement;
+      var theme = localStorage.getItem('hisab:theme');
+      if (theme) {
+        var value = JSON.parse(theme);
+        /* Both directions matter. A stored 'day' must ADD the attribute and a
+           cleared preference must REMOVE it, or someone who switches back to
+           following their device stays stuck on their old choice. */
+        if (value === 'day' || value === 'night') root.setAttribute('data-theme', value);
+        else root.removeAttribute('data-theme');
+      }
+      var density = localStorage.getItem('hisab:density');
+      if (density && JSON.parse(density) === 'compact') root.setAttribute('data-density', 'compact');
+      var hand = localStorage.getItem('hisab:hand');
+      if (hand && JSON.parse(hand) === 'left') root.setAttribute('data-hand', 'left');
+    } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
+  </script>
+
+  <title>Sign in — Hisab</title>
+  <meta name="description" content="Sign in to Hisab.">
+  <meta name="theme-color" content="#06080B">
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../../assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="../../site.webmanifest">
+
+  <link rel="stylesheet" href="../../shared/css/hisab.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!--
+    THE LOCK IS THE PAGE, and it is visible from the first paint rather than
+    revealed by script — the same decision as the vault's, for the same reason.
+    If this started hidden, a slow script or a JavaScript error would leave a
+    sign-in screen that never appears, on a page whose only purpose is to be it.
+
+    There is no app shell here on purpose. No tab bar, no rail, no navigation:
+    every one of those destinations needs a session, so offering them to someone
+    who does not have one is a row of links that all bounce straight back here.
+  -->
+  <main class="lock" id="main">
+    <div class="lock__panel stack stack--4">
+
+      <div class="stack stack--2" style="align-items:center">
+        <span class="wordmark">Hisa<span class="wordmark__b">b</span></span>
+        <p class="meta" data-intro>Sign in to your accounts and vault.</p>
+      </div>
+
+      <form class="stack stack--3" data-login-form novalidate>
+
+        <div class="field">
+          <label class="field__label" for="login-email">Email</label>
+          <div class="input-wrap">
+            <input class="input" type="email" id="login-email" name="email"
+                   autocomplete="username" inputmode="email" enterkeyhint="next"
+                   autocapitalize="none" spellcheck="false" required data-autofocus>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="login-password">Password</label>
+          <div class="input-wrap">
+            <input class="input" type="password" id="login-password" name="password"
+                   autocomplete="current-password" enterkeyhint="go" required>
+          </div>
+        </div>
+
+        <label class="check">
+          <input class="check__box" type="checkbox" name="remember" checked>
+          <span class="check__text">Stay signed in on this device</span>
+        </label>
+
+        <!--
+          ONE error line for the whole form, not one per field.
+
+          The server answers every failed sign-in with the same message
+          whatever went wrong - no such account, wrong password - because
+          telling them apart is an account enumeration endpoint. Field-level
+          errors here would undo that from the client side by implying which
+          half was wrong.
+        -->
+        <p class="field__error" data-login-error role="alert" hidden></p>
+
+        <button type="submit" class="btn btn--primary btn--lg btn--block" data-submit>
+          Sign in
+        </button>
+      </form>
+
+      <p class="meta" data-offline-note hidden>
+        No server is reachable, so there is nothing to sign in to. Your ledger
+        is on this device and the app works without an account.
+      </p>
+
+    </div>
+  </main>
+
+  <script type="module" src="../../shared/js/main.js"></script>
+  <script type="module" src="login-page.js"></script>
+</body>
+</html>

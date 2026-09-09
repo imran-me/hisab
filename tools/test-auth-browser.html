@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Auth — browser test</title>
+<style>
+  body { font: 14px/1.6 ui-monospace, monospace; background: #06080B; color: #C9D2DA; padding: 2rem; }
+  .pass { color: #6EE7A8; } .fail { color: #FF8199; } h1 { font-size: 1rem; }
+</style>
+</head>
+<body>
+<h1>Auth — browser test</h1>
+<pre id="out"></pre>
+
+<!--
+  THIS TEST NEEDS A REAL BACKEND, and cannot be run against `python -m http.server`.
+
+      HISAB_DEV_TOOLS=1 php -S 127.0.0.1:8822 -t . tools/serve.php
+      tools/run-browser-tests.sh 8822
+
+  It also needs an owner to exist with the credentials below. Create one with
+  `php artisan hisab:owner`, or point OWNER at whatever exists locally.
+
+  WHY THIS EXISTS AT ALL, when the PHP suite already covers the endpoints and
+  curl already proved the cookie flow: neither of those runs session.js. The
+  part that can only break in a browser is signIn()'s priming GET — the request
+  whose sole purpose is to be issued the XSRF-TOKEN cookie that the POST must
+  echo back. Drop it and the very first sign-in of a fresh browser session is a
+  419, which nothing server-side would notice and no curl script written by hand
+  would reproduce, because the person writing it fetches a token first without
+  thinking about it.
+-->
+<script type="module">
+import { signIn, signOut, session, forgetSession } from '../shared/js/core/session.js';
+import { resetBackendProbe } from '../shared/js/core/http.js';
+
+const OWNER = { email: 'owner@hisab.test', password: 'a correct horse battery staple' };
+
+const out = document.getElementById('out');
+let passed = 0;
+const failures = [];
+
+function check(label, condition) {
+  if (condition) { passed++; out.innerHTML += `<span class="pass">  ok  </span>${label}\n`; }
+  else { failures.push(label); out.innerHTML += `<span class="fail">  FAIL</span> ${label}\n`; }
+}
+
+function finish() {
+  const verdict = failures.length === 0 ? 'PASS' : 'FAIL';
+  document.title = `RESULT|${verdict}|${passed}|${failures.length}|${failures.join(' ; ')}`;
+}
+
+(async function run() {
+  try {
+    // Start from a known state: a previous run may have left a session behind.
+    await signOut();
+    forgetSession();
+    resetBackendProbe();
+
+    // --- the server is found at all ---------------------------------------
+    let state = await session({ force: true });
+    check('a backend is detected', state.backend === true);
+    check('nobody is signed in yet', state.authenticated === false);
+
+    // --- the wrong password ------------------------------------------------
+    const bad = await signIn(OWNER.email, 'definitely not the password');
+    check('a wrong password does not sign in', bad.ok === false);
+    check('and reports it as invalid, not as an error', bad.reason === 'invalid');
+
+    forgetSession();
+    state = await session({ force: true });
+    check('still signed out after a failed attempt', state.authenticated === false);
+
+    // --- the real thing ----------------------------------------------------
+    // The assertion this whole file exists for. If signIn() ever stops priming
+    // the CSRF cookie with its GET, this is a 419 and nothing else catches it.
+    const good = await signIn(OWNER.email, OWNER.password);
+    check('the owner can sign in from a browser', good.ok === true);
+    check('and gets their user back', good.user?.email === OWNER.email);
+    check('the id is an uppercase ULID', /^[0-9A-HJKMNP-TV-Z]{26}$/.test(good.user?.id ?? ''));
+
+    state = await session({ force: true });
+    check('the session survives the next request', state.authenticated === true);
+
+    // --- the session actually opens the data --------------------------------
+    const { get } = await import('../shared/js/core/http.js');
+    const accounts = await get('/accounts');
+    check('a signed-in read succeeds', accounts.ok === true);
+    check('and returns the documented envelope', Array.isArray(accounts.data?.data));
+
+    // --- and closes it again -------------------------------------------------
+    const bye = await signOut();
+    check('signing out succeeds', bye.ok === true);
+
+    state = await session({ force: true });
+    check('the session is gone', state.authenticated === false);
+
+    const after = await get('/accounts');
+    check('and a read is refused afterwards', after.ok === false && after.reason === 'auth');
+
+  } catch (err) {
+    check(`no exception escaped (${err?.message ?? err})`, false);
+  }
+
+  finish();
+})();
+</script>
+</body>
+</html>

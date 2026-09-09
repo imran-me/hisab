@@ -20,10 +20,12 @@ Things that have been run, with the result.
 | `python tools/check-pages.py` | 6 pages, pre-paint block identical, CSP hash matches `.htaccess`. |
 | `tools/qa-viewport.html` | **15/15 pass** — no horizontal overflow on any of the three screens at 360 / 390 / 414 / 768 / 1280. |
 | Headless Chrome render | Overview, Ledger and Accounts all load with an empty console. |
-| `php artisan test` | **78 tests, 251 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
+| `php artisan test` | **81 tests, 259 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
 | `php artisan migrate` | Laravel's own three migrations run against **real MySQL** (MariaDB 10.4), not only the SQLite the test suite uses. |
 | `hisab:owner` on an unseeded database | Creating the owner on a database that had been migrated but never seeded used to fail with a foreign-key violation naming a table nobody asked about. Owner-seeding now establishes the reference data it needs; verified against MySQL from `migrate:fresh` with no `db:seed`. |
 | FX on both drivers | Seeder is idempotent (10 currencies / 10 rates after three runs) and KWD lands at `minor_unit` 3, JPY at 0. The rate write path was then re-run against **real MySQL** as well, because the bug found here only appeared on SQLite. |
+| `tools/run-browser-tests.sh` | **51 + 14 assertions pass** against a real backend on one origin (`tools/serve.php`). The auth harness exists because neither the PHP suite nor curl runs `session.js` — the priming GET that fetches the CSRF cookie can only fail in a browser. |
+| Signing in, end to end | Guard verified in headless Chrome: signed out **with** a server present redirects to the login screen and leaks no ledger markup; **without** one, the app opens on the Overview exactly as in Phase 1. |
 | Auth over real HTTP | The whole flow against `artisan serve`: session 200 while signed out, `XSRF-TOKEN` issued, **POST without the CSRF header rejected 419**, POST with it 200, session persists, logout 204, session cleared, limiter cutting in. The session cookie carries `httponly; samesite=lax`. Done over HTTP because Laravel skips CSRF inside the test suite, so a feature test would pass whether the middleware were wired or not. |
 | `tools/deploy.sh` | Exercised against a simulated server on both branches — with git, and with git hidden so it takes the tarball. Only owned paths published; `.git`, `docs/` and `tools/` do not leak; a deleted file is swept; `api/` survives; a second run is a silent no-op; two concurrent runs leave one working. |
 
@@ -105,6 +107,13 @@ the frontend fetches, rather than a second copy of the list. Rates keep their
 history, are entered by hand rather than pulled from a provider, and a rate the
 owner entered always beats the estimate shipped with the install.
 
+### Signing in (frontend)
+`modules/auth/login.html`, and a session gate in `main.js` built on
+`shared/js/core/session.js`. The gate recognises **three** states, not two:
+there is no server (Phase 1 — no login, no gate), there is a server and nobody
+is signed in (redirect), or someone is. Collapsing the first two would lock
+every static deployment out of itself.
+
 ### Auth (backend)
 One owner, session cookie rather than a bearer token — a token has to live where
 script can read it, and that is where the vault's blob already is. CSRF on every
@@ -131,13 +140,14 @@ hash-based CSP. `docs/DEPLOY-HOSTINGER.md`. `404.html`.
 Listed so a gap does not look like an oversight later.
 
 ### Next
-1. **The login screen**, and pointing each module's `api.js` at the API. The
-   backend is now complete enough to serve the whole app — auth, currencies,
-   categories, accounts and the ledger — and **nothing in the UI calls any of
-   it**. That seam is the last thing between Phase 1 and Phase 2
-2. **Deploying the backend**: `composer install`, the `.env`, the `/api` rewrite
+1. **Deploying the backend**: `composer install`, the `.env`, the `/api` rewrite
    in `.htaccess` §8, and `hisab:owner` on the server. None of it has been run
-   there
+   there — everything below passes locally on the same PHP version, which is
+   evidence and not the same thing
+2. **The vault has no server storage.** Every `/vault/*` route 404s, and the
+   module now treats that as "this server does not offer vault sync" and stays
+   on the device. So the vault keeps working exactly as it does today, and is
+   **not** backed up anywhere when the rest of the app is
 3. **Export and import** — the only way to move a Phase 1 ledger off a device,
    and the reason it comes before the backend rather than after
 4. **Settings** — theme, density, currency, hand, rate entry, data management

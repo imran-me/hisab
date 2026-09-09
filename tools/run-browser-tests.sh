@@ -48,7 +48,11 @@ if ! curl -sf -o /dev/null "http://127.0.0.1:$PORT/index.html"; then
   exit 1
 fi
 
-PAGES=("tools/test-vault-browser.html")
+# test-auth-browser.html needs a server that also answers /api, which
+# `python -m http.server` does not. Run it against tools/serve.php:
+#     HISAB_DEV_TOOLS=1 php -S 127.0.0.1:8822 -t . tools/serve.php
+#     tools/run-browser-tests.sh 8822
+PAGES=("tools/test-vault-browser.html" "tools/test-auth-browser.html")
 FAILED=0
 
 for page in "${PAGES[@]}"; do

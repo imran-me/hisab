@@ -212,6 +212,11 @@ Newest first. One entry per committed item.
 - Laravel 13 foundation: skeleton at the repository root, module PSR-4 map,
   `/api` routing, a front controller that resolves its own application root,
   and four tests that pin the shape of the backend.
+- Wired the frontend to the backend: login screen, a session gate that knows
+  the difference between "no server" and "not signed in", and tools/serve.php so
+  both halves run on one origin locally. Found that turning the backend on
+  BREAKS THE VAULT — every /vault/* route 404s, and the module read that as a
+  real error, so creating or saving a vault failed on a device where it worked.
 - Ledger module backend: legs, pairs written atomically, derived balances and
   the period summary. The counting rules each have a test whose only job is to
   fail if the rule is ever collapsed — a deposit summed twice or folded into

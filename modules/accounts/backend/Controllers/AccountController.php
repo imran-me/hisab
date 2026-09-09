@@ -65,6 +65,18 @@ class AccountController extends Controller
         return response()->json(['data' => $this->shape($account)]);
     }
 
+    public function reorder(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['string', 'size:26'],
+        ]);
+
+        $this->book->reorder($request->user(), $data['ids']);
+
+        return response()->json(null, 204);
+    }
+
     public function destroy(Request $request, string $id): JsonResponse
     {
         // Throws a 409 carrying the transaction count when the account is

@@ -201,6 +201,56 @@ class AccountsTest extends TestCase
             ->assertOk()->assertJsonPath('data.archived_at', null);
     }
 
+    public function test_reordering_takes_position_from_the_list_not_the_client(): void
+    {
+        $owner = $this->owner();
+
+        $a = $this->actingAs($owner)->postJson('/api/accounts', $this->payload(['name' => 'A']))->json('data.id');
+        $b = $this->actingAs($owner)->postJson('/api/accounts', $this->payload(['name' => 'B']))->json('data.id');
+        $c = $this->actingAs($owner)->postJson('/api/accounts', $this->payload(['name' => 'C']))->json('data.id');
+
+        $this->actingAs($owner)->patchJson('/api/accounts/reorder', ['ids' => [$c, $a, $b]])
+            ->assertNoContent();
+
+        $order = collect($this->actingAs($owner)->getJson('/api/accounts')->json('data'))
+            ->pluck('id')->filter(fn ($id) => in_array($id, [$a, $b, $c], true))->values()->all();
+
+        $this->assertSame([$c, $a, $b], $order);
+    }
+
+    public function test_reorder_ignores_an_id_that_is_not_yours(): void
+    {
+        $mine = $this->owner('me@example.test');
+        $theirs = $this->owner('them@example.test');
+
+        $a = $this->actingAs($mine)->postJson('/api/accounts', $this->payload(['name' => 'A']))->json('data.id');
+        $stranger = $this->actingAs($theirs)->postJson('/api/accounts', $this->payload())->json('data.id');
+
+        // Captured rather than assumed: both owners start with seeded accounts,
+        // so a new one does not land at position 0.
+        $before = (int) Account::query()->find($stranger)->sort_order;
+
+        // A stale id in the list must not refuse to reorder the rest, and must
+        // not touch a row belonging to someone else.
+        $this->actingAs($mine)->patchJson('/api/accounts/reorder', ['ids' => [$stranger, $a]])
+            ->assertNoContent();
+
+        $this->assertSame($before, (int) Account::query()->find($stranger)->sort_order);
+
+        // And mine did move, so the stale id did not abort the whole reorder.
+        $this->assertSame(1, (int) Account::query()->find($a)->sort_order);
+    }
+
+    public function test_reorder_is_not_mistaken_for_an_account_id(): void
+    {
+        // 'reorder' is 7 characters, so it cannot be a ULID - but the route is
+        // registered before /{id} regardless, because relying on the id format
+        // to disambiguate a route is a rule nobody will remember.
+        $this->actingAs($this->owner())
+            ->patchJson('/api/accounts/reorder', ['ids' => []])
+            ->assertStatus(422);
+    }
+
     public function test_an_unreferenced_account_can_be_deleted(): void
     {
         $owner = $this->owner();
