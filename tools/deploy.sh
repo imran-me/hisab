@@ -160,7 +160,27 @@ publish() {
     if have rsync; then
       rsync -a --delete "$SRC/$d/" "$DOCROOT/$d/" || die "rsync failed on $d/"
     else
-      rm -rf "${DOCROOT:?}/$d" && cp -a "$SRC/$d" "$DOCROOT/$d" || die "failed to copy $d/"
+      # Build beside the live directory, then swap with two renames.
+      #
+      # The obvious `rm -rf` then `cp -a` is what this replaces, and it is worse
+      # than it looks: copying shared/ takes seconds, and for every one of them
+      # the directory DOES NOT EXIST. A page loaded in that window gets a 404
+      # for main.js, so the shell never mounts - no navigation, no header, and
+      # skeleton rows that never resolve. It looks like a broken app rather than
+      # a deploy in progress, and it is gone by the time anyone investigates.
+      #
+      # Two renames are not atomic together, but each is atomic and the gap
+      # between them is microseconds rather than seconds. That is the best
+      # available without symlinking the document root, which Hostinger's
+      # document root cannot be.
+      local new="${DOCROOT:?}/.$d.new" old="${DOCROOT:?}/.$d.old"
+      rm -rf "$new" "$old"
+      cp -a "$SRC/$d" "$new" || die "failed to stage $d/"
+      if [ -d "$DOCROOT/$d" ]; then
+        mv "$DOCROOT/$d" "$old" || die "failed to retire the old $d/"
+      fi
+      mv "$new" "$DOCROOT/$d" || die "failed to swap in $d/"
+      rm -rf "$old"
     fi
   done
 

@@ -113,17 +113,17 @@ export async function openEntrySheet(opts = {}) {
  * are one tap further, in the sheet's own type picker, and are used a fraction
  * as often.
  *
- * They carry an aria-label as well as a visible word because "Out" alone is not
- * an action — the label says which of the four kinds of entry this opens, and
- * it is also what is left to read once the narrow-width rule hides the word.
+ * They carry an aria-label as well as the visible word because "Out" on its own
+ * is not an action: the label says which of the four kinds of entry the button
+ * opens, which is what a screen reader has to hear and the icon cannot say.
  */
 export function entryActions() {
   return `
-    <button type="button" class="btn btn--sm btn--flow-out" data-compose="expense" aria-label="Add an expense">
-      ${icon('arrow-out', { class: 'icon icon--sm' })}<span class="btn__label">Out</span>
+    <button type="button" class="btn btn--flow-out" data-compose="expense" aria-label="Add an expense">
+      ${icon('arrow-out', { class: 'icon icon--sm' })}<span>Out</span>
     </button>
-    <button type="button" class="btn btn--sm btn--flow-in" data-compose="income" aria-label="Add income">
-      ${icon('arrow-in', { class: 'icon icon--sm' })}<span class="btn__label">In</span>
+    <button type="button" class="btn btn--flow-in" data-compose="income" aria-label="Add income">
+      ${icon('arrow-in', { class: 'icon icon--sm' })}<span>In</span>
     </button>`;
 }
 

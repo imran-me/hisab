@@ -38,6 +38,17 @@
 .app-header__title { flex: 1 1 auto; min-width: 0; font-family: var(--font-display); font-size: var(--fs-16); font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-header__actions { flex: none; display: flex; align-items: center; gap: var(--s-1); }
 
+/* A header action keeps the FULL tap height even when it carries a word, and
+   pays for it in horizontal padding instead. The header is reached with a thumb
+   stretched to the top of a phone, which is the least accurate press anyone
+   makes all day; .btn--sm would fit more comfortably at 34px and be missed. */
+.app-header__actions .btn {
+  min-height: var(--tap-min);
+  padding-inline: var(--s-3);
+  font-size: var(--fs-13);
+  gap: var(--s-1);
+}
+
 /* The wordmark. Set in the display face with the two syllables weighted
    differently — the mark IS the typography, so there is no logo file to load
    and nothing to go blurry on a high-density screen. */

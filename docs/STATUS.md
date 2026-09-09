@@ -4,7 +4,7 @@ What is built, what is not, and what has actually been executed as opposed to
 merely written. `CONVENTIONS.md` requires this file: authored is not verified,
 and a gap that is written down is a decision rather than an oversight.
 
-Last updated: 2026-09-08
+Last updated: 2026-09-09
 
 ---
 
@@ -28,6 +28,8 @@ Things that have been run, with the result.
 | Auth in a browser | **14 assertions pass** against a real backend on one origin (`tools/serve.php`). The auth harness exists because neither the PHP suite nor curl runs `session.js` — the priming GET that fetches the CSRF cookie can only fail in a browser. |
 | Signing in, end to end | Guard verified in headless Chrome: signed out **with** a server present redirects to the login screen and leaks no ledger markup; **without** one, the app opens on the Overview exactly as in Phase 1. |
 | Auth over real HTTP | The whole flow against `artisan serve`: session 200 while signed out, `XSRF-TOKEN` issued, **POST without the CSRF header rejected 419**, POST with it 200, session persists, logout 204, session cleared, limiter cutting in. The session cookie carries `httponly; samesite=lax`. Done over HTTP because Laravel skips CSRF inside the test suite, so a feature test would pass whether the middleware were wired or not. |
+| Out / In in the header | **21 assertions pass** in headless Chrome across Ledger and Overview: the pressed button's type arrives in the sheet, the saved row carries the matching `type` and `direction`, and the bare FAB still asks for no type. Measured at 320 / 360 / 390 / 414 / 768 / 1280 — no header overflow, 44px tap targets, and the title ellipsises rather than pushes at 320. Rendered in both themes. |
+| The entry draft | **Never written.** `saveDraft()` begins `if (!form.isConnected) return;` and `openSheet`'s `close()` calls `sheet.remove()` before `onClose?.(reason)`, so the form is already detached every time. Pre-existing; found while testing the buttons above, not caused by them. |
 | `tools/deploy.sh` | Exercised against a simulated server on both branches — with git, and with git hidden so it takes the tarball. Only owned paths published; `.git`, `docs/` and `tools/` do not leak; a deleted file is swept; `api/` survives; a second run is a silent no-op; two concurrent runs leave one working. |
 
 ## Not executed
@@ -198,6 +200,9 @@ Stated so nobody looks for them:
 - **The overflow measurements were taken against an empty ledger.** A very long
   payee or a ten-digit balance in a narrow column has not been measured at 360px
   with real data in place. A stress fixture is worth adding to `qa-viewport.html`.
+- **A half-typed entry is not kept.** The entry sheet promises a draft that
+  survives the app being backgrounded, and the draft is never written — see
+  the row in Executed. Dismissing the sheet loses whatever was typed.
 - **Insights is a tab with no feature behind it.** It reaches a real page that
   says so, rather than a 404, but there are no reports yet. Every other primary
   tab is a working screen.
