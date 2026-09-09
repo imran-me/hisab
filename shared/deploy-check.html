@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Deploy check · Hisab</title>
+<!--
+  TEMPORARY. Delete this file once the cron deploy has been confirmed.
+
+  It is deliberately self-contained: no stylesheet, no script, no font, no
+  icon sprite. If it depended on shared/css/hisab.css then a styling failure
+  would look identical to a deploy failure, and this page exists to answer
+  exactly one question - did the file reach the server. Nothing else.
+
+  It lives under shared/ rather than at the top level because deploy.sh
+  publishes an explicit list: OWNED_FILES is index.html, 404.html, .htaccess
+  and site.webmanifest, plus the assets/, shared/ and modules/ directories.
+  A new top-level file would be committed and then never published, which
+  would read as a broken cron rather than a page in the wrong place.
+-->
+<style>
+  :root {
+    --void: #06080B; --surface: #0B0F15; --line: #1D2634;
+    --ink: #E9EEF4; --ink-2: #A3B0BF; --ink-3: #6B7A8B;
+    --ok: #3FE3AE; --ok-ink: #5DEEC0; --ok-wash: rgba(63,227,174,.12);
+    --warn-ink: #FFC960; --warn-wash: rgba(242,178,60,.13);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 6vh 5vw 12vh;
+    background: var(--void); color: var(--ink);
+    font: 16px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+
+  .mark {
+    display: grid; place-items: center;
+    width: 4.5rem; height: 4.5rem; border-radius: 50%;
+    background: var(--ok-wash); border: 1px solid var(--ok);
+    color: var(--ok-ink); font-size: 2.25rem; line-height: 1;
+    margin-bottom: 1.75rem;
+  }
+  h1 { font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 1.15; margin: 0 0 .75rem; letter-spacing: -.02em; }
+  .lede { font-size: 1.125rem; color: var(--ink-2); margin: 0 0 2.5rem; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 1.5rem 1.75rem; margin-bottom: 1.5rem;
+  }
+  .panel h2 {
+    font-size: .75rem; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--ink-3); margin: 0 0 1rem; font-weight: 600;
+  }
+
+  ol.chain { margin: 0; padding-left: 1.35rem; color: var(--ink-2); }
+  ol.chain li { margin-bottom: .5rem; }
+  ol.chain li:last-child { margin-bottom: 0; }
+  ol.chain b { color: var(--ink); font-weight: 600; }
+
+  dl { display: grid; grid-template-columns: auto 1fr; gap: .6rem 1.5rem; margin: 0; }
+  dt { color: var(--ink-3); font-size: .9rem; }
+  dd {
+    margin: 0; font-family: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
+    font-size: .9rem; word-break: break-all;
+  }
+  @media (max-width: 34rem) {
+    dl { grid-template-columns: 1fr; gap: .15rem; }
+    dd { margin-bottom: .6rem; }
+  }
+
+  .note {
+    border-left: 3px solid var(--warn-ink); background: var(--warn-wash);
+    border-radius: 0 8px 8px 0; padding: 1rem 1.25rem;
+    color: var(--ink-2); font-size: .95rem;
+  }
+  .note b { color: var(--ink); }
+  footer { margin-top: 2.5rem; color: var(--ink-3); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <div class="mark" aria-hidden="true">&#10003;</div>
+
+  <h1>The deploy pipeline works.</h1>
+  <p class="lede">
+    You are reading a file that nobody uploaded. It was written on a laptop,
+    pushed to GitHub, and pulled down here by the cron job without anything
+    else being pressed.
+  </p>
+
+  <section class="panel">
+    <h2>What reaching this page proves</h2>
+    <ol class="chain">
+      <li>The cron job is <b>running on schedule</b> &mdash; not saved-but-disabled.</li>
+      <li>It can <b>reach GitHub</b> and see that <code>main</code> moved.</li>
+      <li>It <b>fetched the new commit</b> into <code>hisab-deploy/src</code>.</li>
+      <li>It <b>published</b> into the document root, one level down from the checkout.</li>
+      <li>The subdomain, SSL and <code>.htaccess</code> are all <b>serving what it published</b>.</li>
+    </ol>
+  </section>
+
+  <section class="panel">
+    <h2>Details</h2>
+    <dl>
+      <dt>Written</dt>
+      <dd>2026-09-09 15:48 UTC</dd>
+      <dt>Source</dt>
+      <dd>shared/deploy-check.html</dd>
+      <dt>Published by</dt>
+      <dd>tools/deploy.sh, via cron every 5 minutes</dd>
+    </dl>
+  </section>
+
+  <p class="note">
+    <b>This page is temporary.</b> It is not linked from anywhere in the app and
+    it is marked <code>noindex</code>. Delete it once you have seen it &mdash;
+    removing the file from <code>main</code> is enough, because the deploy
+    mirrors <code>shared/</code> with <code>rsync --delete</code>, so the next
+    run takes it off the server too. That deletion is itself the second half of
+    the test.
+  </p>
+
+  <footer>Hisab &middot; deploy check &middot; safe to delete</footer>
+</main>
+</body>
+</html>
