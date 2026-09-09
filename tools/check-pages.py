@@ -74,6 +74,22 @@ def main() -> int:
         rel = str(page.relative_to(ROOT)).replace("\\", "/")
         text = page.read_text(encoding="utf-8")
 
+        # A page can declare itself standalone and be held to none of this.
+        #
+        # There is exactly one legitimate reason: a page whose job is to prove
+        # that a FILE reached the server. Such a page must not load the
+        # stylesheet, the sprite or the boot script, because then a styling
+        # failure and a deploy failure look identical - and it exists to answer
+        # only the second question.
+        #
+        # Deliberately an opt-in marker in the file rather than a filename in
+        # this tool. A list of exempt names here rots the moment someone renames
+        # a file, and it puts the reason for the exemption somewhere nobody
+        # reading the page will look.
+        if 'name="hisab:standalone"' in text:
+            notes.append(f"{rel}: standalone, exempt from the page contract")
+            continue
+
         # --- 1. the pre-paint block
         match = re.search(r"<script>\s*(/\*.*?)</script>", text, re.S)
         if not match:

@@ -24,7 +24,8 @@ Things that have been run, with the result.
 | `php artisan migrate` | Laravel's own three migrations run against **real MySQL** (MariaDB 10.4), not only the SQLite the test suite uses. |
 | `hisab:owner` on an unseeded database | Creating the owner on a database that had been migrated but never seeded used to fail with a foreign-key violation naming a table nobody asked about. Owner-seeding now establishes the reference data it needs; verified against MySQL from `migrate:fresh` with no `db:seed`. |
 | FX on both drivers | Seeder is idempotent (10 currencies / 10 rates after three runs) and KWD lands at `minor_unit` 3, JPY at 0. The rate write path was then re-run against **real MySQL** as well, because the bug found here only appeared on SQLite. |
-| `tools/run-browser-tests.sh` | **51 + 14 assertions pass** against a real backend on one origin (`tools/serve.php`). The auth harness exists because neither the PHP suite nor curl runs `session.js` — the priming GET that fetches the CSRF cookie can only fail in a browser. |
+| `tools/run-browser-tests.sh` | **51 + 13 + 14 assertions.** The settings harness exists because `--dump-dom` cannot answer its question: the page restores a preference by setting `input.checked`, which is a property, so a DOM dump looks identical whether the selector matched or not. |
+| Auth in a browser | **14 assertions pass** against a real backend on one origin (`tools/serve.php`). The auth harness exists because neither the PHP suite nor curl runs `session.js` — the priming GET that fetches the CSRF cookie can only fail in a browser. |
 | Signing in, end to end | Guard verified in headless Chrome: signed out **with** a server present redirects to the login screen and leaks no ledger markup; **without** one, the app opens on the Overview exactly as in Phase 1. |
 | Auth over real HTTP | The whole flow against `artisan serve`: session 200 while signed out, `XSRF-TOKEN` issued, **POST without the CSRF header rejected 419**, POST with it 200, session persists, logout 204, session cleared, limiter cutting in. The session cookie carries `httponly; samesite=lax`. Done over HTTP because Laravel skips CSRF inside the test suite, so a feature test would pass whether the middleware were wired or not. |
 | `tools/deploy.sh` | Exercised against a simulated server on both branches — with git, and with git hidden so it takes the tarball. Only owned paths published; `.git`, `docs/` and `tools/` do not leak; a deleted file is swept; `api/` survives; a second run is a silent no-op; two concurrent runs leave one working. |
@@ -107,6 +108,15 @@ the frontend fetches, rather than a second copy of the list. Rates keep their
 history, are entered by hand rather than pulled from a provider, and a rate the
 owner entered always beats the estimate shipped with the install.
 
+### Settings
+Theme, density and reaching hand. All three setters have existed in
+`shared/js/core/state.js` since the design system was built — what was missing
+was any way to reach them, so the theme followed the device and nobody could
+override it. Theme has **three** options rather than a switch: Day, Night, and
+Follow device. The third has to be selectable, because it is the only way back
+once a choice is made, and it is what the CSS expresses as
+`:root:not([data-theme])`.
+
 ### Signing in (frontend)
 `modules/auth/login.html`, and a session gate in `main.js` built on
 `shared/js/core/session.js`. The gate recognises **three** states, not two:
@@ -150,10 +160,12 @@ Listed so a gap does not look like an oversight later.
    **not** backed up anywhere when the rest of the app is
 3. **Export and import** — the only way to move a Phase 1 ledger off a device,
    and the reason it comes before the backend rather than after
-4. **Settings** — theme, density, currency, hand, rate entry, data management
+9. **Settings** — theme, density, currency, hand, rate entry, data management
 
 ### After that
-3. **Reports** — the Insights tab now reaches a real page that states the
+3. **The four remaining dead nav links** — Business, Investments, Budgets and
+   Categories still 404. Settings and Insights now do not
+4. **Reports** — the Insights tab now reaches a real page that states the
    feature is unwritten, rather than a 404. The reports themselves are not built
 4. **Business books** — separate ledgers per business, per-business profit
 5. **Investments** — holdings, cost basis, partner splits, returns

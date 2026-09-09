@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <script>
+    /* PRE-PAINT. Inline, and first, on purpose: a deferred script runs after
+       the first paint, and the first paint is exactly what this exists to get
+       right. A night-theme user who sees one white frame on every navigation
+       has a broken app, however correct it looks a moment later.
+
+       This block is the twin of applyTheme() in shared/js/core/state.js. If one
+       changes, so must the other. It is duplicated into every page rather than
+       imported because an import cannot run before paint.
+
+       It is byte-identical in every page, and tools/check-pages.py asserts
+       that, because duplicated code drifts. That tool also prints the
+       Content-Security-Policy hash for this exact block; if the two disagree,
+       the browser blocks the script and every page paints the white frame this
+       is here to prevent.
+
+       .no-js is removed here too, so [data-reveal] content is only hidden when
+       JavaScript is actually present to reveal it. */
+    document.documentElement.classList.remove('no-js');
+    try {
+      var root = document.documentElement;
+      var theme = localStorage.getItem('hisab:theme');
+      if (theme) {
+        var value = JSON.parse(theme);
+        /* Both directions matter. A stored 'day' must ADD the attribute and a
+           cleared preference must REMOVE it, or someone who switches back to
+           following their device stays stuck on their old choice. */
+        if (value === 'day' || value === 'night') root.setAttribute('data-theme', value);
+        else root.removeAttribute('data-theme');
+      }
+      var density = localStorage.getItem('hisab:density');
+      if (density && JSON.parse(density) === 'compact') root.setAttribute('data-density', 'compact');
+      var hand = localStorage.getItem('hisab:hand');
+      if (hand && JSON.parse(hand) === 'left') root.setAttribute('data-hand', 'left');
+    } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
+  </script>
+
+  <title>Settings — Hisab</title>
+  <meta name="description" content="Appearance and preferences.">
+  <meta name="theme-color" content="#06080B">
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../../assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="../../site.webmanifest">
+
+  <link rel="stylesheet" href="../../shared/css/hisab.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="app">
+    <header class="app-header"></header>
+    <nav class="app-rail" aria-label="Sections"></nav>
+
+    <main class="app-main" id="main">
+      <div class="page stack stack--4">
+
+        <!-- ================= Appearance ================= -->
+        <section class="stack stack--3" aria-labelledby="appearance-h">
+          <h2 class="label" id="appearance-h">Appearance</h2>
+
+          <div class="card stack stack--3">
+
+            <fieldset class="fieldset stack stack--2">
+              <legend class="field__label">Theme</legend>
+              <!--
+                THREE options, not a two-way switch.
+
+                "Follow device" has to be a real, selectable state rather than
+                the absence of a choice: it is what the CSS expresses as
+                :root:not([data-theme]), and it is the only way back once
+                someone has picked one. A toggle with two positions can express
+                day and night and cannot express "whatever my phone is doing",
+                so choosing once would be permanent.
+              -->
+              <div class="choices" data-theme-choices role="radiogroup" aria-label="Theme">
+                <label class="choice">
+                  <input type="radio" name="theme" value="">
+                  <span>Follow device</span>
+                </label>
+                <label class="choice">
+                  <input type="radio" name="theme" value="day">
+                  <span>Day</span>
+                </label>
+                <label class="choice">
+                  <input type="radio" name="theme" value="night">
+                  <span>Night</span>
+                </label>
+              </div>
+              <p class="field__hint" data-theme-hint></p>
+            </fieldset>
+
+            <fieldset class="fieldset stack stack--2">
+              <legend class="field__label">Density</legend>
+              <div class="choices" data-density-choices role="radiogroup" aria-label="Density">
+                <label class="choice">
+                  <input type="radio" name="density" value="default">
+                  <span>Comfortable</span>
+                </label>
+                <label class="choice">
+                  <input type="radio" name="density" value="compact">
+                  <span>Compact</span>
+                </label>
+              </div>
+              <p class="field__hint">Compact fits more rows on screen.</p>
+            </fieldset>
+
+            <fieldset class="fieldset stack stack--2">
+              <legend class="field__label">Reaching hand</legend>
+              <div class="choices" data-hand-choices role="radiogroup" aria-label="Reaching hand">
+                <label class="choice">
+                  <input type="radio" name="hand" value="right">
+                  <span>Right</span>
+                </label>
+                <label class="choice">
+                  <input type="radio" name="hand" value="left">
+                  <span>Left</span>
+                </label>
+              </div>
+              <p class="field__hint">Moves the compose button to the reachable side.</p>
+            </fieldset>
+
+          </div>
+        </section>
+
+        <!-- ================= Account ================= -->
+        <!--
+          Only rendered when there is a server. On a static deployment there is
+          nobody signed in and nothing to sign out of, so an account panel would
+          be a section about a feature that is not present.
+        -->
+        <section class="stack stack--3" data-account-section hidden aria-labelledby="account-h">
+          <h2 class="label" id="account-h">Account</h2>
+          <div class="card stack stack--3">
+            <div class="split split--base">
+              <span class="meta" data-account-email></span>
+              <button type="button" class="btn btn--ghost btn--sm" data-sign-out>Sign out</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= Storage ================= -->
+        <section class="stack stack--3" aria-labelledby="storage-h">
+          <h2 class="label" id="storage-h">Where your data is</h2>
+          <div class="card stack stack--2">
+            <p class="field__hint" data-storage-note></p>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <nav class="tabbar" aria-label="Primary"></nav>
+
+  <script type="module" src="../../shared/js/main.js"></script>
+  <script type="module" src="settings-page.js"></script>
+</body>
+</html>

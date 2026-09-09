@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="hisab:standalone" content="test harness">
+<title>Settings — browser test</title>
+<style>
+  body { font: 14px/1.6 ui-monospace, monospace; background: #06080B; color: #C9D2DA; padding: 2rem; }
+  .pass { color: #6EE7A8; } .fail { color: #FF8199; } h1 { font-size: 1rem; }
+</style>
+</head>
+<body>
+<h1>Settings — browser test</h1>
+<pre id="out"></pre>
+
+<!--
+  Why this exists: --dump-dom cannot answer the question.
+
+  The settings page restores the stored preference by setting input.checked,
+  which is a PROPERTY. It does not write a `checked` attribute, so a DOM dump
+  shows nothing either way and a broken selector looks identical to a working
+  one. The only way to know is to read the property back in a live document.
+
+  It also covers the round trip that matters most: choosing Day must actually
+  put data-theme="day" on <html>, and choosing "Follow device" must REMOVE the
+  attribute rather than set it to something - the CSS distinguishes
+  :root:not([data-theme]) from every other case, and that is what lets the media
+  query take over again.
+-->
+<script type="module">
+import { setTheme, setDensity, setHand, getState } from '../shared/js/core/state.js';
+
+const out = document.getElementById('out');
+let passed = 0;
+const failures = [];
+
+function check(label, condition) {
+  if (condition) { passed++; out.innerHTML += `<span class="pass">  ok  </span>${label}\n`; }
+  else { failures.push(label); out.innerHTML += `<span class="fail">  FAIL</span> ${label}\n`; }
+}
+
+const root = document.documentElement;
+
+try {
+  // --- the attribute round trip ------------------------------------------
+  setTheme('day');
+  check('choosing Day sets data-theme="day"', root.getAttribute('data-theme') === 'day');
+  check('and stores it', getState().theme === 'day');
+
+  setTheme('night');
+  check('choosing Night sets data-theme="night"', root.getAttribute('data-theme') === 'night');
+
+  setTheme(null);
+  // The important one. An empty string or the literal 'null' here would break
+  // :root:not([data-theme]) and strand someone on whichever theme they last
+  // picked, with no way back to following the device.
+  check('Follow device REMOVES the attribute', !root.hasAttribute('data-theme'));
+  check('and clears the stored value', !getState().theme);
+
+  // --- the selector the settings page uses to restore state ---------------
+  // Reproduced exactly, against the real markup, because this is the part a
+  // DOM dump cannot verify.
+  const group = document.createElement('div');
+  group.setAttribute('data-theme-choices', '');
+  group.innerHTML = `
+    <label class="choice"><input type="radio" name="t" value=""><span>Follow device</span></label>
+    <label class="choice"><input type="radio" name="t" value="day"><span>Day</span></label>
+    <label class="choice"><input type="radio" name="t" value="night"><span>Night</span></label>`;
+  document.body.appendChild(group);
+
+  const pick = (value) => group.querySelector(`input[value="${value ?? ''}"]`);
+
+  check('the empty value matches the Follow device radio', pick(null) !== null);
+  check('and it is the one with no value', pick(null).value === '');
+  pick(null).checked = true;
+  check('checking it works as a property', pick(null).checked === true);
+  check('day radio is reachable', pick('day') !== null);
+
+  group.remove();
+
+  // --- density and hand ----------------------------------------------------
+  setDensity('compact');
+  check('compact density sets the attribute', root.getAttribute('data-density') === 'compact');
+  setDensity('default');
+  check('and comfortable removes it', !root.hasAttribute('data-density'));
+
+  setHand('left');
+  check('left hand sets the attribute', root.getAttribute('data-hand') === 'left');
+  setHand('right');
+  check('and right removes it', !root.hasAttribute('data-hand'));
+
+} catch (err) {
+  check(`no exception escaped (${err?.message ?? err})`, false);
+}
+
+// Leave nothing behind: this harness shares an origin with the app in dev, so a
+// stored preference here would follow the person into the real pages.
+setTheme(null); setDensity('default'); setHand('right');
+
+document.title = `RESULT|${failures.length === 0 ? 'PASS' : 'FAIL'}|${passed}|${failures.length}|${failures.join(' ; ')}`;
+</script>
+</body>
+</html>

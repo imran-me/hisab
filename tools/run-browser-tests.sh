@@ -52,7 +52,7 @@ fi
 # `python -m http.server` does not. Run it against tools/serve.php:
 #     HISAB_DEV_TOOLS=1 php -S 127.0.0.1:8822 -t . tools/serve.php
 #     tools/run-browser-tests.sh 8822
-PAGES=("tools/test-vault-browser.html" "tools/test-auth-browser.html")
+PAGES=("tools/test-vault-browser.html" "tools/test-settings-browser.html" "tools/test-auth-browser.html")
 FAILED=0
 
 for page in "${PAGES[@]}"; do
@@ -89,7 +89,11 @@ for page in "${PAGES[@]}"; do
   fails=$(echo "$title" | cut -d'|' -f4)
   detail=$(echo "$title" | cut -d'|' -f5-)
 
-  if [ "$verdict" = "PASS" ]; then
+  if [ "$verdict" = "SKIP" ]; then
+    # Not a pass and not a failure: the harness said it cannot run here. It
+    # must not set the exit code, or a static-server run reports a broken suite.
+    echo "  - $page — skipped ($detail)"
+  elif [ "$verdict" = "PASS" ]; then
     echo "  $page — $passed assertions passed"
   else
     echo "  x $page — $fails FAILED, $passed passed"

@@ -59,6 +59,18 @@ function finish() {
 
     // --- the server is found at all ---------------------------------------
     let state = await session({ force: true });
+
+    // Served without an API - `python -m http.server`, or the live static
+    // deployment - there is nothing here to test. Reported as SKIPPED rather
+    // than as ten failures: a suite that fails for the wrong reason teaches
+    // people to ignore it, and this harness genuinely cannot run without a
+    // backend. Run it against tools/serve.php instead.
+    if (!state.backend) {
+      out.innerHTML += '<span class="fail">  --  </span>no backend on this origin — skipped';
+      document.title = 'RESULT|SKIP|0|0|needs tools/serve.php, not a static server';
+      return;
+    }
+
     check('a backend is detected', state.backend === true);
     check('nobody is signed in yet', state.authenticated === false);
 
