@@ -267,7 +267,7 @@ every common mistake.
 |---|---|
 | `http://hisab.gulfrabit.com` | **redirects to https://** — if not, `.htaccess` is missing |
 | `https://hisab.gulfrabit.com` | the Overview screen, dark, with icons and a bottom tab bar |
-| `https://hisab.gulfrabit.com/context.md` | **403 Forbidden** — if you see the file, `.htaccess` is missing |
+| `https://hisab.gulfrabit.com/context.md` | **404** under Option A, because the cron deploy never copies it to the server — there is no file to forbid. **403** under Option B or C, which put the whole tree in the web root. Either is correct; seeing the file's contents is not |
 | `https://hisab.gulfrabit.com/tools/qa-viewport.html` | **403 Forbidden** |
 | `https://hisab.gulfrabit.com/nonsense` | the styled "Nothing here" page, not Hostinger's default 404 |
 | `https://hisab.gulfrabit.com/shared/icons/sprite.svg` | XML, not a download prompt |
