@@ -22,7 +22,7 @@ import { openEntrySheet, entryActions } from './entry-sheet.js';
 mountShell({ title: 'Ledger', actions: entryActions() });
 qs('[data-period-slot]')?.append(periodStepper());
 
-const filters = { type: '', q: '' };
+const filters = { type: '', q: '', includeReversed: false };
 
 /* The compose action can be reached from the app shortcut on a phone's home
    screen, which lands here with ?compose=1. */
@@ -39,6 +39,18 @@ delegate(document.body, 'click', '[data-compose]', (_event, button) => {
 delegate(document.body, 'click', '[data-type]', (_event, button) => {
   filters.type = button.dataset.type;
   qsa('[data-type]').forEach((b) => b.classList.toggle('is-active', b === button));
+  refresh();
+});
+
+/* History: show the corrections as well as what stands.
+   Deliberately NOT one of the type pills, and it does not clear them - it is a
+   different axis. Filtering to Out and then asking for history should show the
+   history of the Out entries, not start again. */
+qs('[data-show-history]')?.addEventListener('click', (event) => {
+  const button = event.currentTarget;
+  filters.includeReversed = !filters.includeReversed;
+  button.setAttribute('aria-pressed', String(filters.includeReversed));
+  button.classList.toggle('is-active', filters.includeReversed);
   refresh();
 });
 
@@ -77,7 +89,12 @@ async function refresh() {
   const display = state.currency();
 
   const [listRes, accountRes, summaryRes, rates] = await Promise.all([
-    ledger.list({ book, period, type: filters.type || undefined, q: filters.q || undefined }),
+    ledger.list({
+      book, period,
+      type: filters.type || undefined,
+      q: filters.q || undefined,
+      includeReversed: filters.includeReversed || undefined,
+    }),
     accounts.list({ book, includeArchived: true }),
     ledger.summary({ book, period, currency: display }),
     fx.rates(),
@@ -123,6 +140,11 @@ function drawList(rows, accountRows, display, rates) {
 
   const byId = new Map(accountRows.map((a) => [a.id, a]));
 
+  // Which of these rows has been cancelled. Derived once per render rather than
+  // per row: entryRow() is called for every visible entry, and a scan inside it
+  // would be quadratic on a busy month.
+  const reversedIds = new Set(rows.filter((r) => r.reverses_id).map((r) => r.reverses_id));
+
   // Grouped by day, with the day's net beside the heading. The net is what
   // makes a day heading worth its row — "Sat 5 Sep" alone is a divider, "Sat 5
   // Sep −2,450" is information.
@@ -150,11 +172,11 @@ function drawList(rows, accountRows, display, rates) {
           ${formatMoneyHTML(net, display, { sign: 'always', code: false })}
         </span>
       </li>
-      ${dayRows.map((row) => entryRow(row, byId)).join('')}`;
+      ${dayRows.map((row) => entryRow(row, byId, reversedIds)).join('')}`;
   }).join('');
 }
 
-function entryRow(row, byId) {
+function entryRow(row, byId, reversedIds) {
   const type = ledger.typeOf(row.type);
   const account = byId.get(row.account_id);
   const amount = row.direction === 'in' ? row.amount_minor : -row.amount_minor;
@@ -163,20 +185,47 @@ function entryRow(row, byId) {
   const band = row.type === 'expense' && row.necessity
     ? `<span class="chip chip--need-${row.necessity}">${esc(bandLabel(row.necessity))}</span>` : '';
 
+  // What this row IS, in the history of the money — the part that makes a
+  // corrected ledger readable rather than merely honest. Without it the
+  // History view is three near-identical rows and no way to tell which is
+  // which.
+  const isReversal = Boolean(row.reverses_id);
+  const wasReversed = reversedIds.has(row.id);
+  const isReplacement = Boolean(row.corrects_id);
+
+  const mark = isReversal
+    ? '<span class="chip chip--warn">Reversal</span>'
+    : wasReversed
+      ? '<span class="chip">Reversed</span>'
+      : isReplacement
+        ? '<span class="chip chip--in">Corrected</span>'
+        : '';
+
+  // The reason belongs beside the row it explains. A reason nobody sees next to
+  // the entry may as well not have been asked for.
+  const why = isReversal && row.reversal_reason
+    ? `<span aria-hidden="true">·</span><span>${esc(row.reversal_reason)}</span>` : '';
+
+  // A cancelled entry is struck through and dimmed: it is still part of the
+  // record, and it no longer counts. Saying that visually is cheaper than
+  // explaining it.
+  const stateClass = (isReversal || wasReversed) ? ' row--void' : '';
+
   return `
     <li>
-      <button type="button" class="row" data-edit="${esc(row.id)}">
+      <button type="button" class="row${stateClass}" data-edit="${esc(row.id)}">
         <span class="row__glyph row__glyph--${type.tone}">${icon(type.icon, { class: 'icon' })}</span>
         <span class="row__main">
           <span class="row__title">${esc(row.payee || row.category_label || type.label)}</span>
           <span class="row__sub">
             ${row.category_label ? `<span>${esc(row.category_label)}</span><span aria-hidden="true">·</span>` : ''}
             <span>${esc(account?.name || 'Unknown account')}</span>
+            ${why}
           </span>
         </span>
         <span class="row__end">
           <span class="money money--md money--${type.tone}">${formatMoneyHTML(amount, row.currency, { sign: 'always' })}</span>
-          ${band}
+          ${mark || band}
         </span>
       </button>
     </li>`;

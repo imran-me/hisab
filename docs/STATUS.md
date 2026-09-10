@@ -75,6 +75,14 @@ The FastAPI analytics service has not been written or run.
 `fx`, `categories`, `accounts`, `ledger` — all four return the shape documented
 in `shared/backend/api-contract.md`, so swapping in Laravel changes no consumer.
 
+### Ledger records (frontend)
+A row now says what it IS in the history of the money — **Corrected**,
+**Reversal** or **Reversed** — with the reversal's reason beside it, and a
+cancelled entry struck through and dimmed rather than hidden. A **History**
+toggle in the filter bar shows the corrections alongside what stands; it is a
+separate axis from the type pills, so filtering to Out and then asking for
+history shows the history of the Out entries rather than starting again.
+
 ### Ledger (backend) — recorded is final
 Inherited from OppTracker: **a saved entry is never altered and never deleted.**
 A correction reverses the original — a mirror entry, dated today, with a reason

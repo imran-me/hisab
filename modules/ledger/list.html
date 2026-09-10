@@ -84,6 +84,19 @@
             <button type="button" class="pill" data-type="income">In</button>
             <button type="button" class="pill" data-type="deposit">Held</button>
             <button type="button" class="pill" data-type="transfer">Moves</button>
+
+            <!--
+              Corrections are hidden by default, because a ledger where every
+              fixed typo occupies three rows is one nobody can read. They are
+              never hidden from a TOTAL - the figures are identical either way,
+              since a reversal and the entry it cancels net to nothing.
+
+              aria-pressed rather than a checkbox: it is a view toggle, and a
+              checkbox here would read as a filter that changes the numbers.
+            -->
+            <button type="button" class="pill" data-show-history aria-pressed="false">
+              History
+            </button>
           </div>
         </div>
 

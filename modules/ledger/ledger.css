@@ -54,3 +54,16 @@
    control that is always used, and on a phone it should be reachable without
    the eye searching for it. */
 .entry .amount-field { margin-top: var(--s-1); }
+
+/* A cancelled entry: still part of the record, no longer part of the money.
+   ---------------------------------------------------------------------------
+   Shown struck through and dimmed rather than hidden, because in the History
+   view the whole point is that it is still there. Saying it visually is cheaper
+   than a sentence, and it distinguishes the three near-identical rows a
+   correction leaves behind at a glance.
+
+   The strike is on the AMOUNT only. Striking the payee too makes the row look
+   like a deleted item in a list, which is the impression this app is trying not
+   to give - nothing here was deleted. */
+.row--void { opacity: .55; }
+.row--void .money { text-decoration: line-through; text-decoration-thickness: 1px; }
