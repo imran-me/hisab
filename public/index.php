@@ -67,6 +67,28 @@ $root = (static function (): string {
     exit(json_encode(['message' => 'Server misconfigured.']));
 })();
 
+/*
+ * Do not let the framework strip the directory this file sits in.
+ *
+ * Symfony's Request works out a "base URL" from SCRIPT_NAME and removes it from
+ * the path before routing. Deployed, this file is public_html/hisab/api/index.php,
+ * so SCRIPT_NAME is /api/index.php, the base URL is /api, and a request for
+ * /api/health arrives at the router as `health`. Every route is registered WITH
+ * the api prefix, so every one of them 404s - with the honest and thoroughly
+ * confusing message "The route health could not be found", naming a path nobody
+ * wrote.
+ *
+ * It cannot happen locally, because there public/ IS the document root and
+ * SCRIPT_NAME is already /index.php - which is exactly why this survived a
+ * passing test suite and a browser harness and appeared only in production.
+ *
+ * Pinning SCRIPT_NAME to /index.php makes the base URL empty everywhere, so the
+ * full request path reaches the router in both shapes and the prefix in
+ * bootstrap/app.php is the single place the /api prefix is decided.
+ */
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['PHP_SELF'] = '/index.php';
+
 // Maintenance mode, if the framework left the flag behind.
 if (file_exists($maintenance = $root.'/storage/framework/maintenance.php')) {
     require $maintenance;
