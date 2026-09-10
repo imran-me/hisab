@@ -566,14 +566,65 @@ function shiftYear(dateKey, n) {
 async function load() {
   if (memo) return memo;
 
+  // THE SERVER IS THE SOURCE OF TRUTH WHEN THERE IS ONE.
+  //
+  // This used to read local storage first and return it if anything was there,
+  // which made the backend unreachable in practice: a browser that had ever
+  // used the app in Phase 1 held an array - very often an EMPTY one - and an
+  // empty array is a perfectly good answer, so the server was never asked. The
+  // app wrote entries to the server and then showed a ledger of nothing, with
+  // Settings reporting 94 entries three lines above it.
+  //
+  // Order matters more than the fetch: server, then the local copy as an
+  // OFFLINE CACHE, then the seed. A 401 still stops here rather than falling
+  // through - api-contract.md §1 - because answering "not signed in" with this
+  // device's data is how one person sees another's ledger.
+  if (await hasBackend()) {
+    // PAGED, not one large request.
+    //
+    // This asked for limit=500. The server caps a page at 200 and rejects
+    // anything larger with a 422 - so the fetch failed, load() fell through to
+    // local storage, and the app showed an empty ledger while the server held
+    // ninety-four entries. Nothing surfaced the 422: a failed read is
+    // indistinguishable from an empty ledger unless someone looks.
+    //
+    // include_reversed, so the local copy holds the same rows the server does.
+    // Without them the totals cannot net a correction to zero, and a corrected
+    // entry would count twice on this device and once on every other.
+    const PAGE = 200;
+    const rows = [];
+    let cursor = null;
+
+    for (let page = 0; page < 50; page += 1) {
+      const res = await get('/ledger', {
+        limit: PAGE,
+        include_reversed: 1,
+        after: cursor || undefined,
+      });
+
+      if (!res.ok) {
+        if (res.reason === 'auth') { memo = []; return memo; }
+        // A partial read is worse than a stale one: half a ledger produces
+        // totals that look plausible and are wrong. Fall through to the cache.
+        rows.length = 0;
+        break;
+      }
+
+      rows.push(...(res.data?.data || []));
+
+      cursor = res.data?.meta?.next_cursor || null;
+      if (!res.data?.meta?.has_more || !cursor) {
+        memo = rows;
+        persist(memo);
+        return memo;
+      }
+    }
+    // Anything else - offline, a 500 - falls through to whatever was last
+    // cached, which is better than an empty screen.
+  }
+
   const saved = store.read(null);
   if (Array.isArray(saved)) { memo = saved; return memo; }
-
-  if (await hasBackend()) {
-    const res = await get('/ledger', { limit: 500 });
-    if (res.ok) { memo = res.data?.data || []; persist(memo); return memo; }
-    if (res.reason === 'auth') { memo = []; return memo; }
-  }
 
   // No seeded transactions. A ledger pre-filled with invented spending is
   // actively harmful: the first month's figures look real, and the first real

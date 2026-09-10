@@ -284,15 +284,30 @@ function tail(value) {
 async function load() {
   if (memo) return memo;
 
-  const saved = store.read(null);
-  if (Array.isArray(saved)) { memo = saved; return memo; }
-
+  // THE SERVER IS THE SOURCE OF TRUTH WHEN THERE IS ONE.
+  //
+  // This used to read local storage first and return it if anything was there,
+  // which made the backend unreachable in practice: a browser that had ever
+  // used the app in Phase 1 held an array - very often an EMPTY one - and an
+  // empty array is a perfectly good answer, so the server was never asked. The
+  // app wrote entries to the server and then showed a ledger of nothing, with
+  // Settings reporting 94 entries three lines above it.
+  //
+  // Order matters more than the fetch: server, then the local copy as an
+  // OFFLINE CACHE, then the seed. A 401 still stops here rather than falling
+  // through - api-contract.md §1 - because answering "not signed in" with this
+  // device's data is how one person sees another's ledger.
   if (await hasBackend()) {
-    const res = await get('/accounts');
+    // Archived ones too: a historical entry points at an account that may have
+    // been archived, and the row has to be able to name it.
+    const res = await get('/accounts', { include_archived: 1 });
     if (res.ok) { memo = res.data?.data || []; persist(memo); return memo; }
     // A 401 must NOT fall through to the seed — see api-contract.md §1.
     if (res.reason === 'auth') { memo = []; return memo; }
   }
+
+  const saved = store.read(null);
+  if (Array.isArray(saved)) { memo = saved; return memo; }
 
   // First run with no backend: a small starting set, so the app is usable
   // immediately rather than opening on an empty screen with a form.

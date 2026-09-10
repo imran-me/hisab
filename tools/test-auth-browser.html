@@ -32,7 +32,7 @@
 -->
 <script type="module">
 import { signIn, signOut, session, forgetSession } from '../shared/js/core/session.js';
-import { resetBackendProbe } from '../shared/js/core/http.js';
+import { resetBackendProbe, get, post, del } from '../shared/js/core/http.js';
 
 const OWNER = { email: 'owner@hisab.test', password: 'a correct horse battery staple' };
 
@@ -95,10 +95,53 @@ function finish() {
     check('the session survives the next request', state.authenticated === true);
 
     // --- the session actually opens the data --------------------------------
-    const { get } = await import('../shared/js/core/http.js');
     const accounts = await get('/accounts');
     check('a signed-in read succeeds', accounts.ok === true);
     check('and returns the documented envelope', Array.isArray(accounts.data?.data));
+
+    // --- THE ONE THAT WAS MISSING --------------------------------------------
+    //
+    // Every check above proves the API answers. None of them proved the APP
+    // READS IT. The modules kept a local copy and returned it whenever it
+    // existed - and an empty array from a Phase 1 session counts as existing -
+    // so the server was never asked. Entries were written to the server and the
+    // Overview showed zero, with Settings reporting 94 entries three lines up.
+    //
+    // Signed in, a module's own list() has to return what the server holds.
+    const ledger = await import('../modules/ledger/backend/api.js');
+    const accountsApi = await import('../modules/accounts/backend/api.js');
+
+    // Put data on the SERVER that this browser has never seen, so a module
+    // answering from local storage cannot accidentally give the right answer.
+    // Comparing counts alone is not enough: with no demo data the server and
+    // the local seed both hold four accounts, and the check passes while the
+    // read path is completely broken.
+    await del('/ledger/demo');
+    const seeded = await post('/ledger/demo', { months: 1 });
+    check('demo data generated on the server', seeded.ok === true);
+
+    // Start the modules from cold, exactly as a page load would.
+    ledger.reset();
+    accountsApi.reset?.();
+
+    const rows = await ledger.list({});
+    check('ledger.list() reaches the server', rows.ok === true);
+    check('and SEES entries this browser never stored', (rows.data?.length ?? 0) > 0);
+
+    const serverAccounts = await accountsApi.list({ includeArchived: true });
+    // The generator creates accounts the local seed does not contain - a
+    // business account, a USD wallet, a brokerage - so their presence proves
+    // the list came from the server rather than from the fixture.
+    const names = (serverAccounts.data ?? []).map((a) => a.name);
+    check('accounts.list() reaches the server', serverAccounts.ok === true);
+    check(
+      'and includes accounts that exist only on the server',
+      names.some((n) => /Business|Payoneer|Brokerage/.test(n)),
+    );
+
+    await del('/ledger/demo');
+    ledger.reset();
+    accountsApi.reset?.();
 
     // --- and closes it again -------------------------------------------------
     const bye = await signOut();
