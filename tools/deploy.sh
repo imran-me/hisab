@@ -276,6 +276,46 @@ say "deploying ${NOW:0:8} (was ${WAS:0:8})"
 fetch_source || die "could not fetch $BRANCH from $REPO_URL"
 publish
 printf '%s' "$NOW" > "$STATE"
+# --- bring the database with the code -----------------------------------------
+# Code and schema deploy together or they do not deploy at all. A migration that
+# waits for someone to SSH in means the window between the two is a live site
+# querying columns that are not there yet - and the person who pushed has no
+# reason to suspect it, because the deploy said it succeeded.
+#
+# Only when the backend is actually installed. `migrate --force` skips what has
+# already run, so this is a no-op on the usual deploy that changes no schema.
+#
+# NOT db:seed. Seeders are idempotent here, but running them unattended on every
+# deploy is a much larger promise than running migrations, and reference data
+# changes far more rarely than code.
+migrate_if_installed() {
+  [ -f "$SRC/vendor/autoload.php" ] || return 0
+  [ -f "$SRC/.env" ] || return 0
+  [ -f "$SRC/artisan" ] || return 0
+
+  local php
+  php="$(command -v php 2>/dev/null)" || return 0
+  [ -n "$php" ] || return 0
+
+  local output
+  # 2>&1 kept: a migration that fails is the one thing here worth waking up for,
+  # and the log is the only place anyone will look for it afterwards.
+  output="$("$php" "$SRC/artisan" migrate --force --no-interaction 2>&1)" || {
+    say "MIGRATION FAILED - the site may be serving against an old schema"
+    log "$output"
+    return 1
+  }
+
+  # Laravel says "Nothing to migrate" when there is nothing to do, which is most
+  # deploys. Only mention it when something actually ran.
+  case "$output" in
+    *"Nothing to migrate"*) : ;;
+    *) say "ran database migrations"; log "$output" ;;
+  esac
+}
+
+migrate_if_installed
+
 # --- keep this script current -------------------------------------------------
 # The checkout contains tools/deploy.sh - the newer version of this very file.
 # Copying it over ourselves means the cron entry can be a plain path with no
