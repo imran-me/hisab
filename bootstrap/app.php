@@ -27,6 +27,20 @@ return Application::configure(basePath: dirname(__DIR__))
         // pulled in because the frontend is same origin, so there is no CORS
         // and no token refresh to manage - the package would be four lines of
         // configuration and a dependency to keep current.
+        // An unauthenticated /api request must be a 401, never a redirect.
+        //
+        // Laravel sends guests to a route named `login`, and this app has no
+        // such route - the sign-in screen is a static HTML file, not something
+        // the router knows about. So the redirect throws RouteNotFoundException
+        // and a clean 401 becomes a 500. It is invisible from the app, because
+        // http.js sends X-Requested-With and Laravel answers those with JSON
+        // already; it shows up the moment anyone opens an /api URL in a browser
+        // tab, and it would have leaked a stack trace if APP_DEBUG were ever on.
+        //
+        // Returning null means "do not redirect", which lets the exception
+        // handler render the 401 it should have been.
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : '/');
+
         $middleware->api(prepend: [
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,

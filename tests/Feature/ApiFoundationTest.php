@@ -44,6 +44,19 @@ class ApiFoundationTest extends TestCase
         $this->assertStringContainsString('application/json', (string) $response->headers->get('Content-Type'));
     }
 
+    public function test_a_guest_hitting_a_protected_api_route_gets_401_not_a_redirect(): void
+    {
+        // Deliberately a PLAIN get(), with no Accept or X-Requested-With - a
+        // browser address bar, not fetch(). Laravel sends guests to a route
+        // named `login`, which this app does not have (the sign-in screen is a
+        // static file), so the redirect threw and turned a clean 401 into a 500.
+        //
+        // getJson() would pass whether this were fixed or not, which is exactly
+        // why it is not used here.
+        $this->get('/api/ledger')->assertUnauthorized();
+        $this->get('/api/accounts')->assertUnauthorized();
+    }
+
     public function test_the_health_endpoint_is_up(): void
     {
         // Laravel's own /up, used by uptime checks. Kept because it costs
