@@ -259,33 +259,6 @@ needs_publish() {
   return 1
 }
 
-# Every run, not only the ones that deploy.
-#
-# Otherwise a pending migration waits for the NEXT push, which is a gap that
-# bites exactly once and confusingly: the deploy that shipped the migration ran
-# an older copy of this script, which had no migrate step, and by the time the
-# new copy is installed there is nothing left to trigger it. `migrate --force`
-# is a no-op when nothing is pending, so the cost is one quiet PHP boot per
-# tick, and the schema catches up on its own.
-migrate_if_installed
-
-if [ "$NOW" = "$WAS" ] && [ "$MODE" != "--force" ]; then
-  if needs_publish; then
-    say "same commit, but the web root is out of step - republishing"
-    publish
-    say "republished ${NOW:0:8} to $DOCROOT"
-    exit 0
-  fi
-
-  # Quiet on purpose. This is the common case, twelve times an hour, and a log
-  # line for it would bury the deploys that actually happened.
-  exit 0
-fi
-
-say "deploying ${NOW:0:8} (was ${WAS:0:8})"
-fetch_source || die "could not fetch $BRANCH from $REPO_URL"
-publish
-printf '%s' "$NOW" > "$STATE"
 # --- bring the database with the code -----------------------------------------
 # Code and schema deploy together or they do not deploy at all. A migration that
 # waits for someone to SSH in means the window between the two is a live site
@@ -324,6 +297,33 @@ migrate_if_installed() {
   esac
 }
 
+# Every run, not only the ones that deploy.
+#
+# Otherwise a pending migration waits for the NEXT push, which is a gap that
+# bites exactly once and confusingly: the deploy that shipped the migration ran
+# an older copy of this script, which had no migrate step, and by the time the
+# new copy is installed there is nothing left to trigger it. `migrate --force`
+# is a no-op when nothing is pending, so the cost is one quiet PHP boot per
+# tick, and the schema catches up on its own.
+migrate_if_installed
+
+if [ "$NOW" = "$WAS" ] && [ "$MODE" != "--force" ]; then
+  if needs_publish; then
+    say "same commit, but the web root is out of step - republishing"
+    publish
+    say "republished ${NOW:0:8} to $DOCROOT"
+    exit 0
+  fi
+
+  # Quiet on purpose. This is the common case, twelve times an hour, and a log
+  # line for it would bury the deploys that actually happened.
+  exit 0
+fi
+
+say "deploying ${NOW:0:8} (was ${WAS:0:8})"
+fetch_source || die "could not fetch $BRANCH from $REPO_URL"
+publish
+printf '%s' "$NOW" > "$STATE"
 # --- keep this script current -------------------------------------------------
 # The checkout contains tools/deploy.sh - the newer version of this very file.
 # Copying it over ourselves means the cron entry can be a plain path with no
