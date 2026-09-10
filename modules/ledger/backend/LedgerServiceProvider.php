@@ -2,6 +2,7 @@
 
 namespace Hisab\Ledger;
 
+use Hisab\Ledger\Commands\DemoCommand;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -19,5 +20,9 @@ class LedgerServiceProvider extends ServiceProvider
         Route::middleware('api')
             ->prefix('api')
             ->group(__DIR__.'/routes.php');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([DemoCommand::class]);
+        }
     }
 }

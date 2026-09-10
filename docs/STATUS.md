@@ -75,6 +75,17 @@ The FastAPI analytics service has not been written or run.
 `fx`, `categories`, `accounts`, `ledger` — all four return the shape documented
 in `shared/backend/api-contract.md`, so swapping in Laravel changes no consumer.
 
+### Demo data
+`php artisan hisab:demo` writes a few months of plausible entries — salary,
+rent, a weekly shop, transport, bills, a DPS instalment, an ATM withdrawal and a
+wallet top-up — so the screens have something to show. `--fresh` clears it.
+
+That clear is the **only true delete in the product**, and it deletes every
+transaction for the owner rather than just the demo ones. It exists because the
+ledger is immutable: clearing demo data the ordinary way would write a reversal
+for each row and bury a real ledger under hundreds of cancelled entries. It asks
+first, and it is a console command with nothing reachable from the app or API.
+
 ### Ledger records (frontend)
 A row now says what it IS in the history of the money — **Corrected**,
 **Reversal** or **Reversed** — with the reversal's reason beside it, and a
