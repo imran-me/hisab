@@ -210,14 +210,28 @@ DirectoryIndex index.html index.php
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 
+  # REVALIDATE, do not assume.
+  #
+  # This was max-age=3600, and an hour is exactly long enough to break the app
+  # in a way nobody diagnoses. HTML is no-cache, so a deploy reaches the browser
+  # immediately - but the SCRIPTS it references did not, for up to an hour. New
+  # markup plus old JavaScript is not a slightly stale page: a section that
+  # ships hidden and is revealed by its script simply never appears, and the
+  # person is looking straight at markup that is already in the document.
+  #
+  # `no-cache` does not mean "do not cache". It means "cache it, but ask before
+  # using it", so the file is still stored and the usual answer is a 304 with no
+  # body. The cost is one conditional request per file; the alternative is an
+  # app that is wrong for an hour after every deploy, on a project that deploys
+  # several times a day and has no build step to hash filenames with.
   <FilesMatch "\.(css|js)$">
-    Header set Cache-Control "public, max-age=3600, must-revalidate"
+    Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 
   # The sprite changes whenever an icon is added, and a stale one means missing
   # glyphs rather than an old colour, so it is treated as code.
   <FilesMatch "sprite\.svg$">
-    Header set Cache-Control "public, max-age=3600, must-revalidate"
+    Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 
   <FilesMatch "\.woff2$">
