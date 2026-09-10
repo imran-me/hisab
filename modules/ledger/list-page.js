@@ -154,7 +154,20 @@ function drawList(rows, accountRows, display, rates) {
     days.get(row.occurred_on).push(row);
   }
 
-  host.innerHTML = [...days.entries()].map(([day, dayRows]) => {
+  // The header belongs to the whole list, not to a day, so it is emitted once
+  // above the groups rather than repeated per day - a repeated header turns a
+  // scannable table back into a series of small unrelated ones.
+  const header = `
+    <li class="ledger-head" aria-hidden="true">
+      <span></span>
+      <span>Detail</span>
+      <span>Category</span>
+      <span>Necessity</span>
+      <span>Method</span>
+      <span class="ledger-head__amount">Amount</span>
+    </li>`;
+
+  host.innerHTML = header + [...days.entries()].map(([day, dayRows]) => {
     // Transfers are excluded from the day's net for the same reason they are
     // excluded from the month's: they are not income and not spending, and
     // including them would show a net movement on a day when nothing changed.
@@ -211,10 +224,19 @@ function entryRow(row, byId, reversedIds) {
   // explaining it.
   const stateClass = (isReversal || wasReversed) ? ' row--void' : '';
 
+  // The same row, in cells.
+  //
+  // CONVENTIONS.md: mobile is the primary target and the desktop layout is the
+  // enhancement, so this is ONE markup that reflows rather than two renderers.
+  // Below 900px the cells are hidden and their content stays in the sub-line,
+  // where it already read well at 360px; above it they become columns under a
+  // header. Two renderers would drift, and the narrow one is the one that
+  // matters most.
   return `
     <li>
-      <button type="button" class="row${stateClass}" data-edit="${esc(row.id)}">
+      <button type="button" class="row row--ledger${stateClass}" data-edit="${esc(row.id)}">
         <span class="row__glyph row__glyph--${type.tone}">${icon(type.icon, { class: 'icon' })}</span>
+
         <span class="row__main">
           <span class="row__title">${esc(row.payee || row.category_label || type.label)}</span>
           <span class="row__sub">
@@ -223,9 +245,14 @@ function entryRow(row, byId, reversedIds) {
             ${why}
           </span>
         </span>
+
+        <span class="row__cell row__cell--category">${esc(row.category_label || '—')}</span>
+        <span class="row__cell row__cell--need">${band || mark || ''}</span>
+        <span class="row__cell row__cell--method">${esc(methodLabel(row.method) || '—')}</span>
+
         <span class="row__end">
           <span class="money money--md money--${type.tone}">${formatMoneyHTML(amount, row.currency, { sign: 'always' })}</span>
-          ${mark || band}
+          <span class="row__end-mark">${mark || ''}</span>
         </span>
       </button>
     </li>`;
@@ -235,6 +262,21 @@ function entryRow(row, byId, reversedIds) {
    chip cannot wait on an async read inside a loop over four hundred rows. The
    four are stable and ordered; the label here is presentation of a number the
    row already carries. */
+/* The stored method is a key - 'bkash', 'cash'. The labels live in the
+   categories module's seed data, and a per-row async read to resolve one word
+   is not worth a request inside a loop over four hundred rows, so the common
+   ones are mapped here and anything unknown falls back to the key itself
+   rather than to an empty cell. */
+const METHOD_LABELS = {
+  cash: 'Cash', bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket',
+  card: 'Card', bank: 'Bank', cheque: 'Cheque', other: 'Other',
+};
+
+function methodLabel(key) {
+  if (!key) return '';
+  return METHOD_LABELS[key] || key;
+}
+
 function bandLabel(band) {
   return ['', 'Essential', 'Important', 'Discretionary', 'Avoidable'][band] || '';
 }

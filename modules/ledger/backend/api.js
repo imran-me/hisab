@@ -19,6 +19,7 @@ import { emit, EVENTS } from '../../../shared/js/core/bus.js';
 import { convert, convertAndSum } from '../../../shared/js/core/money.js';
 import * as accounts from '../../accounts/backend/api.js';
 import * as fx from '../../fx/backend/api.js';
+import * as categories from '../../categories/backend/api.js';
 
 const store = moduleStore('ledger');
 
@@ -151,11 +152,12 @@ export async function create(input) {
     amount_minor: amount,
     currency,
     category_id: type === 'transfer' ? null : (input.category_id || null),
-    // The category NAME is snapshotted alongside the id. Renaming a category
-    // must not rewrite what last year's report said, and an archived category
-    // must still render its own name on the rows that used it.
-    category_label: type === 'transfer' ? null : (input.category_label || null),
-    necessity: type === 'expense' ? (Number(input.necessity) || 3) : null,
+    // Filled in below from the category itself. Left null here rather than
+    // taken from the caller: the label and the band are FACTS ABOUT THE
+    // CATEGORY, and accepting them from whoever is writing the row is how a
+    // transaction ends up filed under a name its category never had.
+    category_label: null,
+    necessity: null,
     method: input.method || null,
     payee: input.payee?.trim() || null,
     note: input.note?.trim() || null,
@@ -166,6 +168,37 @@ export async function create(input) {
     created_at: stamp,
     updated_at: stamp,
   };
+
+  // THE SNAPSHOT. The server does exactly this in LedgerWriter::snapshotCategory,
+  // and the two have to agree or the same entry reads differently depending on
+  // which side wrote it.
+  //
+  // It was missing here, and the symptom was not an error: every row rendered
+  // its category as "—" and its necessity as Discretionary, because the label
+  // was whatever the caller happened to pass (usually nothing) and the band
+  // fell back to a default of 3. House rent came out discretionary.
+  //
+  // Snapshotted rather than read through, per CONVENTIONS.md: renaming a
+  // category must not rewrite last year's report, and an archived one must
+  // still render its own name on the rows that used it.
+  if (base.category_id) {
+    const category = await categories.find(base.category_id);
+
+    if (category) {
+      base.category_label = category.label;
+      // The band comes FROM the category unless the caller overrode it, so a
+      // row filed under Rent is essential without anyone re-stating it.
+      base.necessity = type === 'expense'
+        ? (Number(input.necessity) || category.necessity || 3)
+        : null;
+    } else {
+      // A category that is not ours, or gone. Dropped rather than stored: an id
+      // pointing at nothing is worse than no id at all.
+      base.category_id = null;
+    }
+  }
+
+  if (type === 'expense' && base.necessity === null) base.necessity = Number(input.necessity) || 3;
 
   const legs = [];
 

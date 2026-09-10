@@ -213,8 +213,14 @@ function drawMonth(summary, display) {
   panel.hidden = categories.length === 0;
   if (panel.hidden) return;
 
-  const parts = categories.map((c, i) => ({ ...c, color: segmentColor(i) }));
-  qs('[data-breakdown-bar]').innerHTML = breakdownBar(parts);
+  const parts = categories.map((c, i) => ({
+    ...c,
+    color: segmentColor(i),
+    // Compact, because it sits inside the segment beside the name. The exact
+    // figure is one row below in the legend.
+    label: formatCompact(c.value, display),
+  }));
+  qs('[data-breakdown-bar]').innerHTML = breakdownBar(parts, { bands: true });
 
   const total = summary.expense_minor || 1;
   qs('[data-breakdown-legend]').innerHTML = parts.map((p) => `

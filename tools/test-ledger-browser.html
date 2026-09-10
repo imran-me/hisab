@@ -81,8 +81,15 @@ function check(label, condition) {
 
     // Dated today, never backdated - a correction must not change a month that
     // has already been looked at.
-    const today = new Date().toISOString().slice(0, 10);
-    check('the mirror is dated today', mirror?.occurred_on === today);
+    //
+    // Compared against the app's own today(), NOT toISOString().slice(0,10).
+    // occurred_on is a LOCAL calendar date by contract, and toISOString is UTC:
+    // east of Greenwich the two are different days from midnight until the
+    // offset runs out, so this test failed at 01:09 local and would have passed
+    // again by morning. A test that is wrong for six hours a day is worse than
+    // no test, because the failure looks like a real one.
+    const { today } = await import('../shared/js/core/dates.js');
+    check('the mirror is dated today', mirror?.occurred_on === today());
 
     // --- what the list shows -------------------------------------------------
     const shown = (await ledger.list({})).data;

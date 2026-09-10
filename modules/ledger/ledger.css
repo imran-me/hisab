@@ -67,3 +67,57 @@
    to give - nothing here was deleted. */
 .row--void { opacity: .55; }
 .row--void .money { text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* ---- The ledger as columns ----------------------------------------------
+   Only above 900px, and only as an ENHANCEMENT of the row that already works
+   at 360px. The narrow layout is the primary one and is untouched: the cells
+   below are display:none there, and everything in them is still present in the
+   row's sub-line.
+
+   grid-template-columns rather than a <table>, because the row has to remain a
+   single <button>. A table row cannot be one focusable control, and splitting
+   it into per-cell controls would turn one tab stop into five on a list that
+   routinely has four hundred rows.
+   ------------------------------------------------------------------------ */
+.row__cell { display: none; }
+.ledger-head { display: none; }
+
+@media (min-width: 900px) {
+  .row--ledger,
+  .ledger-head {
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 2.2fr) minmax(0, 1.4fr) 7rem 6rem minmax(0, 1fr);
+    align-items: center;
+    gap: var(--s-3);
+  }
+
+  .ledger-head {
+    padding: var(--s-2) var(--s-3);
+    font-size: var(--fs-11);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .ledger-head__amount { text-align: end; }
+
+  .row__cell {
+    display: block;
+    min-width: 0;
+    font-size: var(--fs-13);
+    color: var(--ink-2);
+    /* A long payee or category must not re-proportion the columns. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .row__cell--need { overflow: visible; }
+
+  /* The sub-line repeats what the cells now show, so it goes - except the
+     account name and a reversal's reason, which have no column of their own. */
+  .row--ledger .row__sub > span:nth-child(1),
+  .row--ledger .row__sub > span:nth-child(2) { display: none; }
+}

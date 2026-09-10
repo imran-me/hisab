@@ -115,6 +115,9 @@ function summarise(rows, currency) {
  * @param {Array<{name:string, value:number, color?:string}>} parts
  * @param {object} [opts]
  * @param {number} [opts.minShare=2]   percent below which a part is folded
+ * @param {boolean} [opts.bands=false]  tall segments carrying their own label,
+ *   for the one place a breakdown is the subject of the panel rather than a
+ *   summary line above a legend
  */
 export function breakdownBar(parts, opts = {}) {
   const { minShare = 2 } = opts;
@@ -130,11 +133,24 @@ export function breakdownBar(parts, opts = {}) {
   }
   if (other > 0) kept.push({ name: 'Other', value: other, share: (other / total) * 100, color: 'var(--ink-4)' });
 
-  const segs = kept.map((p) => `<div class="breakdown__seg"
-      style="--seg-share:${p.share.toFixed(3)}${p.color ? `;--seg-color:${p.color}` : ''}"
-      title="${esc(p.name)} — ${p.share.toFixed(1)}%"></div>`).join('');
+  const segs = kept.map((p) => {
+    // A label only goes INSIDE a segment wide enough to hold it. Below that it
+    // either overflows into its neighbour or gets clipped to one letter, and a
+    // clipped label is worse than none - it reads as a rendering fault rather
+    // than as a segment too small to name. The tooltip carries it either way.
+    const roomy = p.share >= 12;
+    const inside = roomy && (p.label || p.name)
+      ? `<span class="breakdown__name">${esc(p.name)}</span>
+         ${p.label ? `<span class="breakdown__value">${esc(p.label)}</span>` : ''}`
+      : '';
 
-  return `<div class="breakdown" role="img" aria-label="Breakdown by category">${segs}</div>`;
+    return `<div class="breakdown__seg${roomy ? ' breakdown__seg--labelled' : ''}"
+      style="--seg-share:${p.share.toFixed(3)}${p.color ? `;--seg-color:${p.color}` : ''}"
+      title="${esc(p.name)} — ${p.share.toFixed(1)}%">${inside}</div>`;
+  }).join('');
+
+  return `<div class="breakdown${opts.bands ? ' breakdown--bands' : ''}"
+    role="img" aria-label="Breakdown by category">${segs}</div>`;
 }
 
 /**

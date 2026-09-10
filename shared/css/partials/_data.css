@@ -372,3 +372,58 @@
   .kv { grid-template-columns: 1fr; gap: var(--s-1); }
   .kv dd { margin-bottom: var(--s-2); }
 }
+
+/* ---- The banded breakdown ------------------------------------------------
+   The same segments, tall enough to carry their own labels.
+
+   Used where the breakdown IS the panel rather than a summary strip above a
+   legend: at this height the reader gets the shape and the two or three
+   figures that matter without moving their eye to a second list, and the
+   legend below becomes the detail rather than the only way to read the chart.
+   ------------------------------------------------------------------------ */
+.breakdown--bands {
+  height: auto;
+  min-height: 3.5rem;
+  border-radius: var(--r-2);
+  gap: 2px;
+}
+
+.breakdown--bands .breakdown__seg {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--s-2);
+  min-width: 0;
+  border-radius: var(--r-1);
+  /* The label sits ON the segment colour, so it needs a foreground that works
+     against every hue segmentColor() can produce. White with a shadow holds up
+     across the whole ramp; picking per-segment contrast would mean computing
+     luminance for a decorative label. */
+  color: #FFF;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 35%);
+}
+
+.breakdown--bands .breakdown__name {
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  /* Never wraps and never overflows into the next band. A truncated category
+     name still identifies the band; a wrapped one changes the bar's height. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breakdown--bands .breakdown__value {
+  font: var(--fw-semibold) var(--fs-14) / 1 var(--font-mono);
+}
+
+@media (max-width: 599px) {
+  /* At 360px even a 12% band is about forty pixels: enough for the amount,
+     not for a name above it. The name goes and the figure stays, because the
+     figure is the part that cannot be recovered from the legend by position. */
+  .breakdown--bands .breakdown__name { display: none; }
+  .breakdown--bands { min-height: 2.75rem; }
+}
