@@ -158,6 +158,7 @@ class LedgerWriter
                     'method' => $leg->method,
                     'payee' => $leg->payee,
                     'note' => $leg->note,
+                    'recurring' => $leg->recurring,
                     'occurred_on' => $today,
                     'book' => $leg->book,
                     'is_demo' => $leg->is_demo,
@@ -250,6 +251,8 @@ class LedgerWriter
             'method' => $data['method'] ?? null,
             'payee' => $data['payee'] ?? null,
             'note' => $data['note'] ?? null,
+            // A label on a record that already happened, not a schedule.
+            'recurring' => $data['recurring'] ?? null,
             'occurred_on' => $data['occurred_on'],
             'book' => $data['book'] ?? 'personal',
             // Carried onto BOTH legs, or half a demo transfer survives the purge.
@@ -366,6 +369,7 @@ class LedgerWriter
             'method' => $leg->method,
             'payee' => $leg->payee,
             'note' => $leg->note,
+            'recurring' => $leg->recurring,
             'occurred_on' => $leg->occurred_on,
             'book' => $leg->book,
         ];

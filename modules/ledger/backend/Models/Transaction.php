@@ -34,7 +34,7 @@ class Transaction extends Model
         'id', 'user_id', 'group_id', 'reverses_id', 'reversal_reason', 'corrects_id',
         'type', 'direction', 'account_id',
         'counter_account_id', 'amount_minor', 'currency', 'category_id',
-        'category_label', 'necessity', 'method', 'payee', 'note',
+        'category_label', 'necessity', 'method', 'payee', 'note', 'recurring',
         'occurred_on', 'book', 'is_demo', 'fx_rate', 'fx_as_of',
     ];
 

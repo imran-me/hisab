@@ -38,6 +38,8 @@ class UpdateTransactionRequest extends FormRequest
             'method' => ['sometimes', 'nullable', 'string', Rule::exists('payment_methods', 'key')],
             'payee' => ['sometimes', 'nullable', 'string', 'max:160'],
             'note' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            // 'Monthly', 'Weekly', 'Yearly' - a label, never a schedule.
+            'recurring' => ['sometimes', 'nullable', 'string', 'max:16'],
             'occurred_on' => ['sometimes', 'date_format:Y-m-d'],
             'book' => ['sometimes', 'string', 'max:32'],
             'fx_rate_id' => ['sometimes', 'nullable', 'string', Rule::exists('fx_rates', 'id')],

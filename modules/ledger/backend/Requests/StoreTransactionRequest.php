@@ -66,6 +66,8 @@ class StoreTransactionRequest extends FormRequest
 
             'payee' => ['nullable', 'string', 'max:160'],
             'note' => ['nullable', 'string', 'max:2000'],
+            // 'Monthly', 'Weekly', 'Yearly' - a label, never a schedule.
+            'recurring' => ['sometimes', 'nullable', 'string', 'max:16'],
 
             'occurred_on' => ['required', 'date_format:Y-m-d'],
             'book' => ['sometimes', 'string', 'max:32'],
