@@ -338,22 +338,24 @@ function attachHandlers(form, { book, accountRows, editing }) {
   if (editing) {
     delegate(form, 'click', '[data-delete]', async () => {
       const { confirmDialog } = await import('../../shared/js/components/sheet.js');
+      // The wording changed with the rule. Nothing is deleted: a reversing
+      // entry is recorded, the two cancel to nothing, and both stay in the
+      // history. Saying "delete" would promise something the ledger no longer
+      // does - and there is no Undo below for the same reason, because the
+      // reversal is itself a recorded entry rather than a pending action.
       const sure = await confirmDialog({
-        title: 'Delete this entry?',
-        text: 'It will be removed from every total. This cannot be undone after the next few seconds.',
-        confirmLabel: 'Delete',
+        title: 'Reverse this entry?',
+        text: 'A reversing entry is recorded today and the two cancel out. Both stay in the history, so the ledger still shows what happened.',
+        confirmLabel: 'Reverse',
         danger: true,
       });
       if (!sure) return;
 
-      const res = await ledger.destroy(editing.id);
+      const res = await ledger.reverse(editing.id);
       if (!res.ok) { toastFailure(res); return; }
 
       form.closest('dialog')?.querySelector('[data-sheet-close]')?.click();
-      toast('Entry deleted.', {
-        tone: 'good',
-        action: { label: 'Undo', onClick: () => ledger.restore(res.data) },
-      });
+      toast('Entry reversed.', { tone: 'good' });
     });
   }
 }

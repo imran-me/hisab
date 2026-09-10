@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="hisab:standalone" content="test harness">
+<title>Ledger reversal — browser test</title>
+<style>
+  body { font: 14px/1.6 ui-monospace, monospace; background: #06080B; color: #C9D2DA; padding: 2rem; }
+  .pass { color: #6EE7A8; } .fail { color: #FF8199; } h1 { font-size: 1rem; }
+</style>
+</head>
+<body>
+<h1>Ledger reversal — browser test</h1>
+<pre id="out"></pre>
+
+<!--
+  The LOCAL half of "recorded is final".
+
+  The PHP suite covers the server. This covers modules/ledger/backend/api.js,
+  which has to reach the same answer on its own - because when there is no
+  backend it IS the ledger, and when there is one it is still written first. If
+  the client edited in place while the server reversed, the two would hold
+  different histories of the same money and neither would look wrong.
+
+  Runs entirely against local storage, so it needs no backend and no session.
+-->
+<script type="module">
+import * as ledger from '../modules/ledger/backend/api.js';
+import * as accounts from '../modules/accounts/backend/api.js';
+
+const out = document.getElementById('out');
+let passed = 0;
+const failures = [];
+
+function check(label, condition) {
+  if (condition) { passed++; out.innerHTML += `<span class="pass">  ok  </span>${label}\n`; }
+  else { failures.push(label); out.innerHTML += `<span class="fail">  FAIL</span> ${label}\n`; }
+}
+
+(async function run() {
+  try {
+    ledger.reset();
+
+    const list = await accounts.list({});
+    const cash = list.data?.[0];
+
+    // The mirror image of the auth harness: this one runs against LOCAL data,
+    // so a backend that answers 401 leaves it with no accounts to post against.
+    // Skipped rather than failed - api-contract.md is explicit that a 401 must
+    // never fall through to local data, so an empty list here is correct
+    // behaviour, not a fault. Run it against `python -m http.server`.
+    if (!cash) {
+      out.innerHTML += '<span class="fail">  --  </span>no local accounts (a backend is answering) — skipped';
+      document.title = 'RESULT|SKIP|0|0|needs a static server, not tools/serve.php';
+      return;
+    }
+
+    // --- an ordinary expense ------------------------------------------------
+    const made = await ledger.create({
+      type: 'expense', account_id: cash.id, amount_minor: 45000,
+      currency: cash.currency, occurred_on: '2026-09-05', payee: 'Shwapno',
+    });
+    check('an expense is recorded', made.ok === true);
+    const originalId = made.data.id;
+
+    // --- correcting it ------------------------------------------------------
+    const fixed = await ledger.update(originalId, { amount_minor: 4500 }, 'Typo');
+    check('correcting succeeds', fixed.ok === true);
+
+    const all = (await ledger.list({ includeReversed: true, includeBothLegs: true })).data;
+    const original = all.find((r) => r.id === originalId);
+    const mirror = all.find((r) => r.reverses_id === originalId);
+    const replacement = all.find((r) => r.corrects_id === originalId);
+
+    // The whole point: the original is untouched.
+    check('the original still says 45000', original?.amount_minor === 45000);
+    check('a mirror was written', Boolean(mirror));
+    check('the mirror is the opposite direction', mirror?.direction === 'in');
+    check('the mirror carries the reason', mirror?.reversal_reason === 'Typo');
+    check('the replacement says 4500', replacement?.amount_minor === 4500);
+
+    // Dated today, never backdated - a correction must not change a month that
+    // has already been looked at.
+    const today = new Date().toISOString().slice(0, 10);
+    check('the mirror is dated today', mirror?.occurred_on === today);
+
+    // --- what the list shows -------------------------------------------------
+    const shown = (await ledger.list({})).data;
+    check('the list shows one row, not three', shown.filter((r) => r.payee === 'Shwapno').length === 1);
+    check('and it is the corrected one', shown.find((r) => r.payee === 'Shwapno')?.amount_minor === 4500);
+
+    // --- the balance nets ----------------------------------------------------
+    const balances = (await ledger.balances({})).data;
+    const opening = list.data[0].opening_balance_minor || 0;
+    check('the balance reflects only the corrected figure', balances[cash.id] === opening - 4500);
+
+    // --- reversing outright ---------------------------------------------------
+    const second = await ledger.create({
+      type: 'expense', account_id: cash.id, amount_minor: 20000,
+      currency: cash.currency, occurred_on: '2026-09-06', payee: 'Agora',
+    });
+    const rev = await ledger.reverse(second.data.id, 'Wrong account');
+    check('reversing succeeds', rev.ok === true);
+
+    const afterRev = (await ledger.list({ includeReversed: true })).data;
+    check('the reversed entry still exists', afterRev.some((r) => r.id === second.data.id));
+    check('and it is gone from the list', !(await ledger.list({})).data.some((r) => r.id === second.data.id));
+
+    const b2 = (await ledger.balances({})).data;
+    check('and it no longer moves the balance', b2[cash.id] === opening - 4500);
+
+    // --- reversing twice is refused -------------------------------------------
+    const again = await ledger.reverse(second.data.id, 'again');
+    check('reversing twice is refused', again.ok === false);
+
+  } catch (err) {
+    check(`no exception escaped (${err?.message ?? err})`, false);
+  }
+
+  ledger.reset();
+  document.title = `RESULT|${failures.length === 0 ? 'PASS' : 'FAIL'}|${passed}|${failures.length}|${failures.join(' ; ')}`;
+})();
+</script>
+</body>
+</html>

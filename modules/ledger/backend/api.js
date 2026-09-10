@@ -48,7 +48,17 @@ let memo = null;
  */
 export async function list(filters = {}) {
   const rows = await load();
-  const out = rows.filter((row) => matches(row, filters));
+
+  // Reversals, and the entries they cancel, are out of the LIST by default -
+  // a ledger where every fixed typo takes three lines is one nobody can read.
+  // They are never out of a TOTAL: summary() asks for them explicitly, because
+  // the figures have to net rather than skip.
+  const reversedIds = new Set(rows.filter((r) => r.reverses_id).map((r) => r.reverses_id));
+  const standing = (row) => !row.reverses_id && !reversedIds.has(row.id);
+
+  const out = rows
+    .filter((row) => (filters.includeReversed ? true : standing(row)))
+    .filter((row) => matches(row, filters));
 
   out.sort((a, b) => (b.occurred_on < a.occurred_on ? -1 : b.occurred_on > a.occurred_on ? 1 : (a.id < b.id ? 1 : -1)));
 
@@ -209,79 +219,135 @@ export async function create(input) {
  * moved, which shows up as a balance that is wrong by the difference and has no
  * visible cause.
  */
-export async function update(id, changes) {
+/**
+ * A mirror of one leg: same everything, opposite direction.
+ *
+ * The local half of the rule the server enforces. Both sides have to agree,
+ * because when a backend is present this store is still written first - so if
+ * the client edited in place while the server reversed, the two would hold
+ * different histories of the same money and neither would be wrong enough to
+ * notice.
+ */
+function mirrorOf(leg, reason, groupId) {
+  const stamp = new Date().toISOString();
+
+  return {
+    ...leg,
+    id: ulid(),
+    group_id: groupId,
+    reverses_id: leg.id,
+    reversal_reason: reason,
+    corrects_id: null,
+    // The whole mechanism: every balance and total nets to nothing.
+    direction: leg.direction === 'in' ? 'out' : 'in',
+    // Dated TODAY, never backdated. A correction that lands in the original's
+    // month changes a month already looked at, which is what the rule prevents.
+    occurred_on: today(),
+    created_at: stamp,
+    updated_at: stamp,
+  };
+}
+
+/**
+ * Correct an entry.
+ *
+ * NOT an edit. The original is reversed and a replacement recorded beside it,
+ * and all three rows survive - inherited from OppTracker, where the rule is
+ * "posted is final, a mistake is corrected by a reversal, and both stay
+ * visible". A ledger whose past can be rewritten cannot answer what it said
+ * last month.
+ */
+export async function update(id, changes, reason = 'Corrected') {
   const rows = await load();
   const row = rows.find((r) => r.id === id);
   if (!row) return { ok: false, reason: 'missing' };
+
+  if (row.reverses_id) {
+    return { ok: false, reason: 'invalid', errors: { entry: ['A reversal cannot be corrected. Reverse it instead.'] } };
+  }
 
   const merged = { ...row, ...changes };
   const errors = await validate({ ...merged, account_id: merged.account_id }, { editing: true });
   if (Object.keys(errors).length) return { ok: false, reason: 'invalid', errors };
 
   const legs = row.group_id ? rows.filter((r) => r.group_id === row.group_id) : [row];
-  const stamp = new Date().toISOString();
-  const amount = changes.amount_minor !== undefined ? Math.abs(Math.trunc(Number(changes.amount_minor))) : row.amount_minor;
-
-  for (const leg of legs) {
-    Object.assign(leg, {
-      amount_minor: leg.direction === row.direction ? amount : leg.amount_minor,
-      category_id: merged.category_id ?? leg.category_id,
-      category_label: merged.category_label ?? leg.category_label,
-      necessity: merged.type === 'expense' ? (Number(merged.necessity) || leg.necessity || 3) : null,
-      method: merged.method ?? leg.method,
-      payee: merged.payee?.trim?.() ?? leg.payee,
-      note: merged.note?.trim?.() ?? leg.note,
-      occurred_on: merged.occurred_on || leg.occurred_on,
-      updated_at: stamp,
-    });
+  if (legs.some((l) => rows.some((r) => r.reverses_id === l.id))) {
+    return { ok: false, reason: 'conflict', message: 'This entry was already reversed.' };
   }
 
-  // A currency-crossing edit re-snapshots the paired leg, or it keeps crediting
-  // the destination with the old converted figure.
-  if (legs.length === 2 && changes.amount_minor !== undefined) {
-    const other = legs.find((l) => l.id !== row.id);
-    Object.assign(other, await convertLeg(amount, row.currency, other.account_id));
-  }
+  const mirrorGroup = legs.length > 1 ? ulid() : null;
+  const mirrors = legs.map((leg) => mirrorOf(leg, reason, mirrorGroup));
 
-  persist(rows);
-  emit(EVENTS.TRANSACTION_UPDATED, row);
+  persist([...rows, ...mirrors]);
+
+  // The replacement goes through create(), so it is built by exactly the same
+  // code as any other entry - including the FX snapshot and the paired leg.
+  const replacement = await create({
+    type: merged.type,
+    account_id: merged.account_id,
+    to_account_id: merged.to_account_id ?? row.counter_account_id ?? null,
+    amount_minor: merged.amount_minor,
+    currency: merged.currency,
+    category_id: merged.category_id ?? null,
+    necessity: merged.necessity ?? null,
+    method: merged.method ?? null,
+    payee: merged.payee ?? null,
+    note: merged.note ?? null,
+    occurred_on: merged.occurred_on,
+    book: merged.book,
+  });
+
+  if (!replacement.ok) return replacement;
+
+  const after = await load();
+  const fresh = after.find((r) => r.id === replacement.data.id);
+  if (fresh) { fresh.corrects_id = row.id; persist(after); }
+
+  emit(EVENTS.TRANSACTION_UPDATED, replacement.data);
 
   if (await hasBackend()) {
-    const res = await patch(`/ledger/${id}`, changes);
+    const res = await patch(`/ledger/${id}`, { ...changes, reason });
     if (!res.ok && res.reason !== 'offline') return res;
   }
-  return { ok: true, data: row };
+
+  return { ok: true, data: replacement.data };
 }
 
-/** Delete. Removes both legs of a pair, for the same reason edit rewrites both. */
-export async function destroy(id) {
+/**
+ * Reverse an entry. Nothing in this app removes a recorded one.
+ *
+ * `destroy` is kept as the name the UI already calls, because what it means to
+ * the person has not changed - the entry stops counting - only what it leaves
+ * behind has.
+ */
+export async function reverse(id, reason = 'Reversed') {
   const rows = await load();
   const row = rows.find((r) => r.id === id);
   if (!row) return { ok: false, reason: 'missing' };
 
-  const doomed = row.group_id ? rows.filter((r) => r.group_id === row.group_id) : [row];
-  const removed = doomed.map((r) => ({ ...r }));   // a copy, so undo can restore it
+  const legs = row.group_id ? rows.filter((r) => r.group_id === row.group_id) : [row];
 
-  persist(rows.filter((r) => !doomed.includes(r)));
+  if (legs.some((l) => rows.some((r) => r.reverses_id === l.id))) {
+    // A second mirror would take the balance the other way and read as a real
+    // transaction.
+    return { ok: false, reason: 'conflict', message: 'This entry was already reversed.' };
+  }
+
+  const mirrorGroup = legs.length > 1 ? ulid() : null;
+  const mirrors = legs.map((leg) => mirrorOf(leg, reason, mirrorGroup));
+
+  persist([...rows, ...mirrors]);
   emit(EVENTS.TRANSACTION_DELETED, row);
 
   if (await hasBackend()) {
-    const res = await del(`/ledger/${id}`);
-    if (!res.ok && res.reason !== 'offline') {
-      persist([...rows, ...removed]);
-      return res;
-    }
+    const res = await post(`/ledger/${id}/reverse`, { reason });
+    if (!res.ok && res.reason !== 'offline') return res;
   }
-  return { ok: true, data: removed };
+
+  return { ok: true, data: mirrors };
 }
 
-/** Put back exactly what destroy() removed. Backs the Undo in the toast. */
-export async function restore(removedRows) {
-  const rows = await load();
-  persist([...rows, ...removedRows]);
-  emit(EVENTS.TRANSACTION_CREATED, removedRows[0]);
-  return { ok: true, data: removedRows[0] };
-}
+export const destroy = reverse;
 
 /* =========================================================================
    Derived figures — the only place these are computed
@@ -336,12 +402,30 @@ export async function usageCount(accountId) {
  * under-spent by 20,000 taka that they saved nothing.
  */
 export async function summary({ book = 'personal', period = toPeriodKey(new Date()), currency = 'BDT' } = {}) {
-  const rows = (await list({ book, period, includeBothLegs: true })).data;
+  // includeReversed, deliberately. The totals must NET - original, mirror and
+  // replacement all counted - rather than quietly skipping the rows the list
+  // hides. This has to match the server's summary exactly or the same month
+  // reads differently depending on whether a backend happens to be reachable.
+  const rows = (await list({ book, period, includeBothLegs: true, includeReversed: true })).data;
   const rates = await fx.rates();
 
-  const income = rows.filter((r) => r.type === 'income');
-  const expense = rows.filter((r) => r.type === 'expense');
-  const held = rows.filter((r) => r.type === 'deposit' && r.direction === 'out');
+  // A REVERSAL IS STILL type = expense. Summing by type alone reports a
+  // corrected 45,000 expense as 94,500 spent - wrong, and plausible enough that
+  // nobody would question it. The mirror subtracts.
+  const signed = (set) => set.map(
+    (r) => (r.reverses_id ? { ...r, amount_minor: -r.amount_minor } : r),
+  );
+
+  const income = signed(rows.filter((r) => r.type === 'income'));
+  const expense = signed(rows.filter((r) => r.type === 'expense'));
+  // Counted once, on the leg that takes money out of the spendable account -
+  // and its mirror is the leg that puts it back, which is the `in` one. Keyed
+  // on reverses_id rather than direction, because a paired deposit already has
+  // one leg of each direction with no reversal involved.
+  const held = signed(rows.filter(
+    (r) => r.type === 'deposit'
+      && (r.reverses_id ? r.direction === 'in' : r.direction === 'out'),
+  ));
 
   const total = (set) => convertAndSum(set, currency, rates).amountMinor;
   const missing = (set) => convertAndSum(set, currency, rates).missing;

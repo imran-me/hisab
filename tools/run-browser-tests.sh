@@ -52,7 +52,7 @@ fi
 # `python -m http.server` does not. Run it against tools/serve.php:
 #     HISAB_DEV_TOOLS=1 php -S 127.0.0.1:8822 -t . tools/serve.php
 #     tools/run-browser-tests.sh 8822
-PAGES=("tools/test-vault-browser.html" "tools/test-settings-browser.html" "tools/test-auth-browser.html")
+PAGES=("tools/test-vault-browser.html" "tools/test-settings-browser.html" "tools/test-ledger-browser.html" "tools/test-auth-browser.html")
 FAILED=0
 
 for page in "${PAGES[@]}"; do
