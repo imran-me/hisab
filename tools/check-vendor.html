@@ -1,0 +1,33 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>vendor check</title>
+<meta name="hisab:standalone" content="vendor smoke test">
+<!--
+  Does the vendored design system still work?
+
+  Open it and look. Every element here is one that fails SILENTLY: a missing
+  icon font renders as an empty box rather than an error, a missing face falls
+  back to a system font that looks deliberate, and a CSP that blocks a
+  stylesheet logs to a console nobody has open. None of it throws, so nothing
+  in the test suite can catch it - the only check is a human seeing glyphs
+  instead of squares.
+
+      python -m http.server 8000   →   /tools/check-vendor.html
+-->
+<link rel="stylesheet" href="../assets/vendor/fonts.css">
+<link rel="stylesheet" href="../assets/vendor/bootstrap.min.css">
+<link rel="stylesheet" href="../assets/vendor/bootstrap-icons.min.css">
+<link rel="stylesheet" href="../assets/vendor/opptracker.css">
+</head><body class="app-shell">
+<div class="page-wrap wide" style="padding:24px">
+  <div class="card card-pad">
+    <div class="fh-k"><i class="bi bi-wallet2 me-1"></i>In hand at month end</div>
+    <div style="font-family:'JetBrains Mono';font-size:34px;font-weight:700">৳671</div>
+    <p style="font-family:'Plus Jakarta Sans';font-weight:800;font-size:20px;margin:8px 0 0">Plus Jakarta Sans</p>
+    <p style="font-family:Inter">Inter body text</p>
+    <div class="d-flex flex-wrap" style="gap:8px;font-size:22px">
+      <i class="bi bi-cash-coin"></i><i class="bi bi-bank"></i><i class="bi bi-scissors"></i>
+      <i class="bi bi-safe"></i><i class="bi bi-calendar3"></i><i class="bi bi-stars"></i>
+      <i class="bi bi-arrow-up-right-circle"></i><i class="bi bi-arrow-down-left-circle"></i>
+    </div>
+    <button class="btn btn-primary btn-sm mt-2">Bootstrap button</button>
+  </div>
+</div></body></html>
