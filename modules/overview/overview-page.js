@@ -98,18 +98,97 @@ function drawNetWorth(accountRows, balances, rates, display) {
   qs('[data-net-held]').innerHTML = formatMoneyHTML(held.amountMinor, display);
 }
 
+/**
+ * The hero's flow row: what came in, what was put out of reach, what was spent.
+ *
+ * Deliberately signed and abbreviated rather than exact. This line is read at a
+ * glance and compared against itself - the exact figures are in the cards
+ * directly below it, and repeating them here to the poisha would make four
+ * long numbers competing for the same attention.
+ */
+function drawFlow(summary, display) {
+  const row = qs('[data-net-flow]');
+  const bar = qs('[data-net-bar]');
+  const kept = qs('[data-net-kept]');
+
+  const income = summary.income_minor || 0;
+  const held = summary.held_minor || 0;
+  const spent = summary.expense_minor || 0;
+
+  if (!income && !held && !spent) {
+    row.hidden = bar.hidden = kept.hidden = true;
+    return;
+  }
+
+  const chips = [
+    { tone: 'in',   sign: '+', value: income },
+    { tone: 'hold', sign: '−', value: held },
+    { tone: 'out',  sign: '−', value: spent },
+  ].filter((c) => c.value > 0);
+
+  row.innerHTML = chips.map((c) => `
+    <span class="flow-chip flow-chip--${c.tone}">${esc(c.sign)}${formatCompact(c.value, display)}</span>
+  `).join('');
+  row.hidden = false;
+
+  // WHAT IS STILL YOURS, which is not the same as what is still spendable.
+  //
+  // The first version of this subtracted `held` as well, and reported 1% on a
+  // month that kept 16%. A deposit is money moved into savings - it leaves what
+  // you can spend WITHOUT LEAVING YOU, and that distinction is the one the
+  // whole app is built around. Subtracting it here reproduced exactly the bug
+  // CONVENTIONS.md warns about: it made saving look like spending.
+  //
+  // So kept = held + kept: everything that came in and did not go out. It
+  // agrees with the net worth figure directly above it, which is the check that
+  // this is the right sum.
+  const stillYours = held + (summary.kept_minor || 0);
+  const ratio = income > 0 ? Math.max(0, Math.min(1, stillYours / income)) : 0;
+
+  qs('[data-net-bar-fill]').style.width = `${(ratio * 100).toFixed(1)}%`;
+  bar.hidden = income <= 0;
+
+  kept.innerHTML = income > 0
+    ? `Kept <strong>${formatMoneyHTML(stillYours, display)}</strong> · ${(ratio * 100).toFixed(0)}% of income`
+    : '';
+  kept.hidden = income <= 0;
+}
+
+/**
+ * 48,600 -> 48.6k. Only for the flow chips, never for a figure anyone might
+ * act on: a rounded balance is a balance that disagrees with the ledger.
+ */
+function formatCompact(minor, currency) {
+  const symbol = currency === 'BDT' ? '৳' : '';
+  const major = Math.abs(minor) / 100;
+
+  if (major < 1000) return `${symbol}${Math.round(major)}`;
+
+  // One decimal, and the trailing .0 removed. Rounding 48,600 to "49k" loses
+  // the digit that distinguishes it from 48,900 - and these three chips are
+  // meant to be compared against each other, so the shared magnitude is the
+  // uninformative part and the first decimal is the informative one.
+  const thousands = (major / 1000).toFixed(major >= 100000 ? 0 : 1).replace(/\.0$/, '');
+
+  return `${symbol}${thousands}k`;
+}
+
 /* =========================================================================
    This month
    ========================================================================= */
 
 function drawMonth(summary, display) {
   const tiles = [
-    { label: 'In',   value: summary.income_minor,  tone: 'in' },
-    { label: 'Out',  value: summary.expense_minor, tone: 'out' },
-    { label: 'Held', value: summary.held_minor,    tone: 'hold' },
+    // The icon is not decoration. Four figures in four identical boxes are
+    // read by position, which means re-reading the labels every time; a glyph
+    // and a colour make each one recognisable before the label is read at all.
+    { label: 'Income',    value: summary.income_minor,  tone: 'in',   icon: 'arrow-in' },
+    { label: 'Deposited', value: summary.held_minor,    tone: 'hold', icon: 'arrow-hold' },
+    { label: 'Spent',     value: summary.expense_minor, tone: 'out',  icon: 'arrow-out' },
     {
-      label: 'Kept',
+      label: 'Could save',
       value: summary.kept_minor,
+      icon: 'target',
       // Kept is the one figure whose sign is meaningful: a negative month means
       // more went out than came in, and it should read as bad rather than
       // simply as a smaller number.
@@ -119,11 +198,14 @@ function drawMonth(summary, display) {
   ];
 
   render(qs('[data-month-stats]'), html`${raw(tiles.map((t) => `
-    <div class="stat">
-      <span class="stat__label">${esc(t.label)}</span>
+    <div class="stat stat--${t.tone}">
+      <span class="stat__glyph">${icon(t.icon, { class: 'icon icon--sm' })}</span>
       <span class="money money--lg money--${t.tone}">${formatMoneyHTML(t.value, display)}</span>
+      <span class="stat__label">${esc(t.label)}</span>
       ${t.note ? `<span class="stat__delta">${esc(t.note)}</span>` : ''}
     </div>`).join(''))}`);
+
+  drawFlow(summary, display);
 
   // The breakdown only earns its space once there is something to break down.
   const panel = qs('[data-breakdown]');

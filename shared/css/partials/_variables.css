@@ -291,6 +291,21 @@
   --tap:     48px;
 
   color-scheme: dark;
+  /* ---- The hero panel ----------------------------------------------------
+     The balance on the home screen, and the only panel in the product with its
+     own surface token.
+
+     It needs one because the right answer differs per theme rather than
+     inverting. On WHITE, an unboxed figure sitting beside four boxed ones reads
+     as five tiles of equal weight and the one that matters loses, so it becomes
+     a dark panel - the only dark thing on the page, and therefore the first
+     thing seen. On BLACK that trick is unavailable and unnecessary: inverting
+     would put a bright box on a dark page, which shouts instead of leading, so
+     it stays a raised dark surface.
+     --------------------------------------------------------------------- */
+  --hero:     #0F1620;
+  --hero-ink: #ECF1F6;
+
 }
 
 /* =========================================================================
@@ -375,6 +390,10 @@
   --e-2: 0 6px 18px -6px rgba(13, 18, 25, .16);
   --e-3: 0 20px 44px -12px rgba(13, 18, 25, .22);
 
+
+  /* On white the hero inverts: see the note in the base block. */
+  --hero:     #0B0F15;
+  --hero-ink: #ECF1F6;
   color-scheme: light;
 }
 
@@ -440,6 +459,12 @@
     --e-3: 0 20px 44px -12px rgba(13, 18, 25, .22);
     color-scheme: light;
   }
+    /* The hero inverts on white here too. Without this, a device set to light
+       with no explicit choice gets the night hero on a white page - the one
+       combination that looks like a mistake rather than a theme. */
+    --hero:     #0B0F15;
+    --hero-ink: #ECF1F6;
+
 }
 
 /* =========================================================================

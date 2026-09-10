@@ -18,6 +18,44 @@
   border: 1px solid var(--line);
   border-radius: var(--r-3);
   min-width: 0;
+  /* The tinted rule along the top. Drawn as a pseudo-element rather than a
+     border-top, because a coloured border changes the box's height and would
+     misalign a tile that has a delta line against one that does not. */
+  position: relative;
+  overflow: hidden;
+}
+
+.stat--in::before,
+.stat--out::before,
+.stat--hold::before,
+.stat--flat::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  height: 3px;
+  background: var(--stat-tone, var(--accent));
+}
+
+.stat--in   { --stat-tone: var(--flow-in); }
+.stat--out  { --stat-tone: var(--flow-out); }
+.stat--hold { --stat-tone: var(--flow-hold); }
+.stat--flat { --stat-tone: var(--accent); }
+
+/* The glyph, in a tinted square.
+   Four figures in four identical boxes are read by POSITION, which means
+   re-reading the labels each time. A colour and a shape make each tile
+   recognisable before its label is read at all. */
+.stat__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--r-2);
+  margin-block-end: var(--s-1);
+  color: var(--stat-tone, var(--accent));
+  background: color-mix(in srgb, var(--stat-tone, var(--accent)) 12%, transparent);
 }
 
 .stat__label {

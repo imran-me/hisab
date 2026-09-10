@@ -17,6 +17,97 @@
   padding-block: var(--s-2) 0;
 }
 
+/* ---- The hero card -------------------------------------------------------
+   A DARK panel in both themes, and the only one in the product.
+
+   The comment above says the net figure is deliberately not a card, and that
+   was right while it stood alone on a dark page. It stops being right on the
+   day theme: on white, an unboxed figure and four boxed ones read as five
+   tiles of equal weight, and the one that matters loses. Inverting it restores
+   the hierarchy the dark theme got for free — the balance is the only dark
+   thing on the screen, so it is the first thing seen.
+
+   --hero and --hero-ink are defined per theme in _variables.css: near-black on
+   white, and a raised dark on black rather than an inversion that would shout.
+   ------------------------------------------------------------------------ */
+.net--hero {
+  background: var(--hero);
+  color: var(--hero-ink);
+  border-radius: var(--r-4);
+  padding: var(--s-5);
+  gap: var(--s-3);
+  /* The figure sits on a dark ground in a light page, so it needs the
+     elevation that separates it from the page rather than from a card. */
+  box-shadow: var(--e-2);
+}
+
+/* Labels and notes inside the hero are on the inverted ground, so the ordinary
+   --ink-2 and --ink-3 (tuned for the page) are the wrong side of the contrast.
+   color-mix keeps them derived from the inverted ink rather than introducing a
+   second set of greys that would need maintaining alongside the first. */
+.net--hero .label,
+.net--hero .meta {
+  color: color-mix(in srgb, var(--hero-ink) 62%, transparent);
+}
+
+.net--hero .money--hero { color: var(--hero-ink); }
+
+.net--hero .net__split { border-top-color: color-mix(in srgb, var(--hero-ink) 16%, transparent); }
+.net--hero .net__slice + .net__slice { border-inline-start-color: color-mix(in srgb, var(--hero-ink) 12%, transparent); }
+.net--hero .net__slice .money { color: var(--hero-ink); }
+
+/* ---- The flow row --------------------------------------------------------
+   What came in, what was put out of reach, what was spent — the three numbers
+   that explain the figure above them.
+   ------------------------------------------------------------------------ */
+.net__flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.flow-chip {
+  font: var(--fw-medium) var(--fs-12) / 1 var(--font-mono);
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-1);
+  white-space: nowrap;
+  /* The wash tokens are tuned to sit on the PAGE, and this chip sits on the
+     inverted surface. Lifting the opacity keeps them legible there without a
+     second palette. */
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.flow-chip--in   { color: var(--flow-in); }
+.flow-chip--hold { color: var(--flow-hold); }
+.flow-chip--out  { color: var(--flow-out); }
+
+/* ---- Kept, as a proportion ----------------------------------------------- */
+.net__bar {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hero-ink) 14%, transparent);
+  overflow: hidden;
+}
+
+.net__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  /* Animated so a month that changes under you is visibly re-drawn rather than
+     silently different. Respects the motion preference via the token. */
+  transition: width var(--t-slow) var(--ease-out);
+}
+
+.net__kept {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: color-mix(in srgb, var(--hero-ink) 70%, transparent);
+}
+
+.net__kept strong { color: var(--hero-ink); font-weight: var(--fw-semibold); }
+
 .net__spark {
   flex: none;
   width: 10rem;

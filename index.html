@@ -83,7 +83,7 @@
              currency. It is marked as converted and carries the rate date,
              because a roll-up across currencies is an estimate and presenting
              it as an exact balance is a lie of formatting. -->
-        <section class="net" aria-labelledby="net-h">
+        <section class="net net--hero" aria-labelledby="net-h">
           <div class="split split--top">
             <div class="stack stack--1">
               <h2 class="label" id="net-h">Net worth</h2>
@@ -94,6 +94,22 @@
             </div>
             <div class="net__spark" data-net-spark aria-hidden="true"></div>
           </div>
+
+          <!--
+            THE FLOW ROW. Where the figure above came from, in one line.
+
+            A balance on its own answers "how much" and not "why that much",
+            which is the question anyone actually opens this screen with. Three
+            chips - what came in, what was moved out of reach, what was spent -
+            turn a number into an account of the month.
+          -->
+          <div class="net__flow" data-net-flow hidden aria-label="How the month moved"></div>
+
+          <div class="net__bar" data-net-bar hidden aria-hidden="true">
+            <span class="net__bar-fill" data-net-bar-fill></span>
+          </div>
+
+          <p class="net__kept" data-net-kept hidden></p>
 
           <div class="net__split" data-net-split>
             <div class="net__slice">
