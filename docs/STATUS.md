@@ -4,7 +4,7 @@ What is built, what is not, and what has actually been executed as opposed to
 merely written. `CONVENTIONS.md` requires this file: authored is not verified,
 and a gap that is written down is a decision rather than an oversight.
 
-Last updated: 2026-09-09
+Last updated: 2026-09-10
 
 ---
 
@@ -20,7 +20,7 @@ Things that have been run, with the result.
 | `python tools/check-pages.py` | 6 pages, pre-paint block identical, CSP hash matches `.htaccess`. |
 | `tools/qa-viewport.html` | **15/15 pass** — no horizontal overflow on any of the three screens at 360 / 390 / 414 / 768 / 1280. |
 | Headless Chrome render | Overview, Ledger and Accounts all load with an empty console. |
-| `php artisan test` | **81 tests, 259 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
+| `php artisan test` | **86 tests, 276 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
 | `php artisan migrate` | Laravel's own three migrations run against **real MySQL** (MariaDB 10.4), not only the SQLite the test suite uses. |
 | `hisab:owner` on an unseeded database | Creating the owner on a database that had been migrated but never seeded used to fail with a foreign-key violation naming a table nobody asked about. Owner-seeding now establishes the reference data it needs; verified against MySQL from `migrate:fresh` with no `db:seed`. |
 | FX on both drivers | Seeder is idempotent (10 currencies / 10 rates after three runs) and KWD lands at `minor_unit` 3, JPY at 0. The rate write path was then re-run against **real MySQL** as well, because the bug found here only appeared on SQLite. |
@@ -28,6 +28,8 @@ Things that have been run, with the result.
 | Auth in a browser | **14 assertions pass** against a real backend on one origin (`tools/serve.php`). The auth harness exists because neither the PHP suite nor curl runs `session.js` — the priming GET that fetches the CSRF cookie can only fail in a browser. |
 | Signing in, end to end | Guard verified in headless Chrome: signed out **with** a server present redirects to the login screen and leaks no ledger markup; **without** one, the app opens on the Overview exactly as in Phase 1. |
 | Auth over real HTTP | The whole flow against `artisan serve`: session 200 while signed out, `XSRF-TOKEN` issued, **POST without the CSRF header rejected 419**, POST with it 200, session persists, logout 204, session cleared, limiter cutting in. The session cookie carries `httponly; samesite=lax`. Done over HTTP because Laravel skips CSRF inside the test suite, so a feature test would pass whether the middleware were wired or not. |
+| The rail's four dead links | **40 assertions pass.** Business, Investments, Budgets and Categories 404'd — on `python -m http.server` that is an unstyled "Error code: 404" page, which is the white screen they were reported as. Each now mounts the shell, marks itself current in the rail, and its CTA lands on a real screen; checked at 360 / 390 / 768 / 1280 with no overflow and a clean console. `check-pages.py` reports 13 pages with the pre-paint block still byte-identical and the CSP hash unchanged. |
+| Navigation, by clicking | Every tab and rail link driven by `click()` rather than by navigating to a URL, because a direct load cannot fail the way a link can. All ten destinations mount. Also confirmed the failure under `file://`: **zero tabs, no header, on every page** — module imports are blocked, so nothing runs. That is the other white screen, and it is why README says to serve the folder. |
 | Out / In in the header | **21 assertions pass** in headless Chrome across Ledger and Overview: the pressed button's type arrives in the sheet, the saved row carries the matching `type` and `direction`, and the bare FAB still asks for no type. Measured at 320 / 360 / 390 / 414 / 768 / 1280 — no header overflow, 44px tap targets, and the title ellipsises rather than pushes at 320. Rendered in both themes. |
 | The entry draft | **Never written.** `saveDraft()` begins `if (!form.isConnected) return;` and `openSheet`'s `close()` calls `sheet.remove()` before `onClose?.(reason)`, so the form is already detached every time. Pre-existing; found while testing the buttons above, not caused by them. |
 | `tools/deploy.sh` | Exercised against a simulated server on both branches — with git, and with git hidden so it takes the tarball. Only owned paths published; `.git`, `docs/` and `tools/` do not leak; a deleted file is swept; `api/` survives; a second run is a silent no-op; two concurrent runs leave one working. |
@@ -71,6 +73,14 @@ The FastAPI analytics service has not been written or run.
 ### Module APIs on the mock seam
 `fx`, `categories`, `accounts`, `ledger` — all four return the shape documented
 in `shared/backend/api-contract.md`, so swapping in Laravel changes no consumer.
+
+### Ledger (backend) — recorded is final
+Inherited from OppTracker: **a saved entry is never altered and never deleted.**
+A correction reverses the original — a mirror entry, dated today, with a reason
+— and records the replacement beside it; all three rows survive and stay linked.
+`DELETE` reverses too. Reversing twice is refused with 409. The list shows only
+what still stands, so a corrected typo is one row rather than three, while the
+totals include every row and net to the right figure.
 
 ### Ledger (backend)
 The transaction record; everything else is a view over it. One row is one leg.
@@ -165,8 +175,11 @@ Listed so a gap does not look like an oversight later.
 9. **Settings** — theme, density, currency, hand, rate entry, data management
 
 ### After that
-3. **The four remaining dead nav links** — Business, Investments, Budgets and
-   Categories still 404. Settings and Insights now do not
+3. **The four remaining dead nav links are gone.** Business, Investments,
+   Budgets and Categories now reach real pages that state the feature is
+   unwritten, on the pattern `modules/reports/insights.html` set. Every one of
+   the ten rail destinations mounts the shell; nothing in the navigation 404s.
+   The features behind them are still unbuilt — items 4 to 7 below
 4. **Reports** — the Insights tab now reaches a real page that states the
    feature is unwritten, rather than a 404. The reports themselves are not built
 4. **Business books** — separate ledgers per business, per-business profit

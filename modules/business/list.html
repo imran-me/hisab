@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <script>
+    /* PRE-PAINT. Inline, and first, on purpose: a deferred script runs after
+       the first paint, and the first paint is exactly what this exists to get
+       right. A night-theme user who sees one white frame on every navigation
+       has a broken app, however correct it looks a moment later.
+
+       This block is the twin of applyTheme() in shared/js/core/state.js. If one
+       changes, so must the other. It is duplicated into every page rather than
+       imported because an import cannot run before paint.
+
+       It is byte-identical in every page, and tools/check-pages.py asserts
+       that, because duplicated code drifts. That tool also prints the
+       Content-Security-Policy hash for this exact block; if the two disagree,
+       the browser blocks the script and every page paints the white frame this
+       is here to prevent.
+
+       .no-js is removed here too, so [data-reveal] content is only hidden when
+       JavaScript is actually present to reveal it. */
+    document.documentElement.classList.remove('no-js');
+    try {
+      var root = document.documentElement;
+      var theme = localStorage.getItem('hisab:theme');
+      if (theme) {
+        var value = JSON.parse(theme);
+        /* Both directions matter. A stored 'day' must ADD the attribute and a
+           cleared preference must REMOVE it, or someone who switches back to
+           following their device stays stuck on their old choice. */
+        if (value === 'day' || value === 'night') root.setAttribute('data-theme', value);
+        else root.removeAttribute('data-theme');
+      }
+      var density = localStorage.getItem('hisab:density');
+      if (density && JSON.parse(density) === 'compact') root.setAttribute('data-density', 'compact');
+      var hand = localStorage.getItem('hisab:hand');
+      if (hand && JSON.parse(hand) === 'left') root.setAttribute('data-hand', 'left');
+    } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
+  </script>
+
+  <title>Business — Hisab</title>
+  <meta name="description" content="Separate books per business, with their own accounts and profit.">
+  <meta name="theme-color" content="#06080B">
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../../assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="../../site.webmanifest">
+
+  <link rel="stylesheet" href="../../shared/css/hisab.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!--
+    THIS PAGE IS A DESTINATION WITHOUT A FEATURE, AND SAYS SO.
+
+    Business is one of the rail destinations, so the link existed before
+    the screen did.
+
+    A nav link that 404s is the fastest way to make a working app feel broken,
+    and the styled 404 is worse here than an honest page: it says the address is
+    wrong when the address is right and the feature is simply not written. So
+    this is a real page in the shell — the rail lights, the navigation works,
+    and the empty state names what is missing and what to use instead today.
+
+    It is replaced wholesale when the module is built. Nothing here is
+    scaffolding to build on.
+  -->
+  <div class="app">
+    <header class="app-header"></header>
+    <nav class="app-rail" aria-label="Sections"></nav>
+
+    <main class="app-main" id="main">
+      <div class="page stack stack--4">
+
+        <div class="empty" style="min-height:70dvh; justify-content:center">
+          <span class="empty__glyph">
+            <svg class="icon icon--lg" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-briefcase"/></svg>
+          </span>
+          <span class="empty__title">Business books are not built yet</span>
+          <p class="empty__text">
+            Each business will keep its own ledger and its own accounts, so personal money and business money never land in one total, and profit is worked out per business. Until then every entry belongs to the personal book.
+          </p>
+          <a class="btn btn--ghost" href="../ledger/list.html">
+            <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-list"/></svg>
+            <span>Go to the Ledger</span>
+          </a>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <nav class="tabbar" aria-label="Primary"></nav>
+
+  <script type="module" src="../../shared/js/main.js"></script>
+  <script type="module" src="list-page.js"></script>
+</body>
+</html>

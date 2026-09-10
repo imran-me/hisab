@@ -31,7 +31,8 @@ class Transaction extends Model
     protected $table = 'transactions';
 
     protected $fillable = [
-        'id', 'user_id', 'group_id', 'type', 'direction', 'account_id',
+        'id', 'user_id', 'group_id', 'reverses_id', 'reversal_reason', 'corrects_id',
+        'type', 'direction', 'account_id',
         'counter_account_id', 'amount_minor', 'currency', 'category_id',
         'category_label', 'necessity', 'method', 'payee', 'note',
         'occurred_on', 'book', 'fx_rate', 'fx_as_of',
@@ -91,5 +92,29 @@ class Transaction extends Model
     public function isPaired(): bool
     {
         return $this->group_id !== null;
+    }
+
+    /** This entry cancels another one. */
+    public function isReversal(): bool
+    {
+        return $this->reverses_id !== null;
+    }
+
+    /**
+     * Entries that are still standing: not a reversal, and not reversed.
+     *
+     * Used by the ledger list. The rows are NOT excluded from any total - they
+     * net to zero on their own - so this is presentation, and the figures are
+     * the same with or without it.
+     */
+    public function scopeStanding(Builder $query): Builder
+    {
+        return $query
+            ->whereNull('reverses_id')
+            ->whereNotExists(function ($sub): void {
+                $sub->selectRaw('1')
+                    ->from('transactions as r')
+                    ->whereColumn('r.reverses_id', 'transactions.id');
+            });
     }
 }

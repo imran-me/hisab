@@ -35,6 +35,7 @@ class LedgerController extends Controller
             'category_id' => ['sometimes', 'string'],
             'q' => ['sometimes', 'string', 'max:120'],
             'after' => ['sometimes', 'string', 'size:26'],
+            'include_reversed' => ['sometimes', 'boolean'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:'.self::MAX_LIMIT],
         ]);
 
@@ -42,6 +43,11 @@ class LedgerController extends Controller
         [$from, $to] = $this->range($f);
 
         $query = $this->owned($request)
+            // A ledger where every fixed typo occupies three rows is a ledger
+            // nobody can read, so reversals and the entries they cancel are out
+            // by default. They are NOT excluded from any total - they net to
+            // zero on their own - so this is presentation only.
+            ->when(! ($f['include_reversed'] ?? false), fn (Builder $q) => $q->standing())
             ->when(isset($f['book']), fn (Builder $q) => $q->where('book', $f['book']))
             ->when($from !== null, fn (Builder $q) => $q->where('occurred_on', '>=', $from))
             ->when($to !== null, fn (Builder $q) => $q->where('occurred_on', '<=', $to))
@@ -90,12 +96,22 @@ class LedgerController extends Controller
         ], 201);
     }
 
+    /**
+     * Correct an entry. NOT an edit - see the writer, and endpoints.md.
+     *
+     * The original is reversed and a replacement recorded; both survive.
+     */
     public function update(UpdateTransactionRequest $request, string $id): JsonResponse
     {
-        $legs = $this->writer->update(
+        $data = $request->validated();
+        $reason = $data['reason'] ?? null;
+        unset($data['reason']);
+
+        $legs = $this->writer->correct(
             $request->user(),
             $this->find($request, $id),
-            $request->validated(),
+            $data,
+            $reason,
         );
 
         return response()->json([
@@ -104,11 +120,41 @@ class LedgerController extends Controller
         ]);
     }
 
+    /**
+     * Reverse, with a reason. DELETE is the same thing without one.
+     */
+    public function reverse(Request $request, string $id): JsonResponse
+    {
+        $data = $request->validate(['reason' => ['sometimes', 'nullable', 'string', 'max:160']]);
+
+        $mirrors = $this->writer->reverse(
+            $request->user(),
+            $this->find($request, $id),
+            $data['reason'] ?? __('Reversed'),
+        );
+
+        return response()->json([
+            'data' => $this->shape($mirrors->first()),
+            'meta' => ['legs' => $mirrors->map($this->shape(...))->values()],
+        ], 201);
+    }
+
+    /**
+     * Nothing is destroyed. This reverses, and answers 201 with the mirror -
+     * the client shows it rather than removing a row from the list.
+     */
     public function destroy(Request $request, string $id): JsonResponse
     {
-        $this->writer->delete($this->find($request, $id));
+        $mirrors = $this->writer->reverse(
+            $request->user(),
+            $this->find($request, $id),
+            (string) ($request->input('reason') ?: __('Removed')),
+        );
 
-        return response()->json(null, 204);
+        return response()->json([
+            'data' => $this->shape($mirrors->first()),
+            'meta' => ['legs' => $mirrors->map($this->shape(...))->values()],
+        ], 201);
     }
 
     public function balances(Request $request): JsonResponse
@@ -182,6 +228,9 @@ class LedgerController extends Controller
         return [
             'id' => $t->id,
             'group_id' => $t->group_id,
+            'reverses_id' => $t->reverses_id,
+            'reversal_reason' => $t->reversal_reason,
+            'corrects_id' => $t->corrects_id,
             'type' => $t->type,
             'direction' => $t->direction,
             'account_id' => $t->account_id,

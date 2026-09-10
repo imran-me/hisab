@@ -41,6 +41,10 @@ class UpdateTransactionRequest extends FormRequest
             'occurred_on' => ['sometimes', 'date_format:Y-m-d'],
             'book' => ['sometimes', 'string', 'max:32'],
             'fx_rate_id' => ['sometimes', 'nullable', 'string', Rule::exists('fx_rates', 'id')],
+
+            // Why the correction was made. Recorded on the reversal, in the
+            // person's own words, beside the row it explains.
+            'reason' => ['sometimes', 'nullable', 'string', 'max:160'],
         ];
     }
 

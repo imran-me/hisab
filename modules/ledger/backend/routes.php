@@ -22,5 +22,6 @@ Route::prefix('ledger')->middleware('auth')->group(function (): void {
     Route::get('/', [LedgerController::class, 'index']);
     Route::post('/', [LedgerController::class, 'store']);
     Route::patch('/{id}', [LedgerController::class, 'update']);
+    Route::post('/{id}/reverse', [LedgerController::class, 'reverse']);
     Route::delete('/{id}', [LedgerController::class, 'destroy']);
 });

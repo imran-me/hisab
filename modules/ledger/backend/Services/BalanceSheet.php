@@ -79,12 +79,33 @@ class BalanceSheet
             ->where('user_id', $user->id)
             ->where('book', $book)
             ->whereBetween('occurred_on', [$from, $to])
-            ->get(['type', 'direction', 'amount_minor', 'currency', 'category_id', 'category_label', 'necessity', 'method']);
+            ->get(['type', 'direction', 'amount_minor', 'currency', 'reverses_id', 'category_id', 'category_label', 'necessity', 'method']);
 
-        $counted = $rows->filter(fn (Transaction $t): bool => match ($t->type) {
-            'transfer' => false,
-            'deposit' => $t->direction === 'out',
-            default => true,
+        // A REVERSAL IS STILL type = expense.
+        //
+        // That is the trap here, and it does not announce itself: a corrected
+        // 45,000 expense leaves an original, a mirror and a replacement, and
+        // summing by type alone reports 94,500 spent - a figure that is wrong
+        // and entirely plausible. The mirror has to SUBTRACT.
+        //
+        // reverses_id is what separates a mirror from an ordinary leg, and it
+        // has to be reverses_id rather than direction: a paired deposit already
+        // has one leg of each direction without any reversal involved.
+        $counted = $rows->filter(function (Transaction $t): bool {
+            if ($t->type === 'transfer') {
+                return false;
+            }
+
+            if ($t->type !== 'deposit') {
+                return true;
+            }
+
+            // A deposit is counted ONCE, on the leg that takes money out of the
+            // spendable account - and its mirror is the leg that puts it back,
+            // which is the `in` one.
+            return $t->reverses_id === null
+                ? $t->direction === 'out'
+                : $t->direction === 'in';
         });
 
         $totals = ['income' => 0, 'expense' => 0, 'deposit' => 0];
@@ -94,7 +115,8 @@ class BalanceSheet
             // whatever is present and the client converts using the snapshot.
             // Stated rather than hidden: CONVENTIONS.md forbids summing two
             // currencies, so `currencies` below names what went in.
-            $totals[$row->type] = ($totals[$row->type] ?? 0) + $row->amount_minor;
+            $sign = $row->reverses_id === null ? 1 : -1;
+            $totals[$row->type] = ($totals[$row->type] ?? 0) + ($sign * $row->amount_minor);
         }
 
         return [
@@ -125,9 +147,19 @@ class BalanceSheet
             ->groupBy(fn (Transaction $t) => $t->{$key} ?? '—')
             ->map(fn ($group, $label): array => [
                 'key' => $label,
-                'total_minor' => $group->sum('amount_minor'),
-                'count' => $group->count(),
+                // Signed, for the same reason the totals are: a mirror belongs
+                // to the same category as the entry it cancels, so adding it
+                // would double that category's share instead of clearing it.
+                'total_minor' => $group->sum(
+                    fn (Transaction $t): int => ($t->reverses_id === null ? 1 : -1) * $t->amount_minor,
+                ),
+                // Entries that still stand, so a corrected entry counts once
+                // rather than three times.
+                'count' => $group->filter(fn (Transaction $t): bool => $t->reverses_id === null)->count(),
             ])
+            // A category whose entries all cancelled out is not a row worth
+            // showing - it would read as spending that did not happen.
+            ->filter(fn (array $r): bool => $r['total_minor'] !== 0)
             ->sortByDesc('total_minor')
             ->values()
             ->all();

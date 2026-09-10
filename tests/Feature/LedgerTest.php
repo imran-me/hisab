@@ -341,49 +341,149 @@ class LedgerTest extends TestCase
 
     // -------------------------------------------------------- editing, pairs
 
-    public function test_editing_a_transfer_rewrites_both_legs(): void
+    public function test_correcting_an_entry_reverses_it_rather_than_editing_it(): void
     {
-        $from = $this->account('Cash');
-        $to = $this->account('Bank');
+        $account = $this->account("Cash", ["opening_balance_minor" => 0]);
 
         $id = $this->entry([
-            'type' => 'transfer', 'account_id' => $from->id, 'to_account_id' => $to->id,
-            'amount_minor' => 100000, 'currency' => 'BDT', 'occurred_on' => '2026-09-05',
-        ])->json('data.id');
+            "type" => "expense", "account_id" => $account->id,
+            "amount_minor" => 45000, "currency" => "BDT", "occurred_on" => "2026-09-05",
+        ])->json("data.id");
 
         $this->actingAs($this->owner)
-            ->patchJson("/api/ledger/{$id}", ['amount_minor' => 250000])
+            ->patchJson("/api/ledger/{$id}", ["amount_minor" => 4500, "reason" => "Typo"])
             ->assertOk();
 
-        $legs = Transaction::query()->get();
+        // Three rows: the original, its mirror, and the replacement. The
+        // original is untouched - that is the whole point.
+        $this->assertSame(3, Transaction::query()->count());
+        $this->assertSame(45000, Transaction::query()->find($id)->amount_minor);
 
-        // Still exactly two, and both at the new amount - a pair that disagrees
-        // about the amount is money that partly moved.
-        $this->assertCount(2, $legs);
-        $this->assertSame([250000, 250000], $legs->pluck('amount_minor')->all());
+        $mirror = Transaction::query()->where("reverses_id", $id)->firstOrFail();
+        $this->assertSame("in", $mirror->direction);   // opposite of the original
+        $this->assertSame(45000, $mirror->amount_minor);
+        $this->assertSame("Typo", $mirror->reversal_reason);
 
-        $balances = $this->actingAs($this->owner)->getJson('/api/ledger/balances')->json('data');
-        $this->assertSame(-250000, $balances[$from->id]);
-        $this->assertSame(250000, $balances[$to->id]);
+        $replacement = Transaction::query()->where("corrects_id", $id)->firstOrFail();
+        $this->assertSame(4500, $replacement->amount_minor);
+
+        // The balance reflects only the corrected figure: original and mirror
+        // cancel exactly.
+        $balances = $this->actingAs($this->owner)->getJson("/api/ledger/balances")->json("data");
+        $this->assertSame(-4500, $balances[$account->id]);
     }
 
-    public function test_deleting_one_leg_of_a_transfer_removes_both(): void
+    public function test_the_list_shows_only_what_still_stands(): void
     {
-        $from = $this->account('Cash');
-        $to = $this->account('Bank');
+        $account = $this->account("Cash");
+        $id = $this->entry([
+            "type" => "expense", "account_id" => $account->id,
+            "amount_minor" => 45000, "currency" => "BDT", "occurred_on" => "2026-09-05",
+        ])->json("data.id");
 
-        $this->entry([
-            'type' => 'transfer', 'account_id' => $from->id, 'to_account_id' => $to->id,
-            'amount_minor' => 100000, 'currency' => 'BDT', 'occurred_on' => '2026-09-05',
-        ]);
+        $this->actingAs($this->owner)->patchJson("/api/ledger/{$id}", ["amount_minor" => 4500]);
 
-        // Delete the DESTINATION leg specifically, not the one that was returned.
-        $incoming = Transaction::query()->where('direction', 'in')->firstOrFail();
+        // One row, not three - a ledger where every fixed typo takes three lines
+        // is one nobody can read.
+        $rows = $this->actingAs($this->owner)->getJson("/api/ledger")->json("data");
+        $this->assertCount(1, $rows);
+        $this->assertSame(4500, $rows[0]["amount_minor"]);
 
-        $this->actingAs($this->owner)->deleteJson("/api/ledger/{$incoming->id}")->assertNoContent();
+        // Nothing is hidden from someone who asks.
+        $all = $this->actingAs($this->owner)->getJson("/api/ledger?include_reversed=1")->json("data");
+        $this->assertCount(3, $all);
+    }
 
-        // Leaving one behind would be money that arrived from nowhere.
-        $this->assertSame(0, Transaction::query()->count());
+    public function test_a_reversal_nets_the_totals_to_the_corrected_figure(): void
+    {
+        $account = $this->account("Cash");
+        $id = $this->entry([
+            "type" => "expense", "account_id" => $account->id,
+            "amount_minor" => 45000, "currency" => "BDT", "occurred_on" => "2026-09-05",
+        ])->json("data.id");
+
+        $this->actingAs($this->owner)->patchJson("/api/ledger/{$id}", ["amount_minor" => 4500]);
+
+        // The mirror is dated today, so ask over a range covering both.
+        $summary = $this->actingAs($this->owner)
+            ->getJson("/api/ledger/summary?from=2026-01-01&to=2099-12-31")->json("data");
+
+        // 45000 out, 45000 back as the mirror, 4500 out again.
+        $this->assertSame(4500, $summary["expense_minor"]);
+    }
+
+    public function test_deleting_reverses_instead_of_destroying(): void
+    {
+        $account = $this->account("Cash");
+        $id = $this->entry([
+            "type" => "expense", "account_id" => $account->id,
+            "amount_minor" => 45000, "currency" => "BDT", "occurred_on" => "2026-09-05",
+        ])->json("data.id");
+
+        $this->actingAs($this->owner)->deleteJson("/api/ledger/{$id}")->assertCreated();
+
+        // The row survives. Nothing in this app removes a recorded entry.
+        $this->assertDatabaseHas("transactions", ["id" => $id]);
+        $this->assertSame(2, Transaction::query()->count());
+
+        $balances = $this->actingAs($this->owner)->getJson("/api/ledger/balances")->json("data");
+        $this->assertSame(0, $balances[$account->id]);
+    }
+
+    public function test_reversing_a_transfer_mirrors_both_legs(): void
+    {
+        $from = $this->account("Cash", ["opening_balance_minor" => 100000]);
+        $to = $this->account("Bank");
+
+        $id = $this->entry([
+            "type" => "transfer", "account_id" => $from->id, "to_account_id" => $to->id,
+            "amount_minor" => 40000, "currency" => "BDT", "occurred_on" => "2026-09-05",
+        ])->json("data.id");
+
+        $this->actingAs($this->owner)
+            ->postJson("/api/ledger/{$id}/reverse", ["reason" => "Wrong account"])
+            ->assertCreated();
+
+        // Two originals plus two mirrors. Half a reversal is money that left one
+        // account and arrived nowhere.
+        $this->assertSame(4, Transaction::query()->count());
+        $this->assertSame(2, Transaction::query()->whereNotNull("reverses_id")->count());
+
+        $balances = $this->actingAs($this->owner)->getJson("/api/ledger/balances")->json("data");
+        $this->assertSame(100000, $balances[$from->id]);
+        $this->assertSame(0, $balances[$to->id]);
+    }
+
+    public function test_an_entry_cannot_be_reversed_twice(): void
+    {
+        $account = $this->account("Cash");
+        $id = $this->entry([
+            "type" => "expense", "account_id" => $account->id,
+            "amount_minor" => 45000, "currency" => "BDT", "occurred_on" => "2026-09-05",
+        ])->json("data.id");
+
+        $this->actingAs($this->owner)->postJson("/api/ledger/{$id}/reverse")->assertCreated();
+
+        // A second mirror would take the balance the other way and read as a
+        // real transaction.
+        $this->actingAs($this->owner)->postJson("/api/ledger/{$id}/reverse")->assertStatus(409);
+    }
+
+    public function test_the_mirror_is_dated_today_not_backdated(): void
+    {
+        $account = $this->account("Cash");
+        $id = $this->entry([
+            "type" => "expense", "account_id" => $account->id,
+            "amount_minor" => 45000, "currency" => "BDT", "occurred_on" => "2026-01-05",
+        ])->json("data.id");
+
+        $this->actingAs($this->owner)->postJson("/api/ledger/{$id}/reverse");
+
+        // Backdating it would change a month already looked at, which is the
+        // thing this whole rule exists to prevent.
+        $mirror = Transaction::query()->where("reverses_id", $id)->firstOrFail();
+        $this->assertSame(now()->toDateString(), $mirror->occurred_on);
+        $this->assertNotSame("2026-01-05", $mirror->occurred_on);
     }
 
     public function test_an_account_with_transactions_cannot_be_deleted(): void

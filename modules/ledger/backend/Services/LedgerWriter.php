@@ -5,6 +5,7 @@ namespace Hisab\Ledger\Services;
 use App\Models\User;
 use Hisab\Ledger\Models\Transaction;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -74,41 +75,137 @@ class LedgerWriter
     }
 
     /**
-     * Edit.
+     * Correct an entry.
      *
-     * REWRITES the pair rather than patching one leg. Editing a transfer can
-     * change the amount, either account or the direction of the whole thing, and
-     * patching legs individually means working out which of the two you were
-     * handed and what that implies for the other. Deleting both and writing them
-     * again from the merged data is one code path instead of six, and it cannot
-     * leave the pair inconsistent.
+     * NOT an edit. The original is REVERSED - a mirror entry that nets it to
+     * zero - and the corrected version is recorded as a new entry pointing back
+     * at what it replaced. All three rows survive, and the ledger can still
+     * answer what it said last month.
+     *
+     * This is OppTracker's rule, inherited deliberately: "posted is final, a
+     * mistake is corrected by a reversal, and both stay visible." The version
+     * this replaced rewrote the row in place, which meant a figure reported in
+     * September could quietly become a different figure in October with nothing
+     * recording that it had changed.
      *
      * @param  array<string, mixed>  $data
-     * @return Collection<int, Transaction>
+     * @return Collection<int, Transaction>  The replacement legs.
      */
-    public function update(User $user, Transaction $transaction, array $data): Collection
+    public function correct(User $user, Transaction $transaction, array $data, ?string $reason = null): Collection
     {
-        return DB::transaction(function () use ($user, $transaction, $data): Collection {
-            $existing = $this->groupOf($transaction);
+        return DB::transaction(function () use ($user, $transaction, $data, $reason): Collection {
+            $original = $this->sourceLeg($transaction);
 
-            // The source leg is the authoritative one: it carries the category,
-            // the payee and the direction that decides the type's meaning.
-            $source = $existing->firstWhere('direction', $transaction->type === 'income' ? 'in' : 'out')
-                ?? $existing->first();
+            $this->reverse($user, $transaction, $reason ?? __('Corrected'));
 
-            $merged = array_merge($this->toInput($source), $data);
+            $merged = array_merge($this->toInput($original), $data);
+            // The replacement is a new entry, so it cannot reuse the original's
+            // client-minted id - that id still belongs to the row being kept.
+            unset($merged['id']);
 
-            $this->deleteGroup($transaction);
+            $legs = $this->create($user, $merged);
 
-            return $this->create($user, $merged);
+            $legs->first()->update(['corrects_id' => $original->id]);
+
+            return $legs;
         });
     }
 
-    public function delete(Transaction $transaction): void
+    /**
+     * Reverse an entry: a mirror that nets it to zero.
+     *
+     * Dated TODAY rather than backdated to the original, because the correction
+     * happened today - backdating it would change a month that has already been
+     * looked at, which is the thing this whole rule exists to prevent.
+     *
+     * @return Collection<int, Transaction>  The mirror legs.
+     */
+    public function reverse(User $user, Transaction $transaction, string $reason): Collection
     {
-        DB::transaction(function () use ($transaction): void {
-            $this->deleteGroup($transaction);
+        return DB::transaction(function () use ($user, $transaction, $reason): Collection {
+            $legs = $this->groupOf($transaction);
+
+            // Reversing a reversal is legitimate - it is how a wrong correction
+            // is undone - and needs no special case: the mirror of a mirror is
+            // just another entry, recorded the same way.
+            $this->refuseIfAlreadyReversed($legs);
+
+            // A pair reverses BOTH legs under one group, for the same reason the
+            // original wrote both: half a reversal is money that left one
+            // account and arrived nowhere.
+            $groupId = $legs->count() > 1 ? strtoupper((string) Str::ulid()) : null;
+            $today = Carbon::now()->toDateString();
+
+            $mirrors = new Collection();
+
+            foreach ($legs as $leg) {
+                $mirror = new Transaction([
+                    'user_id' => $user->id,
+                    'group_id' => $groupId,
+                    'reverses_id' => $leg->id,
+                    'reversal_reason' => $reason,
+                    'type' => $leg->type,
+                    // The whole mechanism, in one line: the opposite direction,
+                    // so every balance and every total nets to nothing.
+                    'direction' => $leg->direction === 'in' ? 'out' : 'in',
+                    'account_id' => $leg->account_id,
+                    'counter_account_id' => $leg->counter_account_id,
+                    'amount_minor' => $leg->amount_minor,
+                    'currency' => $leg->currency,
+                    'category_id' => $leg->category_id,
+                    'category_label' => $leg->category_label,
+                    'necessity' => $leg->necessity,
+                    'method' => $leg->method,
+                    'payee' => $leg->payee,
+                    'note' => $leg->note,
+                    'occurred_on' => $today,
+                    'book' => $leg->book,
+                    // The ORIGINAL's rate, not today's. Reversing at a new rate
+                    // would leave a residue in the converted totals instead of
+                    // cancelling cleanly.
+                    'fx_rate' => $leg->getRawOriginal('fx_rate'),
+                    'fx_as_of' => $leg->fx_as_of,
+                ]);
+
+                $mirror->save();
+                $mirrors->push($mirror);
+            }
+
+            return $mirrors;
         });
+    }
+
+    /**
+     * @param  Collection<int, Transaction>  $legs
+     *
+     * @throws ValidationException
+     */
+    private function refuseIfAlreadyReversed(Collection $legs): void
+    {
+        $existing = Transaction::query()
+            ->whereIn('reverses_id', $legs->pluck('id'))
+            ->first();
+
+        if ($existing === null) {
+            return;
+        }
+
+        // Refused rather than allowed to stack. A second mirror would take the
+        // balance the other way and read as a real transaction.
+        throw ValidationException::withMessages([
+            'entry' => __('This entry was already reversed on :date.', [
+                'date' => $existing->occurred_on,
+            ]),
+        ])->status(409);
+    }
+
+    /** The leg that carries the category, the payee and the meaning. */
+    private function sourceLeg(Transaction $transaction): Transaction
+    {
+        $legs = $this->groupOf($transaction);
+
+        return $legs->firstWhere('direction', $transaction->type === 'income' ? 'in' : 'out')
+            ?? $legs->first();
     }
 
     /**
@@ -126,22 +223,6 @@ class LedgerWriter
             ->where('user_id', $transaction->user_id)
             ->inGroup($transaction->group_id)
             ->get();
-    }
-
-    private function deleteGroup(Transaction $transaction): void
-    {
-        if (! $transaction->isPaired()) {
-            $transaction->delete();
-
-            return;
-        }
-
-        // Deleting one leg of a transfer would leave money that arrived from
-        // nowhere. Both go, or neither.
-        Transaction::query()
-            ->where('user_id', $transaction->user_id)
-            ->inGroup($transaction->group_id)
-            ->delete();
     }
 
     /**

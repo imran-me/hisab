@@ -125,6 +125,77 @@ second leg itself.
 
 ---
 
+## Recorded is final
+
+**A saved entry is never altered and never deleted.** This is inherited from
+OppTracker's ledger, deliberately, and it is the rule the rest of this section
+follows from:
+
+> Posted is final. A mistake is corrected by a reversal, which writes a mirror
+> entry and leaves both visible.
+
+The reason is not bookkeeping ceremony. A ledger whose past can be edited cannot
+answer "what did I think last month" — the figure you reported and the figure
+stored today silently become different numbers with no record that anything
+happened. Every real accounting system refuses this, and a personal ledger has
+the same problem with a smaller audience.
+
+So the two destructive verbs change meaning:
+
+| | Before | Now |
+|---|---|---|
+| `PATCH /api/ledger/{id}` | rewrote the row | **reverses** it and records a corrected entry |
+| `DELETE /api/ledger/{id}` | removed the row | **reverses** it, and nothing replaces it |
+
+### What a reversal is
+
+A mirror of the original: same account, same amount, same category, **opposite
+direction**. Its effect on every balance and every total is exactly equal and
+opposite, so the pair nets to nothing.
+
+Three fields carry the relationship:
+
+| | |
+|---|---|
+| `reverses_id` | on the reversal — the entry it cancels |
+| `reversal_reason` | on the reversal — why, in the person's words |
+| `corrects_id` | on a replacement — the entry it was written instead of |
+
+**Dated today, not backdated to the original.** The correction happened today,
+and dating it to the original would change a month that has already been looked
+at — which is the thing this whole rule exists to prevent.
+
+A `transfer` or a paired `deposit` reverses **both legs**, in one database
+transaction, for the same reason the original wrote both: half a reversal is
+money that left one account and arrived nowhere.
+
+### Reversing twice is refused
+
+**409.** An entry that has already been reversed cannot be reversed again — the
+second one would take the balance the other way and look like a real
+transaction. The response names the reversal that already exists.
+
+### `POST /api/ledger/{id}/reverse`
+
+Reversal on its own, with a reason. `DELETE` is a shorthand for this with no
+reason given.
+
+```json
+{ "reason": "Wrong account" }
+```
+
+### The list collapses corrections by default
+
+`GET /api/ledger` hides reversals and the entries they cancel, showing only the
+correction that stands — because a ledger where every fixed typo occupies three
+rows is a ledger nobody can read. `?include_reversed=1` shows everything, which
+is what the entry's own detail view asks for.
+
+**Nothing is hidden from the totals.** The rows still exist and still net to
+zero; this is presentation, and the figures are the same either way.
+
+---
+
 ## Not built
 
 - **Recurring transactions.** No schedule, no auto-posting. A monthly rent entry
@@ -135,4 +206,8 @@ second leg itself.
   that is half groceries and half a gadget is two entries.
 - **Multi-currency within one transaction.** The amount is in one currency; the
   conversion to the account's currency is a snapshot, not a second amount.
-- **Undo beyond the toast.** Deleting is soft for six seconds and then final.
+- **Editing an entry in place.** Deliberately impossible — see "Recorded is
+  final". The six-second undo toast still exists in the UI and now cancels the
+  request before it is sent, rather than deleting a row afterwards.
+- **Un-reversing.** A reversal is itself an entry, and removing it would be the
+  same edit-the-past problem one level up. Reverse the reversal if it was wrong.
