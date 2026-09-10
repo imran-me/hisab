@@ -35,13 +35,14 @@ class Transaction extends Model
         'type', 'direction', 'account_id',
         'counter_account_id', 'amount_minor', 'currency', 'category_id',
         'category_label', 'necessity', 'method', 'payee', 'note',
-        'occurred_on', 'book', 'fx_rate', 'fx_as_of',
+        'occurred_on', 'book', 'is_demo', 'fx_rate', 'fx_as_of',
     ];
 
     protected function casts(): array
     {
         return [
             'amount_minor' => 'integer',
+            'is_demo' => 'boolean',
             'necessity' => 'integer',
             // fx_rate is NOT cast - it stays the string the driver returns, so
             // no digits are lost through a float. Same reasoning as FxRate.

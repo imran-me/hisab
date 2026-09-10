@@ -160,6 +160,7 @@ class LedgerWriter
                     'note' => $leg->note,
                     'occurred_on' => $today,
                     'book' => $leg->book,
+                    'is_demo' => $leg->is_demo,
                     // The ORIGINAL's rate, not today's. Reversing at a new rate
                     // would leave a residue in the converted totals instead of
                     // cancelling cleanly.
@@ -251,6 +252,8 @@ class LedgerWriter
             'note' => $data['note'] ?? null,
             'occurred_on' => $data['occurred_on'],
             'book' => $data['book'] ?? 'personal',
+            // Carried onto BOTH legs, or half a demo transfer survives the purge.
+            'is_demo' => (bool) ($data['is_demo'] ?? false),
             'fx_rate' => null,
             'fx_as_of' => null,
         ], $overrides);

@@ -19,6 +19,11 @@ Route::prefix('ledger')->middleware('auth')->group(function (): void {
     Route::get('/balances', [LedgerController::class, 'balances']);
     Route::get('/summary', [LedgerController::class, 'summary']);
 
+    // Demo data. Before /{id}, like the others, or 'demo' is read as an entry id.
+    Route::get('/demo', [LedgerController::class, 'demoStatus']);
+    Route::post('/demo', [LedgerController::class, 'demoStore']);
+    Route::delete('/demo', [LedgerController::class, 'demoDestroy']);
+
     Route::get('/', [LedgerController::class, 'index']);
     Route::post('/', [LedgerController::class, 'store']);
     Route::patch('/{id}', [LedgerController::class, 'update']);

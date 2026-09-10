@@ -109,6 +109,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', des
   qs('[data-account-section]').hidden = false;
   qs('[data-account-email]').textContent = state.user?.email ?? '';
 
+  wireDemo();
+
   qs('[data-sign-out]').addEventListener('click', async () => {
     const res = await signOut();
 
@@ -122,3 +124,88 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', des
     window.location.replace(siteURL('modules/auth/login.html'));
   });
 })();
+
+/* ---- Demo data ------------------------------------------------------------ */
+
+/**
+ * Generating and removing demo entries.
+ *
+ * Only reachable with a backend, because that is where the generator runs. The
+ * buttons reflect what is actually there rather than offering both at once: an
+ * "Add" that would be refused, or a "Remove" with nothing to remove, is a
+ * control that teaches people their taps do not matter.
+ */
+async function wireDemo() {
+  const section = qs('[data-demo-section]');
+  const note = qs('[data-demo-note]');
+  const add = qs('[data-demo-add]');
+  const remove = qs('[data-demo-remove]');
+
+  section.hidden = false;
+
+  const { get, post, del } = await import('../../shared/js/core/http.js');
+
+  function draw(status) {
+    const demo = status?.demo_entries ?? 0;
+    const real = status?.real_entries ?? 0;
+
+    add.hidden = demo > 0;
+    remove.hidden = demo === 0;
+
+    note.textContent = demo > 0
+      ? `${demo} demo entries are in your ledger${real ? `, alongside ${real} of your own` : ''}.`
+      : real > 0
+        ? `You have ${real} entries of your own. Demo data would be added alongside them and marked as demo.`
+        : 'Your ledger is empty. Demo data fills it with a few months of plausible entries so the screens have something to show.';
+  }
+
+  async function refreshStatus() {
+    const res = await get('/ledger/demo');
+    if (res.ok) draw(res.data?.data);
+    else note.textContent = 'Could not check for demo data.';
+  }
+
+  await refreshStatus();
+
+  add.addEventListener('click', async () => {
+    add.disabled = true;
+    add.textContent = 'Generating…';
+
+    const res = await post('/ledger/demo', { months: 3 });
+
+    add.disabled = false;
+    add.textContent = 'Add 3 months of demo data';
+
+    if (!res.ok) { toast(res.message || 'Could not add demo data.'); return; }
+
+    draw(res.data?.data);
+    toast('Demo data added. Open the Overview.', { tone: 'good' });
+  });
+
+  remove.addEventListener('click', async () => {
+    const { confirmDialog } = await import('../../shared/js/components/sheet.js');
+    const sure = await confirmDialog({
+      title: 'Remove demo data?',
+      // Worth stating plainly, because this is the ONE thing in the app that
+      // actually deletes rather than reverses - and the reason it is safe is
+      // exactly that it can tell the two apart.
+      text: 'Only the generated entries are deleted. Anything you recorded yourself stays.',
+      confirmLabel: 'Remove',
+      danger: true,
+    });
+    if (!sure) return;
+
+    remove.disabled = true;
+    remove.textContent = 'Removing…';
+
+    const res = await del('/ledger/demo');
+
+    remove.disabled = false;
+    remove.textContent = 'Remove demo data';
+
+    if (!res.ok) { toast('Could not remove demo data.'); return; }
+
+    draw(res.data?.data);
+    toast('Demo data removed.', { tone: 'good' });
+  });
+}

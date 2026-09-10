@@ -145,6 +145,31 @@
           </div>
         </section>
 
+        <!-- ================= Demo data =================
+             Only rendered when there is a server, because that is the only
+             place the generator runs. On a static deployment the buttons would
+             be two controls that cannot do anything. -->
+        <section class="stack stack--3" data-demo-section hidden aria-labelledby="demo-h">
+          <h2 class="label" id="demo-h">Demo data</h2>
+          <div class="card stack stack--3">
+            <p class="field__hint" data-demo-note>Checking…</p>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn--secondary btn--sm" data-demo-add>
+                Add 3 months of demo data
+              </button>
+              <button type="button" class="btn btn--danger btn--sm" data-demo-remove hidden>
+                Remove demo data
+              </button>
+            </div>
+
+            <p class="field__hint">
+              Generated entries are marked, so removing them leaves anything you
+              recorded yourself untouched.
+            </p>
+          </div>
+        </section>
+
         <!-- ================= Storage ================= -->
         <section class="stack stack--3" aria-labelledby="storage-h">
           <h2 class="label" id="storage-h">Where your data is</h2>

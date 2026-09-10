@@ -554,6 +554,107 @@ class LedgerTest extends TestCase
         $this->actingAs($stranger)->deleteJson("/api/ledger/{$id}")->assertNotFound();
     }
 
+    /* ---- demo data ------------------------------------------------------ */
+
+    public function test_removing_demo_data_leaves_real_entries_alone(): void
+    {
+        $account = $this->account("Cash");
+
+        // One entry the person actually recorded.
+        $mine = $this->entry([
+            "type" => "expense", "account_id" => $account->id,
+            "amount_minor" => 45000, "currency" => "BDT",
+            "occurred_on" => "2026-09-05", "payee" => "My own entry",
+        ])->json("data.id");
+
+        $this->actingAs($this->owner)->postJson("/api/ledger/demo", ["months" => 1])
+            ->assertOk()->assertJsonPath("data.real_entries", 1);
+
+        $this->actingAs($this->owner)->deleteJson("/api/ledger/demo")
+            ->assertOk()
+            ->assertJsonPath("data.demo_entries", 0)
+            ->assertJsonPath("data.real_entries", 1);
+
+        // THE assertion. This is the one thing standing between a button in
+        // Settings and someone losing a year of their own records.
+        $this->assertDatabaseHas("transactions", ["id" => $mine, "payee" => "My own entry"]);
+    }
+
+    public function test_demo_data_cannot_be_added_twice(): void
+    {
+        $this->account("Cash");
+
+        $this->actingAs($this->owner)->postJson("/api/ledger/demo", ["months" => 1])->assertOk();
+
+        // Running it again writes a second salary for every month and doubles
+        // every figure on the Overview, which reads as the app being wrong.
+        $this->actingAs($this->owner)->postJson("/api/ledger/demo", ["months" => 1])
+            ->assertStatus(409);
+    }
+
+    public function test_demo_data_covers_every_section(): void
+    {
+        $this->account("Cash");
+        $this->actingAs($this->owner)->postJson("/api/ledger/demo", ["months" => 3])->assertOk();
+
+        $rows = Transaction::query()->where("user_id", $this->owner->id);
+
+        // Each of these is a screen or a rule that would otherwise have nothing
+        // to show, and each was added because it was missing.
+        $this->assertGreaterThan(0, (clone $rows)->where("type", "income")->count(), "no income");
+        $this->assertGreaterThan(0, (clone $rows)->where("type", "expense")->count(), "no expenses");
+        $this->assertGreaterThan(0, (clone $rows)->where("type", "deposit")->count(), "no deposits");
+        $this->assertGreaterThan(0, (clone $rows)->where("type", "transfer")->count(), "no transfers");
+        $this->assertGreaterThan(0, (clone $rows)->where("book", "business")->count(), "no business book");
+        $this->assertGreaterThan(0, (clone $rows)->where("currency", "USD")->count(), "no foreign currency");
+        // The rate snapshot only happens when the amount is in a currency the
+        // ACCOUNT does not hold - dollars into a dollar account never touch it.
+        $this->assertGreaterThan(0, (clone $rows)->whereNotNull("fx_rate")->count(), "no fx snapshot");
+        $this->assertGreaterThan(0, (clone $rows)->whereNotNull("reverses_id")->count(), "no reversal");
+        $this->assertGreaterThan(0, (clone $rows)->whereNotNull("corrects_id")->count(), "no correction");
+    }
+
+    public function test_demo_entries_are_never_dated_in_the_future(): void
+    {
+        $this->account("Cash");
+        $this->actingAs($this->owner)->postJson("/api/ledger/demo", ["months" => 3])->assertOk();
+
+        // An entry dated next week lands in "this month" and inflates a total
+        // nobody has spent yet.
+        $this->assertSame(0, Transaction::query()
+            ->where("user_id", $this->owner->id)
+            ->where("occurred_on", ">", now()->toDateString())
+            ->count());
+    }
+
+    public function test_demo_accounts_are_kept_if_a_real_entry_uses_them(): void
+    {
+        $this->account("Cash");
+        $this->actingAs($this->owner)->postJson("/api/ledger/demo", ["months" => 1])->assertOk();
+
+        $demoAccount = \Hisab\Accounts\Models\Account::query()
+            ->where("user_id", $this->owner->id)->where("is_demo", true)->firstOrFail();
+
+        // The person posts something of their own to a demo account.
+        $this->entry([
+            "type" => "expense", "account_id" => $demoAccount->id,
+            "amount_minor" => 1000, "currency" => $demoAccount->currency,
+            "occurred_on" => "2026-09-05", "payee" => "Mine",
+        ])->assertCreated();
+
+        $this->actingAs($this->owner)->deleteJson("/api/ledger/demo")->assertOk();
+
+        // Deleting it would orphan money they actually recorded, so it stays.
+        $this->assertDatabaseHas("accounts", ["id" => $demoAccount->id]);
+    }
+
+    public function test_demo_endpoints_need_a_session(): void
+    {
+        $this->getJson("/api/ledger/demo")->assertUnauthorized();
+        $this->postJson("/api/ledger/demo")->assertUnauthorized();
+        $this->deleteJson("/api/ledger/demo")->assertUnauthorized();
+    }
+
     public function test_the_ledger_needs_a_session(): void
     {
         $this->getJson('/api/ledger')->assertUnauthorized();

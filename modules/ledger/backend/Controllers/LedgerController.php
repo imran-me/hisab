@@ -7,11 +7,13 @@ use Hisab\Ledger\Models\Transaction;
 use Hisab\Ledger\Requests\StoreTransactionRequest;
 use Hisab\Ledger\Requests\UpdateTransactionRequest;
 use Hisab\Ledger\Services\BalanceSheet;
+use Hisab\Ledger\Services\DemoData;
 use Hisab\Ledger\Services\LedgerWriter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class LedgerController extends Controller
 {
@@ -155,6 +157,54 @@ class LedgerController extends Controller
             'data' => $this->shape($mirrors->first()),
             'meta' => ['legs' => $mirrors->map($this->shape(...))->values()],
         ], 201);
+    }
+
+    /**
+     * How much of this ledger is demo data. Read by Settings so the buttons can
+     * say what they will actually do rather than offering both blindly.
+     */
+    public function demoStatus(Request $request): JsonResponse
+    {
+        $owner = $request->user();
+
+        return response()->json(['data' => [
+            'demo_entries' => Transaction::query()->where('user_id', $owner->id)->where('is_demo', true)->count(),
+            'real_entries' => Transaction::query()->where('user_id', $owner->id)->where('is_demo', false)->count(),
+        ]]);
+    }
+
+    public function demoStore(Request $request): JsonResponse
+    {
+        $data = $request->validate(['months' => ['sometimes', 'integer', 'min:1', 'max:12']]);
+        $owner = $request->user();
+
+        // Refused rather than stacked. Running it twice writes a second salary
+        // for every month and doubles every figure on the Overview, which reads
+        // as the app being wrong rather than as data being generated twice.
+        if (Transaction::query()->where('user_id', $owner->id)->where('is_demo', true)->exists()) {
+            throw ValidationException::withMessages([
+                'demo' => __('Demo data is already here. Remove it first.'),
+            ])->status(409);
+        }
+
+        app(DemoData::class)->generate($owner, (int) ($data['months'] ?? 3));
+
+        return $this->demoStatus($request);
+    }
+
+    /**
+     * Remove the generated entries, and ONLY those.
+     *
+     * The one true delete in this product. It is safe to put behind a button
+     * only because transactions carry is_demo: without it this could mean
+     * nothing except "delete everything", and a button that does that will
+     * eventually be pressed by someone who has forgotten what it does.
+     */
+    public function demoDestroy(Request $request): JsonResponse
+    {
+        DemoData::purge($request->user());
+
+        return $this->demoStatus($request);
     }
 
     public function balances(Request $request): JsonResponse

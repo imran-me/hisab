@@ -30,7 +30,7 @@ class Account extends Model
     protected $fillable = [
         'id', 'user_id', 'name', 'type', 'currency', 'book',
         'opening_balance_minor', 'opening_on', 'institution', 'number_tail',
-        'credit_limit_minor', 'is_default', 'sort_order', 'archived_at',
+        'credit_limit_minor', 'is_default', 'is_demo', 'sort_order', 'archived_at',
     ];
 
     protected function casts(): array
@@ -42,6 +42,7 @@ class Account extends Model
             'opening_balance_minor' => 'integer',
             'credit_limit_minor' => 'integer',
             'is_default' => 'boolean',
+            'is_demo' => 'boolean',
             'sort_order' => 'integer',
             'archived_at' => 'datetime',
         ];

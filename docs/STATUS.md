@@ -20,7 +20,7 @@ Things that have been run, with the result.
 | `python tools/check-pages.py` | 6 pages, pre-paint block identical, CSP hash matches `.htaccess`. |
 | `tools/qa-viewport.html` | **15/15 pass** — no horizontal overflow on any of the three screens at 360 / 390 / 414 / 768 / 1280. |
 | Headless Chrome render | Overview, Ledger and Accounts all load with an empty console. |
-| `php artisan test` | **86 tests, 276 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
+| `php artisan test` | **92 tests, 303 assertions pass.** The shape of the backend: /api/ping answers in the documented envelope, the site root is not served by Laravel, an unknown API route fails as JSON rather than HTML. |
 | `php artisan migrate` | Laravel's own three migrations run against **real MySQL** (MariaDB 10.4), not only the SQLite the test suite uses. |
 | `hisab:owner` on an unseeded database | Creating the owner on a database that had been migrated but never seeded used to fail with a foreign-key violation naming a table nobody asked about. Owner-seeding now establishes the reference data it needs; verified against MySQL from `migrate:fresh` with no `db:seed`. |
 | FX on both drivers | Seeder is idempotent (10 currencies / 10 rates after three runs) and KWD lands at `minor_unit` 3, JPY at 0. The rate write path was then re-run against **real MySQL** as well, because the bug found here only appeared on SQLite. |
@@ -76,15 +76,21 @@ The FastAPI analytics service has not been written or run.
 in `shared/backend/api-contract.md`, so swapping in Laravel changes no consumer.
 
 ### Demo data
-`php artisan hisab:demo` writes a few months of plausible entries — salary,
-rent, a weekly shop, transport, bills, a DPS instalment, an ATM withdrawal and a
-wallet top-up — so the screens have something to show. `--fresh` clears it.
+**Settings → Demo data** has two buttons: add three months, and remove it again.
+Entries and accounts the generator makes carry `is_demo`, so removing them
+leaves anything recorded by hand untouched — the test that proves it is the one
+thing standing between that button and real loss. Adding twice is refused (409),
+because a second run doubles every figure on the Overview and reads as the app
+being wrong.
 
-That clear is the **only true delete in the product**, and it deletes every
-transaction for the owner rather than just the demo ones. It exists because the
-ledger is immutable: clearing demo data the ordinary way would write a reversal
-for each row and bury a real ledger under hundreds of cancelled entries. It asks
-first, and it is a console command with nothing reachable from the app or API.
+It covers every section rather than three months of groceries: personal and
+business books, all four transaction types, a dollar payout **and** a dollar
+charge against a taka account (only the second exercises the FX snapshot), a
+share purchase as a deposit, and one entry recorded wrong and corrected so the
+History view has something in it.
+
+`php artisan hisab:demo` is the same thing from the console — both go through
+`Services/DemoData`, so they cannot drift.
 
 ### Ledger records (frontend)
 A row now says what it IS in the history of the money — **Corrected**,
