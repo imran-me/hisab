@@ -276,9 +276,27 @@ migrate_if_installed() {
   [ -f "$SRC/.env" ] || return 0
   [ -f "$SRC/artisan" ] || return 0
 
-  local php
-  php="$(command -v php 2>/dev/null)" || return 0
-  [ -n "$php" ] || return 0
+  # FINDING PHP IS THE HARD PART, and getting it wrong fails silently.
+  #
+  # cron runs with a minimal PATH - typically /usr/bin:/bin - and shared hosts
+  # keep the current PHP somewhere else entirely. `command -v php` therefore
+  # finds nothing, this returned 0, and the migration never ran. The deploy
+  # reported success, the site served an old schema, and the only symptom was a
+  # button that did nothing. Exactly the shape of failure this whole file keeps
+  # producing: a guard that skips quietly.
+  local php=""
+  local candidate
+  for candidate in     "$(command -v php83 2>/dev/null)"     "$(command -v php8.3 2>/dev/null)"     "$(command -v php 2>/dev/null)"     /opt/alt/php83/usr/bin/php     /opt/alt/php82/usr/bin/php     /usr/local/bin/php     /usr/bin/php
+  do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then php="$candidate"; break; fi
+  done
+
+  if [ -z "$php" ]; then
+    # Said out loud. A schema that cannot be migrated is worth a line in the log
+    # every time, because the alternative is what just happened.
+    say "cannot find php — DATABASE MIGRATIONS WERE NOT RUN"
+    return 1
+  fi
 
   local output
   # 2>&1 kept: a migration that fails is the one thing here worth waking up for,
@@ -353,5 +371,32 @@ self_update() {
 
 self_update
 
+# --- ask the running site whether it works ------------------------------------
+# Every failure this project has shipped was a difference between a developer's
+# machine and this server, which is precisely what a test suite cannot see. The
+# smoke test asks the deployed site questions over HTTP and fails loudly, so a
+# broken deploy announces itself here rather than being found by whoever next
+# presses a button.
+#
+# Never fails the deploy: the files are already published, and rolling back on a
+# failed check would leave the site on an older version with no way to move
+# forward. It reports.
+smoke_test() {
+  local smoke="$SRC/tools/smoke.sh"
+  [ -f "$smoke" ] || return 0
+  have curl || return 0
+
+  local url="${HISAB_SMOKE_URL:-https://hisab.gulfrabit.com}"
+  local output
+
+  if output="$(bash "$smoke" "$url" 2>&1)"; then
+    return 0
+  fi
+
+  say "SMOKE TEST FAILED after deploying ${NOW:0:8} — see the log"
+  log "$output"
+}
+
 say "deployed ${NOW:0:8} to $DOCROOT"
+smoke_test
 exit 0
