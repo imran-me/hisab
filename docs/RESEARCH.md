@@ -468,6 +468,41 @@ one group.
 
 ---
 
+---
+
+## Added during review
+
+Ideas the reviewed commits suggested. They are ranked as a backlog, below the
+list above.
+
+### R1. Show a converted total's working — S — `formatMoney()` callers, `overview`, `reports`
+
+**What.** When a month total includes a foreign-currency row, add a quiet
+footnote under the figure, for example "includes USD 450.00 at 122.50
+(1 Sep)". Tapping it lists the converted rows.
+
+**Why.** Every Gulf salary and every Upwork payout lands in a different
+currency from the home total. `context.md` already requires a converted figure
+to carry its rate and date. Showing them is what makes the owner trust the
+number, and it would have made the cross-currency summing bug found in review
+round 1 visible on the first screenshot.
+
+**How hard.** The rate and `as_of` are already on the row (`fx_rate`,
+`fx_as_of`) and on the rates endpoint. It needs a small `<details>` under the
+hero.
+
+### R2. A "which book" pill on every total — S — `overview`, `accounts`, `reports`
+
+**What.** Every month figure is now for one book (`?book=`). Show which one as
+a small pill next to the figure ("Personal" / "Business"), and let a tap switch
+it.
+
+**Why.** The personal/business mix-up that `ea255c8` fixed was invisible on
+screen: both totals looked equally plausible. A label makes a wrong book
+obvious at a glance.
+
+**How hard.** Trivial once C6's book switch exists. Until then, a static label.
+
 ## What the reference apps are good at, in one line each
 
 - **Monzo** — "left to spend" as the home number; spending grouped into pots
