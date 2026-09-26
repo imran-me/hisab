@@ -22,6 +22,10 @@
  *   SCREENS   viewports to capture per page, default 3
  *   THEME     dark | light (prefers-color-scheme)
  *   CHROME    path to chrome.exe
+ *   PROBE     a JS expression evaluated on each page after the wait; its
+ *             JSON result is printed (measure a width instead of guessing)
+ *   CDP_PORT  Chrome debug port, default random 9400-9799 (fix it when
+ *             several people shoot on one machine)
  *
  * Prints, per page, the document's scroll width: anything above W is a
  * horizontal overflow and a failed acceptance check.
@@ -42,7 +46,7 @@ const WAIT = Number(env.WAIT || 6000);
 const SCREENS = Number(env.SCREENS || 3);
 const OUT = process.argv[2] || join(tmpdir(), 'hisab-shots');
 const CHROME = env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const PORT = 9400 + Math.floor(Math.random() * 400);
+const PORT = Number(env.CDP_PORT) || 9400 + Math.floor(Math.random() * 400);
 const PROFILE = join(tmpdir(), `hisab-shoot-${PORT}`);
 
 const PAGES = (env.PAGES || [
@@ -132,6 +136,10 @@ for (const path of PAGES) {
     await sleep(250);
     const shot = await send('Page.captureScreenshot', { format: 'png' });
     writeFileSync(join(OUT, `${name}-${i + 1}.png`), Buffer.from(shot.data, 'base64'));
+  }
+  if (env.PROBE) {
+    await evaluate('window.scrollTo(0, 0)');
+    console.log(`  probe: ${JSON.stringify(await evaluate(env.PROBE))}`);
   }
   const overflow = sw > W ? `  OVERFLOW ${sw}px` : '';
   console.log(`${path}  ${sw}x${sh}  ${count} screen(s)${overflow}${problems.length ? `\n    ${problems.join('\n    ')}` : ''}`);

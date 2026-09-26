@@ -23,7 +23,16 @@
      misalign a tile that has a delta line against one that does not. */
   position: relative;
   overflow: hidden;
+  /* The tile is a size container, so its figure can scale to the tile rather
+     than to the viewport. overflow:hidden above is for the tinted rule; it
+     must never be what stops a long figure — the figure shrinks instead. */
+  container-type: inline-size;
 }
+
+/* A tile's figure fits its tile. 15cqi is sized for a lakh-scale figure with
+   poisha (৳2,27,024.01) in a two-up tile at 360px, and the min() keeps it at
+   the type scale's --fs-23 wherever there is room for that. */
+.stat .money--lg { font-size: min(var(--fs-23), 15cqi); }
 
 .stat--in::before,
 .stat--out::before,

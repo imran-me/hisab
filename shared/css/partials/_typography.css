@@ -147,11 +147,24 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
 /* The currency code and the minor part are set smaller and dimmer than the
    major part, so the number a person is actually reading is the number their
    eye lands on. The .money__minor span is produced by formatMoney(). */
+/* The home currency's symbol. Set in the Bengali face for ৳ specifically —
+   neither Plex nor Space Grotesk draws it, and a fallback taka picked by the
+   OS changes shape from one phone to the next. Dimmed by opacity rather than
+   by colour, so a mint or coral figure keeps its tone in the symbol too. */
+.money__sym {
+  font-family: 'Noto Sans Bengali', var(--font-body);
+  font-weight: var(--fw-regular);
+  font-size: 0.86em;
+  opacity: 0.66;
+  margin-inline-end: 0.08em;
+  letter-spacing: 0;
+}
+
 .money__code {
   font-size: 0.72em;
   font-weight: var(--fw-medium);
   color: var(--ink-3);
-  margin-inline-end: 0.35em;
+  margin-inline-end: 0.25em;
   letter-spacing: 0;
 }
 
@@ -162,12 +175,24 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
 
 .money__sign { margin-inline-end: 0.05em; }
 
-/* Sizes. .figure is the big one — one per screen. */
+/* Sizes. .figure is the big one — one per screen.
+
+   From --lg up a figure is set in the DISPLAY face, not the mono. The mono is
+   right for a column, where digits must line up across rows; a single large
+   figure has nothing to line up with, and the mono's width is exactly what
+   cut 'BDT 89,998.00' off at the edge of a 360px tile. Space Grotesk with
+   tabular figures keeps the digits steady as the value ticks and is about a
+   fifth narrower. (2026-09-26, DIRECTION §3.5.1.) */
 .money--sm  { font-size: var(--fs-13); }
 .money--md  { font-size: var(--fs-16); }
 .money--lg  { font-size: var(--fs-23); font-weight: var(--fw-medium); }
 .money--xl  { font-size: var(--fs-34); font-weight: var(--fw-medium); line-height: var(--lh-flush); }
 .money--hero{ font-size: var(--fs-44); font-weight: var(--fw-medium); line-height: var(--lh-flush); }
+
+.money--lg, .money--xl, .money--hero {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
 
 @media (max-width: 380px) {
   /* A ten-digit balance in three currencies does not fit a 360px card at 44px.

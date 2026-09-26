@@ -139,6 +139,19 @@
    aligned and never allowed to shrink. */
 .row__end { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 
+/* A trailing icon button (an account's ⋮) keeps its tap target but hangs into
+   the row's padding, since the glyph is centred in whitespace of its own.
+   At 360px those pixels are the difference between an 18-character account
+   name shown whole and one cut to an ellipsis. */
+.row > .btn--icon:last-child { flex: none; margin-inline-end: calc(-1 * var(--s-2)); }
+
+@media (max-width: 380px) {
+  /* Tighter gaps on a narrow phone: three gaps of 12px is a fifth of the
+     name's width, and the name is the part of a row that is read first. */
+  .row { gap: var(--s-2); padding-inline: var(--s-3); }
+  .row__glyph { margin-inline-end: 2px; }
+}
+
 /* A chevron on a row that navigates. Hidden from assistive tech — the link
    text already says where it goes. */
 .row__chev { flex: none; color: var(--ink-4); transition: transform var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
@@ -163,6 +176,12 @@
   letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--ink-3);
+}
+
+/* Keeps the day heading's text on the same left edge as the rows under it,
+   which step in on a narrow phone (see .row above). */
+@media (max-width: 380px) {
+  .list-group-head { padding-inline: var(--s-3); }
 }
 
 /* ---- Empty state -------------------------------------------------------

@@ -195,6 +195,27 @@ export function parseAmount(input, code = 'BDT') {
    ========================================================================= */
 
 /**
+ * The home currency: the one a figure is shown in WITHOUT a code.
+ *
+ * At 360px the code is what made figures not fit — 'BDT 2,64,477.01' is
+ * fifteen characters of monospace, and a stat tile has room for about ten.
+ * Someone whose money is in taka does not need to be told so on every line;
+ * they need to be told when a figure is NOT in taka. So the home currency
+ * shows as its symbol (৳2,64,477) and every other currency keeps its code
+ * (USD 1,070), which is the one place the code carries information.
+ *
+ * Set by state.js from the display currency, so it follows Settings. This file
+ * imports nothing, which is why it is pushed in rather than read.
+ */
+let HOME = 'BDT';
+
+export function setHomeCurrency(code) {
+  if (code) HOME = String(code).toUpperCase();
+}
+
+export const homeCurrency = () => HOME;
+
+/**
  * Group the integer part.
  *
  * 'western' — 3,3,3 from the right.
@@ -212,63 +233,118 @@ function groupDigits(digits, style) {
 }
 
 /**
- * Format an integer minor amount as text.
+ * Resolve the minor-part option to one of 'auto' | 'always' | 'never'.
+ *
+ * `decimals` is the older boolean spelling and still wins when given, so a call
+ * site written before `minor` existed keeps meaning what it meant.
+ */
+function minorMode(opts, fallback) {
+  if (opts.decimals === true) return 'always';
+  if (opts.decimals === false) return 'never';
+  return ['auto', 'always', 'never'].includes(opts.minor) ? opts.minor : fallback;
+}
+
+/**
+ * The parts every formatted figure is built from, computed once so the text
+ * form and the HTML form cannot disagree about a single digit.
+ *
+ * 'never' ROUNDS to the whole unit (half away from zero) rather than dropping
+ * the minor part. ৳249.99 shown as ৳249 would under-report by a taka on every
+ * row; shown as ৳250 it is the nearest honest whole figure.
+ */
+function parts(minor, cur, mode) {
+  const n = Number.isFinite(minor) ? Math.trunc(minor) : 0;
+  const factor = 10 ** cur.minorUnit;
+  const abs = Math.abs(n);
+
+  // Integer division and remainder — never abs / factor as a value, which
+  // reintroduces the float this whole module exists to avoid.
+  let whole = Math.floor(abs / factor);
+  let rest = abs % factor;
+  if (mode === 'never' && rest !== 0) {
+    if (rest * 2 >= factor) whole += 1;
+    rest = 0;
+  }
+  const showMinor = cur.minorUnit > 0 && (mode === 'always' || (mode === 'auto' && rest !== 0));
+
+  return {
+    negative: n < 0,
+    positive: n > 0,
+    whole: groupDigits(String(whole), cur.group),
+    minor: showMinor ? String(rest).padStart(cur.minorUnit, '0') : '',
+  };
+}
+
+/**
+ * Which marker goes in front of the digits: the symbol, the code, or nothing.
+ *
+ *   code: 'auto' (the display default) — symbol for the home currency, code
+ *         for any other
+ *   code: true  — always the code (a mixed-currency table)
+ *   code: false — nothing (a legend or a day total already labelled)
+ */
+function marker(cur, codeOpt) {
+  if (codeOpt === false) return null;
+  if (codeOpt === true) return { kind: 'code', text: cur.code };
+  if (cur.code === HOME && cur.symbol) return { kind: 'sym', text: cur.symbol };
+  return { kind: 'code', text: cur.code };
+}
+
+/**
+ * Format an integer minor amount as plain text.
+ *
+ * This is the form that goes INTO an input and comes back out through
+ * parseAmount(), so its defaults stay parseable and exact: no marker, and the
+ * minor part always shown. For a figure a person reads — a toast, an aria
+ * label, a title attribute — use moneyLabel(), which has the display defaults.
  *
  * @param {number} minor          integer minor units; may be negative
  * @param {string} code           currency code
  * @param {object} [opts]
- * @param {boolean} [opts.symbol=false]   prefix the currency symbol
- * @param {boolean} [opts.code=false]     prefix the ISO code (preferred in
- *                                        multi-currency lists — '৳' and '₹'
- *                                        are distinct but 'RM' and 'R$' are
- *                                        not, and a code never is)
- * @param {boolean} [opts.decimals=true]  show the minor part
+ * @param {boolean} [opts.symbol=false]   prefix the marker: ৳ for the home
+ *                                        currency, the code for any other
+ * @param {boolean} [opts.code=false]     prefix the ISO code, whatever the
+ *                                        currency (preferred in mixed lists —
+ *                                        '৳' and '₹' are distinct but 'RM' and
+ *                                        'R$' are not, and a code never is)
+ * @param {'auto'|'always'|'never'} [opts.minor='always']
+ *                                        auto hides a zero minor part
+ * @param {boolean} [opts.decimals]       older spelling: true = always, false = never
  * @param {'auto'|'always'|'never'} [opts.sign='auto']
- * @param {boolean} [opts.compact=false]  1.2L / 3.4Cr / 1.2M for chart labels
+ * @param {boolean} [opts.compact=false]  ৳2.7L / ৳1.2Cr / 1.2M where space is the constraint
  */
 export function formatMoney(minor, code = 'BDT', opts = {}) {
   const cur = currency(code);
-  const {
-    symbol = false,
-    code: showCode = false,
-    decimals = true,
-    sign = 'auto',
-    compact = false,
-  } = opts;
+  const { sign = 'auto', compact = false } = opts;
 
-  const n = Number.isFinite(minor) ? Math.trunc(minor) : 0;
-  const negative = n < 0;
-  const abs = Math.abs(n);
+  const p = parts(minor, cur, minorMode(opts, 'always'));
+  const body = compact
+    ? compactBody(Math.abs(Number.isFinite(minor) ? Math.trunc(minor) : 0), cur)
+    : p.whole + (p.minor ? '.' + p.minor : '');
 
-  let body;
-  if (compact) {
-    body = compactBody(abs, cur);
-  } else {
-    const factor = 10 ** cur.minorUnit;
-    // Integer division and remainder — never abs / factor, which reintroduces
-    // the float this whole module exists to avoid.
-    const whole = Math.floor(abs / factor);
-    const rest = abs % factor;
-    body = groupDigits(String(whole), cur.group);
-    if (decimals && cur.minorUnit > 0) {
-      body += '.' + String(rest).padStart(cur.minorUnit, '0');
-    }
-  }
+  let mark = null;
+  if (opts.code === true) mark = marker(cur, true);
+  else if (opts.symbol) mark = marker(cur, 'auto');
+  const prefix = !mark ? '' : (mark.kind === 'code' ? mark.text + ' ' : mark.text);
 
-  let prefix = '';
-  if (showCode) prefix = cur.code + ' ';
-  else if (symbol && cur.symbolFirst) prefix = cur.symbol;
+  return signChar(p, sign) + prefix + body;
+}
 
-  const suffix = (symbol && !cur.symbolFirst) ? ' ' + cur.symbol : '';
+/**
+ * A figure for reading rather than editing: the marker, and the minor part
+ * only when it is not zero. `৳1,250`, `৳1,250.50`, `USD 1,070`.
+ */
+export function moneyLabel(minor, code = 'BDT', opts = {}) {
+  return formatMoney(minor, code, { symbol: true, minor: 'auto', ...opts });
+}
 
-  let signChar = '';
-  if (negative) signChar = '−';                      // U+2212, not a hyphen: a
-  else if (sign === 'always' && n > 0) signChar = '+'; // hyphen is narrower than
-                                                       // a digit and breaks the
-                                                       // tabular alignment.
-  if (sign === 'never') signChar = '';
-
-  return signChar + prefix + body + suffix;
+// U+2212, not a hyphen: a hyphen is narrower than a digit and breaks the
+// tabular alignment.
+function signChar(p, sign) {
+  if (sign === 'never') return '';
+  if (p.negative) return '−';
+  if (sign === 'always' && p.positive) return '+';
+  return '';
 }
 
 /** 1.2L, 3.45Cr, 1.2M, 850 — for axis labels and chips where space is the constraint. */
@@ -289,31 +365,47 @@ function compactBody(absMinor, cur) {
 }
 
 /**
- * The same figure as HTML, with the code and the minor part in their own spans
- * so `.money__code` and `.money__minor` can set them smaller and dimmer.
+ * The same figure as HTML — THE display form. Every amount a person reads on
+ * a screen comes through here.
+ *
+ * Defaults, chosen so a figure fits a 360px phone without being cut:
+ *   - the home currency shows as its symbol, any other as its code
+ *     (`code: true` forces the code, `code: false` drops the marker)
+ *   - the minor part is hidden when it is zero and set small otherwise
+ *     (`minor: 'never'` rounds it away — lists; `minor: 'always'` — detail)
+ *   - the sign comes first: −৳450, +USD 12
+ *
+ * The marker and the minor part get their own spans so `.money__sym`,
+ * `.money__code` and `.money__minor` can set them smaller and dimmer.
  *
  * Returns a STRING of markup. Every part of it is generated from a number and a
  * registry entry, so there is no user-supplied text in the output and nothing
  * to escape — which is stated here because that is the assumption a future
- * change would break.
+ * change would break. (A server-registered symbol is the one registry value
+ * that did not come from this file, so it is escaped anyway.)
  */
 export function formatMoneyHTML(minor, code = 'BDT', opts = {}) {
   const cur = currency(code);
-  const n = Number.isFinite(minor) ? Math.trunc(minor) : 0;
-  const abs = Math.abs(n);
-  const factor = 10 ** cur.minorUnit;
-  const whole = groupDigits(String(Math.floor(abs / factor)), cur.group);
-  const rest = abs % factor;
+  const p = parts(minor, cur, minorMode(opts, 'auto'));
 
-  const sign = n < 0 ? '<span class="money__sign">−</span>'
-    : (opts.sign === 'always' && n > 0 ? '<span class="money__sign">+</span>' : '');
+  const s = signChar(p, opts.sign);
+  const signPart = s ? `<span class="money__sign">${s}</span>` : '';
 
-  const codePart = opts.code === false ? '' : `<span class="money__code">${cur.code}</span>`;
-  const minorPart = (cur.minorUnit > 0 && opts.decimals !== false)
-    ? `<span class="money__minor">.${String(rest).padStart(cur.minorUnit, '0')}</span>`
-    : '';
+  const mark = marker(cur, opts.code === undefined ? 'auto' : opts.code);
+  const markPart = !mark ? ''
+    : `<span class="money__${mark.kind}">${escapeText(mark.text)}</span>`;
 
-  return codePart + sign + whole + minorPart;
+  if (opts.compact) {
+    const abs = Math.abs(Number.isFinite(minor) ? Math.trunc(minor) : 0);
+    return signPart + markPart + compactBody(abs, cur);
+  }
+
+  const minorPart = p.minor ? `<span class="money__minor">.${p.minor}</span>` : '';
+  return signPart + markPart + p.whole + minorPart;
+}
+
+function escapeText(text) {
+  return String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
 /* =========================================================================

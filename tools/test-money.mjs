@@ -17,7 +17,7 @@
 
 import {
   parseAmount, formatMoney, formatMoneyHTML, convert, convertAndSum,
-  splitMinor, sumMinor, currency, minorFactor,
+  splitMinor, sumMinor, currency, minorFactor, moneyLabel, setHomeCurrency, homeCurrency,
 } from '../shared/js/core/money.js';
 
 let passed = 0;
@@ -78,7 +78,24 @@ is(formatMoney(-45000, 'BDT'), '−450.00', 'negative uses a true minus sign');
 is(formatMoney(45000, 'BDT', { sign: 'always' }), '+450.00', 'explicit plus when asked');
 is(formatMoney(125050, 'BDT', { code: true }), 'BDT 1,250.50', 'code prefix');
 is(formatMoney(125050, 'BDT', { symbol: true }), '৳1,250.50', 'symbol prefix');
-is(formatMoney(125050, 'BDT', { decimals: false }), '1,250', 'decimals suppressed');
+// Hidden minor units are ROUNDED to the nearest whole unit, half away from
+// zero: ৳1,250.50 shown without poisha is ৳1,251, not a truncated ৳1,250 that
+// under-reports every row by up to a taka.
+is(formatMoney(125049, 'BDT', { decimals: false }), '1,250', 'decimals suppressed, rounded down');
+is(formatMoney(125050, 'BDT', { decimals: false }), '1,251', 'decimals suppressed, half rounds up');
+is(formatMoney(-125050, 'BDT', { decimals: false }), '−1,251', 'and a negative rounds the same distance');
+is(formatMoney(12345, 'KWD', { minor: 'never' }), '12', "rounding follows the currency's own minor unit");
+is(formatMoney(125000, 'BDT', { minor: 'auto' }), '1,250', 'auto hides a zero minor part');
+is(formatMoney(125050, 'BDT', { minor: 'auto' }), '1,250.50', 'and keeps a non-zero one');
+is(formatMoney(125000, 'BDT'), '1,250.00', 'the input form keeps the minor part by default, so it round-trips');
+is(formatMoney(125050, 'USD', { symbol: true }), 'USD 1,250.50', 'symbol:true is a code for a foreign currency');
+
+/* The reading form — what a toast or an aria label says. */
+is(moneyLabel(12345600, 'BDT'), '৳1,23,456', 'home currency: symbol, no code, no zero poisha');
+is(moneyLabel(12345601, 'BDT'), '৳1,23,456.01', 'non-zero poisha are kept');
+is(moneyLabel(107000, 'USD'), 'USD 1,070', 'a foreign currency keeps its code');
+is(moneyLabel(-45000, 'BDT'), '−৳450', 'the sign comes before the symbol');
+is(moneyLabel(12345600, 'BDT', { compact: true }), '৳1.2L', 'compact lakh with the symbol');
 is(formatMoney(0, 'BDT'), '0.00', 'zero renders');
 
 /* Compact — the axis-label form. */
@@ -90,14 +107,60 @@ is(formatMoney(1234560000, 'USD', { compact: true }), '12M', 'millions');
 /* HTML form */
 is(
   formatMoneyHTML(125050, 'BDT'),
+  '<span class="money__sym">৳</span>1,250<span class="money__minor">.50</span>',
+  'HTML: the home currency is a symbol, and the minor part has its own span'
+);
+is(
+  formatMoneyHTML(26447700, 'BDT'),
+  '<span class="money__sym">৳</span>2,64,477',
+  'HTML: zero poisha are not printed at all'
+);
+is(
+  formatMoneyHTML(26447701, 'BDT', { minor: 'never' }),
+  '<span class="money__sym">৳</span>2,64,477',
+  'HTML: minor never — the list form'
+);
+is(
+  formatMoneyHTML(26447700, 'BDT', { minor: 'always' }),
+  '<span class="money__sym">৳</span>2,64,477<span class="money__minor">.00</span>',
+  'HTML: minor always — the detail form'
+);
+is(
+  formatMoneyHTML(107000, 'USD'),
+  '<span class="money__code">USD</span>1,070',
+  'HTML: a foreign currency keeps its code'
+);
+is(
+  formatMoneyHTML(125050, 'BDT', { code: true }),
   '<span class="money__code">BDT</span>1,250<span class="money__minor">.50</span>',
-  'HTML splits the code and the minor part'
+  'HTML: code:true forces the code, for mixed-currency tables'
+);
+is(
+  formatMoneyHTML(-45000, 'BDT'),
+  '<span class="money__sign">−</span><span class="money__sym">৳</span>450',
+  'HTML: the sign comes first'
+);
+is(
+  formatMoneyHTML(45000, 'BDT', { sign: 'always', code: false }),
+  '<span class="money__sign">+</span>450',
+  'HTML: code:false drops the marker'
+);
+is(
+  formatMoneyHTML(26600000, 'BDT', { compact: true }),
+  '<span class="money__sym">৳</span>2.7L',
+  'HTML: compact'
 );
 is(
   formatMoneyHTML(4200, 'JPY'),
   '<span class="money__code">JPY</span>4,200',
   'no minor span for a zero-decimal currency'
 );
+
+/* The home currency follows the display currency. */
+setHomeCurrency('AED');
+is(homeCurrency(), 'AED', 'the home currency can be changed');
+is(formatMoneyHTML(107000, 'BDT'), '<span class="money__code">BDT</span>1,070', 'and then taka carries its code');
+setHomeCurrency('BDT');
 
 /* ---- Round trip --------------------------------------------------------- */
 for (const [text, code] of [['1250.50', 'BDT'], ['12.345', 'KWD'], ['4200', 'JPY'], ['0.01', 'USD']]) {

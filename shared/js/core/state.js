@@ -21,6 +21,7 @@
 import { storage, KEYS } from './storage.js';
 import { emit, EVENTS } from './bus.js';
 import { currentPeriod } from './dates.js';
+import { setHomeCurrency } from './money.js';
 
 const state = {
   book: storage.get(KEYS.BOOK, 'personal'),
@@ -43,6 +44,10 @@ const state = {
   const now = currentPeriod();
   if (!/^\d{4}-\d{2}$/.test(state.period) || state.period > now) state.period = now;
 }
+
+// The display currency is the one figures are shown in without a code, so the
+// formatter is told about it before any screen renders a figure.
+setHomeCurrency(state.currency);
 
 export function getState() {
   // A copy, so a caller cannot mutate the state object directly and skip the
@@ -77,6 +82,7 @@ export function setCurrency(code) {
   if (!next || next === state.currency) return;
   state.currency = next;
   storage.set(KEYS.CURRENCY, next);
+  setHomeCurrency(next);
   emit(EVENTS.CURRENCY_CHANGED, next);
 }
 
