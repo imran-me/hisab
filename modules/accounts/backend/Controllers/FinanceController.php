@@ -31,6 +31,18 @@ class FinanceController extends Controller
         return response()->json(['data' => $this->cockpit->month($request->user(), $month)]);
     }
 
+    /**
+     * Every month on file at once, for the archive and the trend strip.
+     *
+     * One request rather than one per month: the Months tab shows the whole
+     * history, and asking for thirty-six months one at a time is thirty-six
+     * round trips to draw one table.
+     */
+    public function archive(Request $request): JsonResponse
+    {
+        return response()->json(['data' => $this->cockpit->archive($request->user())]);
+    }
+
     /** Which months have anything in them. */
     public function months(Request $request): JsonResponse
     {

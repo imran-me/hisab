@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Route;
    month cockpit that renders on top of it. */
 Route::prefix('finance')->middleware('auth')->group(function (): void {
     Route::get('/months', [FinanceController::class, 'months']);
+    Route::get('/archive', [FinanceController::class, 'archive']);
     Route::get('/settings', [FinanceController::class, 'settings']);
     Route::patch('/settings', [FinanceController::class, 'updateSettings']);
     Route::get('/closes', [FinanceController::class, 'closes']);

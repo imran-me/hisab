@@ -174,6 +174,19 @@ class FinanceCockpitTest extends TestCase
         $this->assertSame(100000, $q['tagged_minor']);
     }
 
+    public function test_the_reclaimable_slice_is_avoidable_plus_half_of_discretionary(): void
+    {
+        $this->record('expense', 40000, '2026-03-05', ['necessity' => 4]);   // avoidable
+        $this->record('expense', 20000, '2026-03-06', ['necessity' => 3]);   // discretionary
+        $this->record('expense', 90000, '2026-03-07', ['necessity' => 1]);   // essential
+        $this->record('expense', 50000, '2026-03-08');                        // untagged
+
+        // Not all of the discretionary: a figure assuming every meal out could
+        // simply not have happened is true and useless, because nobody reclaims
+        // it. And untagged money is not in it - it has not been judged.
+        $this->assertSame(50000, $this->month('2026-03')['leak_minor']);
+    }
+
     // ------------------------------------------------------------ reversals
 
     public function test_a_reversed_entry_stops_counting_everywhere(): void
@@ -260,6 +273,217 @@ class FinanceCockpitTest extends TestCase
         // accepting the offer invents a transaction.
         $this->assertCount(1, $recurring);
         $this->assertSame('Rent', $recurring[0]['payee']);
+    }
+
+    // ------------------------------------------------ what the tabs are drawn from
+
+    public function test_the_month_carries_its_own_rows(): void
+    {
+        $this->record('expense', 40000, '2026-03-05', ['payee' => 'Bazar', 'necessity' => 1]);
+
+        $rows = $this->month('2026-03')['rows'];
+
+        // The ledger tab draws from these rather than asking again, so anything
+        // it needs to render has to be in the shape - the omission that showed
+        // every row as "—" once already.
+        $this->assertCount(1, $rows);
+        $this->assertSame('Bazar', $rows[0]['payee']);
+        $this->assertSame(1, $rows[0]['necessity']);
+        $this->assertArrayHasKey('reverses_id', $rows[0]);
+    }
+
+    public function test_the_row_shape_does_not_leak_the_whole_table(): void
+    {
+        $this->record('expense', 40000, '2026-03-05');
+
+        // Explicit, so the next column added to `transactions` does not appear
+        // in the API by itself.
+        $this->assertArrayNotHasKey('fx_rate', $this->month('2026-03')['rows'][0]);
+        $this->assertArrayNotHasKey('user_id', $this->month('2026-03')['rows'][0]);
+    }
+
+    public function test_the_calendar_totals_a_day_by_flow(): void
+    {
+        $this->record('income', 100000, '2026-03-05');
+        $this->record('expense', 30000, '2026-03-05');
+        $this->record('deposit', 20000, '2026-03-05');
+        $this->record('expense', 5000, '2026-03-06');
+
+        $days = $this->month('2026-03')['days'];
+
+        $this->assertSame(100000, $days['2026-03-05']['in']);
+        $this->assertSame(30000, $days['2026-03-05']['out']);
+        $this->assertSame(20000, $days['2026-03-05']['dep']);
+        $this->assertSame(3, $days['2026-03-05']['n']);
+        $this->assertSame(5000, $days['2026-03-06']['out']);
+    }
+
+    public function test_a_reversal_subtracts_from_its_day_rather_than_adding(): void
+    {
+        $this->record('expense', 40000, '2026-03-05');
+
+        $expense = \Hisab\Ledger\Models\Transaction::query()->where('type', 'expense')->firstOrFail();
+        $this->actingAs($this->owner)->postJson("/api/ledger/{$expense->id}/reverse")->assertCreated();
+
+        // The mirror is dated today. Grouping the rows in the browser would have
+        // to know a reversal subtracts, and the day it forgets is the day the
+        // heatmap shows a spike that was actually a correction.
+        $today = now()->toDateString();
+        $days = $this->month(now()->format('Y-m'))['days'];
+
+        $this->assertSame(-40000, $days[$today]['out']);
+    }
+
+    public function test_the_necessity_mix_leaves_untagged_money_out(): void
+    {
+        $this->record('expense', 40000, '2026-03-05', ['necessity' => 1]);
+        $this->record('expense', 20000, '2026-03-06', ['necessity' => 4]);
+        $this->record('expense', 50000, '2026-03-07');
+
+        $m = $this->month('2026-03');
+
+        $this->assertSame(40000, $m['by_need']['1']);
+        $this->assertSame(20000, $m['by_need']['4']);
+        $this->assertSame(50000, $m['untagged_minor']);
+    }
+
+    public function test_the_soft_bands_and_the_reclaimable_slice_are_different_numbers(): void
+    {
+        $this->record('expense', 40000, '2026-03-05', ['necessity' => 4]);   // avoidable
+        $this->record('expense', 20000, '2026-03-06', ['necessity' => 3]);   // discretionary
+
+        $m = $this->month('2026-03');
+
+        // What sat in those bands…
+        $this->assertSame(60000, $m['soft_spend_minor']);
+        // …and the slice of it anyone would actually reclaim. Stating one as the
+        // other turns a target into fiction.
+        $this->assertSame(50000, $m['leak_minor']);
+    }
+
+    public function test_sectors_and_methods_are_kept_per_flow(): void
+    {
+        $this->record('income', 100000, '2026-03-01', ['method' => 'bank']);
+        $this->record('expense', 30000, '2026-03-02', ['method' => 'bank']);
+
+        $m = $this->month('2026-03');
+
+        // Merged, 'bank' would read 130,000 - a figure that is neither what was
+        // earned nor what was spent, and looks perfectly reasonable.
+        $this->assertSame([['bank', 100000]], $m['methods']['in']);
+        $this->assertSame([['bank', 30000]], $m['methods']['out']);
+    }
+
+    public function test_a_category_reversed_to_nothing_is_not_a_bar_of_zero(): void
+    {
+        $this->record('expense', 40000, '2026-03-05', ['payee' => 'Gadget']);
+
+        $expense = \Hisab\Ledger\Models\Transaction::query()->where('type', 'expense')->firstOrFail();
+        $this->actingAs($this->owner)->postJson("/api/ledger/{$expense->id}/reverse")->assertCreated();
+
+        // A zero-length bar under a real category name reads as "we spent
+        // nothing on this" rather than "this did not happen".
+        $this->assertSame([], $this->month(now()->format('Y-m'))['sectors']['expense']);
+    }
+
+    public function test_insights_are_decisions_with_figures_not_sentences(): void
+    {
+        $this->record('income', 100000, '2026-03-01');
+        $this->record('expense', 20000, '2026-03-02', ['necessity' => 4]);
+
+        $codes = array_column($this->month('2026-03')['insights'], 'code');
+
+        // The server decides WHICH observations are worth making; the wording
+        // lives with the rest of the wording, in the client. No HTML crosses.
+        $this->assertContains('kept_strong', $codes);
+        $this->assertContains('soft_spend', $codes);
+
+        foreach ($this->month('2026-03')['insights'] as $insight) {
+            $this->assertStringNotContainsString('<', json_encode($insight));
+        }
+    }
+
+    public function test_an_empty_month_says_so_once_rather_than_six_times(): void
+    {
+        $insights = $this->month('2026-03')['insights'];
+
+        $this->assertCount(1, $insights);
+        $this->assertSame('empty', $insights[0]['code']);
+    }
+
+    // --------------------------------------------------------------- archive
+
+    public function test_the_archive_replays_every_month_in_order(): void
+    {
+        $this->record('income', 100000, '2026-01-10');
+        $this->record('expense', 40000, '2026-01-11');   // January nets +60,000
+        $this->record('expense', 10000, '2026-02-05');
+
+        $data = $this->actingAs($this->owner)->getJson('/api/finance/archive')->assertOk()->json('data');
+        $months = collect($data['months'])->keyBy('month');
+
+        // Newest first, the way an archive is read.
+        $this->assertSame('2026-02', $data['months'][0]['month']);
+        $this->assertSame(0, $months['2026-01']['opening_minor']);
+        $this->assertSame(60000, $months['2026-01']['closing_minor']);
+        $this->assertSame(60000, $months['2026-02']['opening_minor']);
+        $this->assertSame(50000, $months['2026-02']['closing_minor']);
+    }
+
+    public function test_the_archive_agrees_with_the_month_it_summarises(): void
+    {
+        $this->record('income', 100000, '2026-01-10');
+        $this->record('deposit', 25000, '2026-01-12');
+        $this->record('expense', 40000, '2026-02-05', ['necessity' => 1]);
+
+        $archive = collect(
+            $this->actingAs($this->owner)->getJson('/api/finance/archive')->json('data.months'),
+        )->keyBy('month');
+
+        // Two code paths, one answer. They compute the same figures differently
+        // - one month at a time versus one pass over everything - and the day
+        // they disagree is the day the archive quietly rewrites history.
+        foreach (['2026-01', '2026-02'] as $key) {
+            $month = $this->month($key);
+
+            foreach (['opening_minor', 'closing_minor', 'income_minor',
+                'deposit_minor', 'expense_minor', 'net_minor', 'vault_minor', 'count'] as $field) {
+                $this->assertSame($month[$field], $archive[$key][$field], "{$key}.{$field}");
+            }
+
+            $this->assertSame($month['quality']['grade'], $archive[$key]['quality']['grade'], "{$key}.grade");
+        }
+    }
+
+    public function test_lifetime_balance_is_what_is_in_hand_not_a_sum_of_closings(): void
+    {
+        $this->record('income', 100000, '2026-01-10');
+        $this->record('income', 50000, '2026-02-10');
+
+        $life = $this->actingAs($this->owner)->getJson('/api/finance/archive')->json('data.lifetime');
+
+        // Summing the closings gives 250,000: January's leftover counted again
+        // in February because it was carried through.
+        $this->assertSame(150000, $life['balance_minor']);
+        $this->assertSame(150000, $life['income_minor']);
+        $this->assertSame(2, $life['months']);
+    }
+
+    public function test_the_average_spend_skips_months_with_no_spending(): void
+    {
+        $this->record('income', 100000, '2026-01-10');   // a month with no spending
+        $this->record('expense', 60000, '2026-02-10');
+
+        $life = $this->actingAs($this->owner)->getJson('/api/finance/archive')->json('data.lifetime');
+
+        // Over both months it would read 30,000 - an average dragged down by a
+        // month that was never spent in.
+        $this->assertSame(60000, $life['avg_expense_minor']);
+    }
+
+    public function test_the_archive_needs_a_session(): void
+    {
+        $this->getJson('/api/finance/archive')->assertUnauthorized();
     }
 
     public function test_a_bad_month_key_is_422_not_404(): void
