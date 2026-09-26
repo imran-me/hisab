@@ -101,6 +101,28 @@ many. Archiving is the answer in that case, and the client offers it.
 
 ---
 
+## The month — `/api/finance/*`
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/finance/{YYYY-MM}` | one month: totals, carry-over, rows, per-day, necessity mix, insights |
+| `GET` | `/api/finance/archive` | every month on file, with a lifetime roll-up |
+| `GET` | `/api/finance/months` | which months have anything in them |
+| `GET`/`PATCH` | `/api/finance/settings` | opening balance, carry-forward, monthly budget, savings goal |
+| `POST`/`DELETE` | `/api/finance/{YYYY-MM}/close` | file or reopen a month's review |
+
+**One book at a time.** The three `GET`s take `?book=`, `personal` when absent —
+the same default as `/api/ledger/summary`. Income, spent and deposited come
+from the ledger's `BalanceSheet::summary()`, so for the same book and month the
+two endpoints give the same figures; `net_minor` is the ledger's
+`spendable_minor`, and `kept_minor` is `income − expense` (a deposit is kept).
+A test pins this against the demo data.
+
+The settings and the month review belong to the personal book. Another book
+opens at zero, has no budget, and reports `closed: null`.
+
+---
+
 ## Not built
 
 Stated here rather than left to look like an oversight:

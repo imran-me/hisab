@@ -6,6 +6,7 @@ use App\Models\User;
 use Hisab\Accounts\Models\FinanceSetting;
 use Hisab\Accounts\Models\MonthClose;
 use Hisab\Ledger\Models\Transaction;
+use Hisab\Ledger\Services\BalanceSheet;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -23,9 +24,32 @@ use Illuminate\Support\Collection;
  * own date forever; July stays July. The opening balance is DERIVED by replaying
  * every earlier month, so a record added to July tomorrow still corrects August
  * on its own, without anyone reopening anything.
+ *
+ * ONE BOOK AT A TIME. Every figure here is for a single book, personal unless
+ * asked otherwise. This used to read every row the owner had, so September's
+ * income was the salary PLUS the business's client invoices - ৳259,473 here
+ * against ৳88,611 on Home for the same month. Mixing the books is the thing
+ * context.md §1 says they exist to prevent: a household grocery bill has no
+ * business inside a profit figure, and a client invoice is not pocket money.
+ *
+ * The month's income, spending and deposits come from the ledger's own
+ * BalanceSheet::summary() rather than being summed again here, so the two
+ * screens cannot drift apart: there is one implementation of the counting
+ * rules, and this class adds only what the ledger does not know (carry-over,
+ * the necessity mix, the review).
+ *
+ * The finance SETTINGS (opening balance, budget, goal) belong to the personal
+ * book. A business's money does not start from your pocket's opening balance,
+ * and a household budget is not a limit on stock purchases.
  */
 class MonthCockpit
 {
+    public const PERSONAL = 'personal';
+
+    public function __construct(private readonly BalanceSheet $sheet)
+    {
+    }
+
     /**
      * The necessity mix as one number.
      *
@@ -41,26 +65,27 @@ class MonthCockpit
     /**
      * @return array<string, mixed>
      */
-    public function month(User $user, string $monthKey): array
+    public function month(User $user, string $monthKey, string $book = self::PERSONAL): array
     {
-        $settings = FinanceSetting::forOwner($user);
+        $settings = $this->settingsFor($user, $book);
 
         [$from, $to] = $this->bounds($monthKey);
 
-        $rows = $this->counted($user)
+        $rows = $this->counted($user, $book)
             ->whereBetween('occurred_on', [$from, $to])
             ->orderByDesc('occurred_on')
             ->orderByDesc('id')
             ->get();
 
-        $totals = $this->totals($rows);
-        $carry = $this->carry($user, $settings, $monthKey);
+        $totals = $this->ledgerTotals($user, $book, $from, $to);
+        $carry = $this->carry($user, $settings, $monthKey, $book);
         $closing = $carry['opening'] + $totals['net'];
 
         $breakdown = $this->breakdown($rows);
 
         return [
             'month' => $monthKey,
+            'book' => $book,
             'from' => $from,
             'to' => $to,
             'opening_minor' => $carry['opening'],
@@ -75,8 +100,8 @@ class MonthCockpit
             'savings_rate' => $totals['savings_rate'],
             'leak_minor' => $this->leak($rows),
             'quality' => $this->quality($rows),
-            'recurring' => $this->recurring($user, $monthKey),
-            'closed' => $this->closeFor($user, $monthKey),
+            'recurring' => $this->recurring($user, $monthKey, $book),
+            'closed' => $book === self::PERSONAL ? $this->closeFor($user, $monthKey) : null,
             'rows' => $this->shape($rows),
             'days' => $this->days($rows),
             'by_need' => $breakdown['by_need'],
@@ -88,7 +113,7 @@ class MonthCockpit
             'soft_spend_minor' => $breakdown['soft'],
             'sectors' => $breakdown['sectors'],
             'methods' => $breakdown['methods'],
-            'insights' => $this->insights($user, $settings, $monthKey, $totals, $breakdown),
+            'insights' => $this->insights($user, $settings, $monthKey, $totals, $breakdown, $book),
             'settings' => [
                 'opening_balance_minor' => $settings->opening_balance_minor,
                 'carry_forward' => $settings->carry_forward,
@@ -111,7 +136,7 @@ class MonthCockpit
      *
      * @return array{on: bool, opening: int, vault: int}
      */
-    public function carry(User $user, FinanceSetting $settings, string $monthKey): array
+    public function carry(User $user, FinanceSetting $settings, string $monthKey, string $book = self::PERSONAL): array
     {
         $on = (bool) $settings->carry_forward;
         $opening = $on ? (int) $settings->opening_balance_minor : 0;
@@ -120,7 +145,7 @@ class MonthCockpit
         // One pass over every counted row rather than a query per month: the
         // ledger of one person is small, and a month-by-month replay is N
         // queries to answer one question.
-        foreach ($this->counted($user)->get(['type', 'direction', 'amount_minor', 'occurred_on', 'reverses_id']) as $row) {
+        foreach ($this->counted($user, $book)->get(['type', 'direction', 'amount_minor', 'occurred_on', 'reverses_id']) as $row) {
             $key = substr((string) $row->occurred_on, 0, 7);
             if ($key === '') {
                 continue;
@@ -340,6 +365,7 @@ class MonthCockpit
         string $monthKey,
         array $totals,
         array $breakdown,
+        string $book = self::PERSONAL,
     ): array {
         $income = (int) $totals['income'];
         $expense = (int) $totals['expense'];
@@ -395,7 +421,7 @@ class MonthCockpit
         }
 
         $previous = $this->shiftMonth($monthKey, -1);
-        $was = (int) $this->totals($this->rowsFor($user, $previous))['expense'];
+        $was = (int) $this->totals($this->rowsFor($user, $previous, $book))['expense'];
         // 8%: below that a month-on-month "change" is noise, and reporting noise
         // as a trend teaches people to ignore the ones that matter.
         if ($was > 0 && abs($expense - $was) > $was * 0.08) {
@@ -426,9 +452,9 @@ class MonthCockpit
      *
      * @return array<string, mixed>
      */
-    public function archive(User $user): array
+    public function archive(User $user, string $book = self::PERSONAL): array
     {
-        $settings = FinanceSetting::forOwner($user);
+        $settings = $this->settingsFor($user, $book);
         $carryOn = (bool) $settings->carry_forward;
 
         /** @var array<string, array<string, int>> $months */
@@ -436,7 +462,7 @@ class MonthCockpit
         $weighted = [];
         $tagged = [];
 
-        foreach ($this->counted($user)->get() as $row) {
+        foreach ($this->counted($user, $book)->get() as $row) {
             $key = substr((string) $row->occurred_on, 0, 7);
             if ($key === '') {
                 continue;
@@ -465,7 +491,10 @@ class MonthCockpit
 
         ksort($months);
 
-        $closes = MonthClose::query()->where('user_id', $user->id)->get()->keyBy('month');
+        // A review is of the personal month; another book has none to show.
+        $closes = $book === self::PERSONAL
+            ? MonthClose::query()->where('user_id', $user->id)->get()->keyBy('month')
+            : collect();
 
         // Running, in date order: the opening of one month is the closing of the
         // last, and the vault never resets.
@@ -544,11 +573,58 @@ class MonthCockpit
     }
 
     /** @return Collection<int, Transaction> */
-    private function rowsFor(User $user, string $monthKey): Collection
+    private function rowsFor(User $user, string $monthKey, string $book): Collection
     {
         [$from, $to] = $this->bounds($monthKey);
 
-        return $this->counted($user)->whereBetween('occurred_on', [$from, $to])->get();
+        return $this->counted($user, $book)->whereBetween('occurred_on', [$from, $to])->get();
+    }
+
+    /**
+     * The month's totals, taken from the ledger rather than summed again.
+     *
+     * BalanceSheet::summary() is what /api/ledger/summary answers with, so Home
+     * and this screen read the same three numbers from the same code. The two
+     * derived figures keep the names this screen has always used: `net` is
+     * what moved in your hand (the ledger's spendable_minor) and `kept` is what
+     * you still have of what came in, a deposit included.
+     *
+     * @return array<string, int|float>
+     */
+    private function ledgerTotals(User $user, string $book, string $from, string $to): array
+    {
+        $s = $this->sheet->summary($user, $book, $from, $to);
+
+        $income = (int) $s['income_minor'];
+        $expense = (int) $s['expense_minor'];
+        $deposit = (int) $s['deposit_minor'];
+
+        return [
+            'income' => $income,
+            'expense' => $expense,
+            'deposit' => $deposit,
+            'net' => (int) $s['spendable_minor'],
+            'kept' => $income - $expense,
+            'savings_rate' => $income > 0 ? round((($income - $expense) / $income) * 100, 1) : 0.0,
+        ];
+    }
+
+    /**
+     * The settings that apply to a book.
+     *
+     * The stored row is the personal book's. Any other book gets the same
+     * shape with nothing set - carry-over on, from zero, no budget - rather
+     * than inheriting a pocket-money opening balance it never had. Built in
+     * memory and never saved, so asking about the business book cannot write
+     * a row.
+     */
+    private function settingsFor(User $user, string $book): FinanceSetting
+    {
+        if ($book === self::PERSONAL) {
+            return FinanceSetting::forOwner($user);
+        }
+
+        return new FinanceSetting(['user_id' => $user->id]);
     }
 
     private function shiftMonth(string $monthKey, int $by): string
@@ -660,11 +736,11 @@ class MonthCockpit
      *
      * @return array<int, array<string, mixed>>
      */
-    private function recurring(User $user, string $monthKey): array
+    private function recurring(User $user, string $monthKey, string $book): array
     {
         [$from, $to] = $this->bounds($monthKey);
 
-        return $this->counted($user)
+        return $this->counted($user, $book)
             ->whereNotNull('recurring')
             ->whereBetween('occurred_on', [$from, $to])
             ->get(['id', 'type', 'payee', 'amount_minor', 'currency', 'category_label', 'recurring', 'occurred_on'])
@@ -704,11 +780,14 @@ class MonthCockpit
      * own accounts is neither income nor spending, and including it inflates
      * both sides by the same amount - which leaves the difference right and the
      * savings rate meaningless.
+     *
+     * And one book only, always: see the class comment.
      */
-    private function counted(User $user)
+    private function counted(User $user, string $book)
     {
         return Transaction::query()
             ->where('user_id', $user->id)
+            ->where('book', $book)
             ->where('type', '!=', 'transfer');
     }
 
@@ -727,9 +806,9 @@ class MonthCockpit
      *
      * @return array<int, string>
      */
-    public function months(User $user): array
+    public function months(User $user, string $book = self::PERSONAL): array
     {
-        return $this->counted($user)
+        return $this->counted($user, $book)
             ->selectRaw('DISTINCT SUBSTR(occurred_on, 1, 7) AS m')
             ->orderByDesc('m')
             ->pluck('m')

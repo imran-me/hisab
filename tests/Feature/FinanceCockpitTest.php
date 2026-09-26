@@ -481,6 +481,75 @@ class FinanceCockpitTest extends TestCase
         $this->assertSame(60000, $life['avg_expense_minor']);
     }
 
+    // ------------------------------------------------------ one book, one answer
+
+    public function test_the_cockpit_and_the_ledger_summary_agree_for_every_book(): void
+    {
+        // The demo data carries a business book beside the personal one, which
+        // is exactly the case that disagreed: ৳88,611 of September income on
+        // Home and ৳259,473 here, because this added the client invoices in.
+        $this->actingAs($this->owner)->postJson('/api/ledger/demo', ['months' => 3])->assertOk();
+
+        $months = [now()->format('Y-m'), now()->subMonthNoOverflow()->format('Y-m')];
+
+        foreach (['personal', 'business'] as $book) {
+            foreach ($months as $key) {
+                $cockpit = $this->actingAs($this->owner)
+                    ->getJson("/api/finance/{$key}?book={$book}")->assertOk()->json('data');
+                $summary = $this->actingAs($this->owner)
+                    ->getJson("/api/ledger/summary?book={$book}&period={$key}")->assertOk()->json('data');
+
+                $this->assertSame($book, $cockpit['book']);
+                $this->assertSame($summary['income_minor'], $cockpit['income_minor'], "{$book} {$key} income");
+                $this->assertSame($summary['expense_minor'], $cockpit['expense_minor'], "{$book} {$key} spent");
+                $this->assertSame($summary['deposit_minor'], $cockpit['deposit_minor'], "{$book} {$key} deposited");
+                $this->assertSame($summary['spendable_minor'], $cockpit['net_minor'], "{$book} {$key} in hand");
+                $this->assertSame(
+                    $summary['income_minor'] - $summary['expense_minor'],
+                    $cockpit['kept_minor'],
+                    "{$book} {$key} kept",
+                );
+            }
+        }
+    }
+
+    public function test_the_cockpit_defaults_to_the_personal_book(): void
+    {
+        $shop = Account::query()->create([
+            'id' => strtoupper((string) Str::ulid()), 'user_id' => $this->owner->id,
+            'name' => 'Shop', 'type' => 'bank', 'currency' => 'BDT',
+            'book' => 'business', 'opening_balance_minor' => 0,
+        ]);
+
+        $this->record('income', 100000, '2026-03-01');
+        app(LedgerWriter::class)->create($this->owner, [
+            'type' => 'income', 'account_id' => $shop->id, 'amount_minor' => 900000,
+            'currency' => 'BDT', 'occurred_on' => '2026-03-02', 'book' => 'business',
+        ]);
+
+        // A client invoice is not pocket money.
+        $this->assertSame(100000, $this->month('2026-03')['income_minor']);
+        $this->assertSame(1, $this->month('2026-03')['count']);
+
+        $business = $this->actingAs($this->owner)
+            ->getJson('/api/finance/2026-03?book=business')->assertOk()->json('data');
+        $this->assertSame(900000, $business['income_minor']);
+
+        $archive = $this->actingAs($this->owner)->getJson('/api/finance/archive')->json('data.lifetime');
+        $this->assertSame(100000, $archive['income_minor']);
+    }
+
+    public function test_another_book_does_not_inherit_the_personal_opening_balance(): void
+    {
+        $this->actingAs($this->owner)->patchJson('/api/finance/settings', ['opening_balance_minor' => 500000])->assertOk();
+
+        $business = $this->actingAs($this->owner)
+            ->getJson('/api/finance/2026-03?book=business')->assertOk()->json('data');
+
+        $this->assertSame(0, $business['opening_minor']);
+        $this->assertSame(500000, $this->month('2026-03')['opening_minor']);
+    }
+
     public function test_the_archive_needs_a_session(): void
     {
         $this->getJson('/api/finance/archive')->assertUnauthorized();

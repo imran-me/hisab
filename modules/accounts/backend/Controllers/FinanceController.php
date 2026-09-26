@@ -28,7 +28,7 @@ class FinanceController extends Controller
     {
         $this->assertMonth($month);
 
-        return response()->json(['data' => $this->cockpit->month($request->user(), $month)]);
+        return response()->json(['data' => $this->cockpit->month($request->user(), $month, $this->book($request))]);
     }
 
     /**
@@ -40,13 +40,13 @@ class FinanceController extends Controller
      */
     public function archive(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->cockpit->archive($request->user())]);
+        return response()->json(['data' => $this->cockpit->archive($request->user(), $this->book($request))]);
     }
 
     /** Which months have anything in them. */
     public function months(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->cockpit->months($request->user())]);
+        return response()->json(['data' => $this->cockpit->months($request->user(), $this->book($request))]);
     }
 
     public function settings(Request $request): JsonResponse
@@ -122,6 +122,18 @@ class FinanceController extends Controller
             ->get(['month', 'note', 'closed_at']);
 
         return response()->json(['data' => $rows]);
+    }
+
+    /**
+     * `?book=`, personal when absent - the same default and the same rule as
+     * /api/ledger/summary, so the two answer for the same book unless told
+     * otherwise.
+     */
+    private function book(Request $request): string
+    {
+        $f = $request->validate(['book' => ['sometimes', 'string', 'max:32']]);
+
+        return (string) ($f['book'] ?? MonthCockpit::PERSONAL);
     }
 
     /**
