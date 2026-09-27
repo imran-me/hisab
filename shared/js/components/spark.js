@@ -154,20 +154,44 @@ export function breakdownBar(parts, opts = {}) {
 }
 
 /**
- * The palette for category segments.
+ * The colour of a category segment, as a token reference.
  *
- * Generated from the accent hue rather than listed as hexes, so it stays inside
- * the product's colour world and does not become a second, unrelated palette.
- * Hues are spaced by the golden angle (137.5°), which is what stops adjacent
- * categories in a sorted list from being adjacent in hue — an evenly spaced
- * ramp gives neighbouring segments nearly the same colour.
+ * Given a category name it answers with that category's own tint, so Rent is
+ * the same violet on Home, in the Ledger's glyph and in the month's chart.
+ * Otherwise it takes the index-th of eight ordered tints (--seg-1 … --seg-8),
+ * which are the category tints in an order where neighbours differ. Returned
+ * as var(), so it follows the theme; it used to be a generated hsl() that was
+ * the same in both themes and matched nothing else in the product.
  *
- * Lightness alternates in a three-step cycle so that two segments landing on a
- * similar hue still differ in value, which is what keeps them apart in
- * greyscale and for a colour-blind reader.
+ * @param {number} index        position in the sorted breakdown
+ * @param {string} [name]       the category's name, if known
  */
-export function segmentColor(index) {
-  const hue = (196 + index * 137.5) % 360;
-  const light = [58, 68, 48][index % 3];
-  return `hsl(${hue.toFixed(0)} 62% ${light}%)`;
+export function segmentColor(index, name) {
+  const tint = categoryTint(name);
+  if (tint) return `var(--cat-${tint})`;
+  return `var(--seg-${(Math.max(0, index) % 8) + 1})`;
+}
+
+/**
+ * Which of the eight category tints a category name belongs to, or null.
+ *
+ * Matched on words in the name because the owner names categories, in English
+ * or in Bangla, and a category table has no colour column yet (B11 may add
+ * one; this is the fallback until then). The first rule that matches wins.
+ */
+const TINT_RULES = [
+  ['home',      /rent|hous|home|bari|ভাড়া|বাসা/i],
+  ['food',      /food|grocer|bazar|bazaar|market|বাজার|খাবার/i],
+  ['dining',    /dining|restaurant|\beat|cafe|\btea\b|coffee|lunch|dinner|snack/i],
+  ['transport', /transport|ride|uber|pathao|cng|rickshaw|\bbus\b|fuel|travel|যাতায়াত/i],
+  ['utilities', /utilit|electric|gas|water|bill|বিদ্যুৎ/i],
+  ['mobile',    /mobile|phone|internet|\bdata\b|wifi|subscri|recharge/i],
+  ['health',    /health|medic|doctor|pharma|hospital|ওষুধ/i],
+  ['shopping',  /shop|cloth|gadget|tech|gift|fashion|কেনাকাটা/i],
+];
+
+export function categoryTint(name) {
+  if (!name) return null;
+  const hit = TINT_RULES.find(([, re]) => re.test(String(name)));
+  return hit ? hit[0] : null;
 }

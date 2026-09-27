@@ -259,3 +259,23 @@ characters, all the right length.
 
 Verified: test-vault-browser 52 passed (was 50 plus 1 flaky failure),
 test-settings 13 passed; test-crypto passes.
+
+## Category colours are tokens (for C's Home bar)
+
+`segmentColor(index, name)` in `spark.js` now returns a token reference, not
+a generated `hsl()`: the category's own tint (`var(--cat-home)` …) when the
+name matches one, otherwise the index-th of eight ordered tokens
+`--seg-1 … --seg-8` (the category tints in an order where neighbours differ)
+plus `--seg-rest` for "everything else". All are aliases of the `--cat-*`
+tints, so both themes follow. `categoryTint(name)` is exported for B5 and
+C: English and Bangla keywords, whole-word where a short word would
+misfire ("bus" in "Business", "tea" in "team").
+
+For C: pass the name (`segmentColor(i, c.name)`) so Rent is the same violet
+everywhere, and use `var(--seg-rest)` for the "everything else" band.
+Without any change, Home's bar already switched to the token palette.
+
+Verified: Node check of the name mapping (Rent → home, Gadgets / tech →
+shopping, Subscriptions → mobile, Business → none, Business travel →
+transport); Home at 360 in both themes shows the v2 tints in the bar and
+the legend.

@@ -93,6 +93,20 @@
   --cat-mobile:    #93A7F0;
   --cat-health:    #E48FB6;
 
+  /* The same eight tints in a fixed ORDER, for a bar or chart segment whose
+     category has no tint of its own. Ordered so that neighbours differ in hue
+     and in lightness (violet, amber, blue, coral, teal, yellow, periwinkle,
+     pink). Aliases, so they follow the theme with the tints themselves. */
+  --seg-1: var(--cat-home);
+  --seg-2: var(--cat-food);
+  --seg-3: var(--cat-transport);
+  --seg-4: var(--cat-dining);
+  --seg-5: var(--cat-shopping);
+  --seg-6: var(--cat-utilities);
+  --seg-7: var(--cat-mobile);
+  --seg-8: var(--cat-health);
+  --seg-rest: var(--text-4);   /* "everything else" */
+
   /* ---------------------------------------------------------------------
      5 · WASHES, SCRIMS, GLASS
      --------------------------------------------------------------------- */
