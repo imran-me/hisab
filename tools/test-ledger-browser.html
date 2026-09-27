@@ -120,6 +120,20 @@ function check(label, condition) {
     const again = await ledger.reverse(second.data.id, 'again');
     check('reversing twice is refused', again.ok === false);
 
+    // --- a foreign-currency row moves its account by its converted value ---
+    // A USD 12.99 charge on a taka account used to move it by ৳12.99.
+    const beforeUsd = (await ledger.balances({})).data[cash.id];
+    const usd = await ledger.create({
+      type: 'expense', account_id: cash.id, amount_minor: 1299,
+      currency: 'USD', occurred_on: '2026-09-07', payee: 'Cloud',
+    });
+    const snap = Number(usd.data?.fx_rate);
+    const afterUsd = (await ledger.balances({})).data[cash.id];
+    const { convert } = await import('../shared/js/core/money.js');
+    check('a USD row snapshots a rate', cash.currency === 'USD' || (Number.isFinite(snap) && snap > 0));
+    check('and moves the taka balance by its taka value, not by 12.99',
+      cash.currency === 'USD' || beforeUsd - afterUsd === convert(1299, 'USD', cash.currency, snap));
+
     // --- the entry sheet's number pad ------------------------------------------
     // Pure functions, so they are checked here without opening a sheet. The
     // pad is the only way an amount gets typed on a phone, so what it refuses

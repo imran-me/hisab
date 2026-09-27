@@ -277,6 +277,40 @@ class LedgerTest extends TestCase
         $this->assertSame(130000, $balances[$account->id]);
     }
 
+    public function test_a_dollar_charge_moves_a_taka_balance_by_its_taka_value(): void
+    {
+        $card = $this->account('Card', ['opening_balance_minor' => 1000000]);
+        $rateId = \Illuminate\Support\Facades\DB::table('fx_rates')
+            ->where('base', 'USD')->where('quote', 'BDT')->value('id');
+
+        // With a snapshot: $12.99 at 122.50 is ৳1,591.28 (159128 poisha).
+        $this->entry(['type' => 'expense', 'account_id' => $card->id, 'fx_rate_id' => $rateId,
+            'amount_minor' => 1299, 'currency' => 'USD', 'occurred_on' => '2026-09-10'])->assertCreated();
+        // Without one: converted at the rate of its date, the same 122.50.
+        $this->entry(['type' => 'expense', 'account_id' => $card->id,
+            'amount_minor' => 1000, 'currency' => 'USD', 'occurred_on' => '2026-09-11'])->assertCreated();
+
+        $res = $this->actingAs($this->owner)->getJson('/api/ledger/balances')->assertOk();
+
+        // The bug this pins: the charge used to move the balance by 12.99 TAKA.
+        $this->assertSame(1000000 - 159128 - 122500, $res->json("data.{$card->id}"));
+        $this->assertSame([], $res->json('meta.unconverted'));
+    }
+
+    public function test_a_row_with_no_rate_is_left_out_of_a_balance_and_named(): void
+    {
+        $euro = $this->account('Euro wallet', ['currency' => 'EUR', 'opening_balance_minor' => 5000]);
+
+        // There is no JPY/EUR rate either way round.
+        $this->entry(['type' => 'expense', 'account_id' => $euro->id,
+            'amount_minor' => 500, 'currency' => 'JPY', 'occurred_on' => '2026-09-10'])->assertCreated();
+
+        $res = $this->actingAs($this->owner)->getJson('/api/ledger/balances')->assertOk();
+
+        $this->assertSame(5000, $res->json("data.{$euro->id}"));
+        $this->assertSame(['JPY'], $res->json('meta.unconverted'));
+    }
+
     public function test_a_transfer_moves_a_balance_even_though_it_is_in_no_total(): void
     {
         $from = $this->account('Cash', ['opening_balance_minor' => 100000]);

@@ -175,3 +175,21 @@ Transport saves `amount_minor` 25000, `category_label` Transport, `necessity`
 1 (from the category, not 3) and closes the sheet. Screenshots in both themes
 with a sum on the pad: the sheet top is at y≈141, nothing scrolls, no overflow.
 **Not yet:** the recent strip (B3) and the draft (B4) are next.
+
+Follow-up in the same push: the tiles use A's `.cat-<tint>` classes and
+`cat-<tint>` sprite glyphs (db2595d), and ⌫ uses the sprite's `backspace`.
+
+## Fixed (C's request 1): a foreign row moved its account by the wrong amount
+
+Both `BalanceSheet::balances()` and the client `balances()` added a row's
+`amount_minor` whatever its currency, so a USD 12.99 charge on a taka account
+moved it by ৳12.99. Rows in another currency than their account are now
+converted first, by the row's `fx_rate` snapshot (currency → account currency)
+or else the as-of rate (server, via fx `Converter`) / current rate (client);
+with no rate the row is left out and named in `meta.unconverted`. Same-currency
+rows are still summed by the database.
+
+**Verified:** php artisan test (LedgerTest 39 passed, 2 new: snapshot and
+as-of conversion on a taka card, a JPY row on a EUR account reported as
+unconverted). Ledger harness 35 (2 new: a local USD row snapshots a rate and
+moves the taka balance by its converted value).

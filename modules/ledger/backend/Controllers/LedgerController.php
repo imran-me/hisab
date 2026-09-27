@@ -212,9 +212,11 @@ class LedgerController extends Controller
     {
         $book = $request->query('book');
 
+        $data = $this->balances->balances($request->user(), $book ? (string) $book : null);
+
         return response()->json([
-            'data' => $this->balances->balances($request->user(), $book ? (string) $book : null),
-            'meta' => ['as_of' => Carbon::now()->toDateString()],
+            'data' => $data,
+            'meta' => ['as_of' => Carbon::now()->toDateString(), 'unconverted' => $this->balances->unconverted()],
         ]);
     }
 

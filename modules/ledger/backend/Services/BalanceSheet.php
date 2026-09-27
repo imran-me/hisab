@@ -33,14 +33,20 @@ class BalanceSheet
         $accounts = DB::table('accounts')
             ->where('user_id', $user->id)
             ->when($book !== null, fn ($q) => $q->where('book', $book))
-            ->get(['id', 'opening_balance_minor']);
+            ->get(['id', 'currency', 'opening_balance_minor']);
 
+        $currencyOf = $accounts->pluck('currency', 'id');
+
+        // Rows in their account's own currency - nearly all of them - are
+        // summed by the database.
         $movements = DB::table('transactions')
-            ->where('user_id', $user->id)
-            ->when($book !== null, fn ($q) => $q->where('book', $book))
-            ->groupBy('account_id')
-            ->select('account_id', DB::raw(
-                "SUM(CASE WHEN direction = 'in' THEN amount_minor ELSE -amount_minor END) AS net",
+            ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
+            ->where('transactions.user_id', $user->id)
+            ->whereColumn('transactions.currency', 'accounts.currency')
+            ->when($book !== null, fn ($q) => $q->where('transactions.book', $book))
+            ->groupBy('transactions.account_id')
+            ->select('transactions.account_id', DB::raw(
+                "SUM(CASE WHEN transactions.direction = 'in' THEN transactions.amount_minor ELSE -transactions.amount_minor END) AS net",
             ))
             ->pluck('net', 'account_id');
 
@@ -54,7 +60,63 @@ class BalanceSheet
                 + (int) ($movements[$account->id] ?? 0);
         }
 
+        // A row in ANOTHER currency - a USD 12.99 charge on a taka card - is
+        // converted into the account's currency first. This used to be summed
+        // as it stood, so the charge moved the balance by 12.99 TAKA. The row's
+        // snapshot is exactly the rate from its currency to its account's, so
+        // it is used when present; otherwise the rate as of its date. With no
+        // rate at all the row is left out and its currency named.
+        $this->unconverted = [];
+        $foreign = DB::table('transactions')
+            ->join('accounts', 'accounts.id', '=', 'transactions.account_id')
+            ->where('transactions.user_id', $user->id)
+            ->whereColumn('transactions.currency', '!=', 'accounts.currency')
+            ->when($book !== null, fn ($q) => $q->where('transactions.book', $book))
+            ->get(['transactions.account_id', 'transactions.direction', 'transactions.amount_minor',
+                'transactions.currency', 'transactions.fx_rate', 'transactions.occurred_on']);
+
+        if ($foreign->isNotEmpty()) {
+            $rates = new Converter((string) $user->id);
+
+            foreach ($foreign as $row) {
+                $to = $currencyOf[$row->account_id] ?? null;
+                if ($to === null) {
+                    continue;
+                }
+
+                $value = $rates->convert(
+                    (int) $row->amount_minor,
+                    (string) $row->currency,
+                    (string) $to,
+                    substr((string) $row->occurred_on, 0, 10),
+                    $row->fx_rate === null ? null : (string) $row->fx_rate,
+                );
+
+                if ($value === null) {
+                    $this->unconverted[(string) $row->currency] = true;
+
+                    continue;
+                }
+
+                $out[$row->account_id] += $row->direction === 'in' ? $value : -$value;
+            }
+        }
+
         return $out;
+    }
+
+    /** @var array<string, true> currencies the last balances() call could not convert */
+    private array $unconverted = [];
+
+    /**
+     * The currencies the last balances() call left out for want of a rate, so
+     * the response can say a balance is incomplete rather than look whole.
+     *
+     * @return array<int, string>
+     */
+    public function unconverted(): array
+    {
+        return array_keys($this->unconverted);
     }
 
     /**

@@ -441,14 +441,42 @@ export async function balances({ book = null } = {}) {
   const accountRes = await accounts.list({ book, includeArchived: true });
 
   const out = {};
-  for (const account of accountRes.data) out[account.id] = account.opening_balance_minor || 0;
+  const currencyOf = {};
+  for (const account of accountRes.data) {
+    out[account.id] = account.opening_balance_minor || 0;
+    currencyOf[account.id] = account.currency;
+  }
+
+  // A row in another currency than its account - a USD 12.99 charge on a taka
+  // card - is converted into the account's currency before it moves the
+  // balance. It used to be added as it stood, moving the card by ৳12.99. The
+  // same rule as BalanceSheet::balances(): the row's snapshot (which is
+  // exactly its currency → its account's) when present, else the current
+  // rate; with no rate the row is left out and its currency named.
+  let rates = null;
+  const unconverted = new Set();
 
   for (const row of rows) {
     if (!(row.account_id in out)) continue;
-    out[row.account_id] += row.direction === 'in' ? row.amount_minor : -row.amount_minor;
+    let value = row.amount_minor;
+    const to = currencyOf[row.account_id];
+
+    if (to && row.currency && row.currency !== to) {
+      const snapshot = Number(row.fx_rate);
+      if (Number.isFinite(snapshot) && snapshot > 0) {
+        value = convert(row.amount_minor, row.currency, to, snapshot);
+      } else {
+        rates ??= await fx.rates();
+        const res = convertAndSum([row], to, rates);
+        value = res.missing.length ? null : res.amountMinor;
+      }
+      if (value === null) { unconverted.add(row.currency); continue; }
+    }
+
+    out[row.account_id] += row.direction === 'in' ? value : -value;
   }
 
-  return { ok: true, data: out, meta: { as_of: today() } };
+  return { ok: true, data: out, meta: { as_of: today(), unconverted: [...unconverted] } };
 }
 
 /** How many transactions reference an account — the accounts screen asks before deleting. */

@@ -110,10 +110,16 @@ Cursor pagination on `id`, not offset — see `api-contract.md` §8.
 ### `GET /api/ledger/balances`
 
 ```json
-{ "data": { "01JBX…": 1250000, "01JBY…": -34000 }, "meta": { "as_of": "2026-09-05" } }
+{ "data": { "01JBX…": 1250000, "01JBY…": -34000 }, "meta": { "as_of": "2026-09-05", "unconverted": [] } }
 ```
 
 The **only** place a balance is computed. Accounts deliberately does not do it.
+
+Each balance is in **its account's currency**. A row in another currency (a
+USD charge on a taka card) is converted first: by its `fx_rate` snapshot,
+which is exactly the rate from its currency to its account's, or else by the
+rate as of its date. A row with no rate is left out and its currency listed in
+`meta.unconverted`, so a balance that is incomplete says so.
 
 ### `GET /api/ledger/summary`
 
