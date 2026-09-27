@@ -423,3 +423,23 @@ Verified: the Node check matches City Bank, Dutch-Bangla Bank Ltd, Bank
 Asia, bKash, Dhaka Bank, Prime, One Bank and "my visa card" correctly, and
 returns nothing for Payoneer and LankaBangla. `tools/institutions.html` at
 360 shows all 40 tiles legible at both sizes.
+
+## Institution logos: 9 real logos, the rest monograms
+
+Nine logos come from Wikimedia Commons, all CC0 or public domain, and are
+self-hosted in `assets/banks/`: Dutch-Bangla, Sonali, Janata, Standard
+Chartered, Rocket, Upay, Visa, Mastercard and American Express.
+`assets/banks/README.md` lists each source file and licence, and why the
+others were not used: wide wordmarks are illegible in a 40px square; the
+HSBC file was "HSBC UK"; the bKash file is a Bangla wordmark; the "NRB" file
+is a Cyrillic mark for another bank; and some are not on Commons. Those
+stay as brand-colour monograms. Nagad's brand colour is corrected to its
+orange.
+
+The SVGs were stripped of editor metadata and given a viewBox, and checked
+for scripts and external references (none). The PNGs are 160px, 64 colours,
+about 4 KB. The `<img>` tile is forced square (`aspect-ratio`) so a tall or
+wide mark sits centred. Commons was queried with a generic User-Agent.
+
+Verified: `tools/institutions.html` at 360 in both themes. All 40 tiles
+are square and legible at 24 and 40px.

@@ -451,6 +451,11 @@
    edge. White here is the logo's own ground, not a theme colour. */
 .inst-logo--img {
   box-sizing: border-box;
+  /* Square whatever the logo's own shape: the width attribute sets the size,
+     and this overrides the image's intrinsic ratio (and the global
+     img { height: auto }) so a tall or wide mark sits centred in a tile. */
+  aspect-ratio: 1 / 1;
+  height: auto;
   padding: 12%;
   border-radius: 26%;
   background: #FFFFFF;
@@ -481,4 +486,4 @@
 .inst-tint--in     { --inst-tint: var(--money-in); }
 .inst-tint--biz    { --inst-tint: var(--biz); }
 .inst-tint--saved  { --inst-tint: var(--saved); }
-.inst-tint--accent { --inst-tint: var(--accent); }
+.inst-tint--accent { --inst-tint: var(--accent-text); }   /* marigold is never a line on paper */

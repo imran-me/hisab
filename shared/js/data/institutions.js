@@ -22,15 +22,15 @@ export const INSTITUTIONS = [
   /* ---- Banks ------------------------------------------------------------ */
   { id: 'brac',        name: 'BRAC Bank',                 short: 'BRAC', kind: 'bank', color: '#1C4E9D', logo: null, match: ['brac'] },
   { id: 'city',        name: 'The City Bank',             short: 'City', kind: 'bank', color: '#D7282F', logo: null, match: ['city bank', 'citybank', 'city'] },
-  { id: 'dbbl',        name: 'Dutch-Bangla Bank',         short: 'DBBL', kind: 'bank', color: '#00833E', logo: null, match: ['dutch', 'dbbl'] },
+  { id: 'dbbl',        name: 'Dutch-Bangla Bank',         short: 'DBBL', kind: 'bank', color: '#00833E', logo: 'dbbl.svg', match: ['dutch', 'dbbl'] },
   { id: 'ebl',         name: 'Eastern Bank',              short: 'EBL',  kind: 'bank', color: '#0A3C75', logo: null, match: ['eastern', 'ebl'] },
   { id: 'ibbl',        name: 'Islami Bank Bangladesh',    short: 'IBBL', kind: 'bank', color: '#00695C', logo: null, match: ['islami', 'ibbl'] },
-  { id: 'sonali',      name: 'Sonali Bank',               short: 'SB',   kind: 'bank', color: '#B8860B', logo: null, match: ['sonali'] },
-  { id: 'janata',      name: 'Janata Bank',               short: 'JB',   kind: 'bank', color: '#1F7A3A', logo: null, match: ['janata'] },
+  { id: 'sonali',      name: 'Sonali Bank',               short: 'SB',   kind: 'bank', color: '#B8860B', logo: 'sonali.svg', match: ['sonali'] },
+  { id: 'janata',      name: 'Janata Bank',               short: 'JB',   kind: 'bank', color: '#1F7A3A', logo: 'janata.svg', match: ['janata'] },
   { id: 'agrani',      name: 'Agrani Bank',               short: 'AGR',  kind: 'bank', color: '#2E7D32', logo: null, match: ['agrani'] },
   { id: 'pubali',      name: 'Pubali Bank',               short: 'PB',   kind: 'bank', color: '#0F4C81', logo: null, match: ['pubali'] },
   { id: 'prime',       name: 'Prime Bank',                short: 'PBL',  kind: 'bank', color: '#005BAA', logo: null, match: ['prime'] },
-  { id: 'scb',         name: 'Standard Chartered',        short: 'SC',   kind: 'bank', color: '#0072AA', logo: null, match: ['standard chartered', 'stanchart', 'scb'] },
+  { id: 'scb',         name: 'Standard Chartered',        short: 'SC',   kind: 'bank', color: '#0072AA', logo: 'scb.svg', match: ['standard chartered', 'stanchart', 'scb'] },
   { id: 'hsbc',        name: 'HSBC',                      short: 'HSBC', kind: 'bank', color: '#DB0011', logo: null, match: ['hsbc'] },
   { id: 'mtb',         name: 'Mutual Trust Bank',         short: 'MTB',  kind: 'bank', color: '#A6192E', logo: null, match: ['mutual trust', 'mtb'] },
   { id: 'bankasia',    name: 'Bank Asia',                 short: 'BA',   kind: 'bank', color: '#0055A5', logo: null, match: ['bank asia'] },
@@ -50,16 +50,16 @@ export const INSTITUTIONS = [
 
   /* ---- Mobile financial services ---------------------------------------- */
   { id: 'bkash',       name: 'bKash',                     short: 'bK',   kind: 'mfs',  color: '#E2136E', logo: null, match: ['bkash', 'b kash'] },
-  { id: 'nagad',       name: 'Nagad',                     short: 'N',    kind: 'mfs',  color: '#EC1C24', logo: null, match: ['nagad'] },
-  { id: 'rocket',      name: 'Rocket',                    short: 'R',    kind: 'mfs',  color: '#8C3494', logo: null, match: ['rocket'] },
-  { id: 'upay',        name: 'Upay',                      short: 'U',    kind: 'mfs',  color: '#0054A6', logo: null, match: ['upay'] },
+  { id: 'nagad',       name: 'Nagad',                     short: 'N',    kind: 'mfs',  color: '#F26722', logo: null, match: ['nagad'] },
+  { id: 'rocket',      name: 'Rocket',                    short: 'R',    kind: 'mfs',  color: '#8C3494', logo: 'rocket.svg', match: ['rocket'] },
+  { id: 'upay',        name: 'Upay',                      short: 'U',    kind: 'mfs',  color: '#0054A6', logo: 'upay.svg', match: ['upay'] },
   { id: 'tap',         name: 'Tap',                       short: 'tap',  kind: 'mfs',  color: '#6C2D82', logo: null, match: ['tap'] },
   { id: 'surecash',    name: 'SureCash',                  short: 'SC',   kind: 'mfs',  color: '#00A651', logo: null, match: ['surecash', 'sure cash'] },
 
   /* ---- Card networks ----------------------------------------------------- */
-  { id: 'visa',        name: 'Visa',                      short: 'VISA', kind: 'card', color: '#1A1F71', logo: null, match: ['visa'] },
-  { id: 'mastercard',  name: 'Mastercard',                short: 'MC',   kind: 'card', color: '#EB001B', logo: null, match: ['mastercard', 'master card'] },
-  { id: 'amex',        name: 'American Express',          short: 'AMEX', kind: 'card', color: '#2E77BC', logo: null, match: ['amex', 'american express'] },
+  { id: 'visa',        name: 'Visa',                      short: 'VISA', kind: 'card', color: '#1A1F71', logo: 'visa.svg', match: ['visa'] },
+  { id: 'mastercard',  name: 'Mastercard',                short: 'MC',   kind: 'card', color: '#EB001B', logo: 'mastercard.svg', match: ['mastercard', 'master card'] },
+  { id: 'amex',        name: 'American Express',          short: 'AMEX', kind: 'card', color: '#2E77BC', logo: 'amex.png', match: ['amex', 'american express'] },
 
   /* ---- Generic: no institution, or one not listed -------------------------
      Drawn from the sprite in a tint, never a grey placeholder. */
