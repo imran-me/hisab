@@ -837,11 +837,11 @@ calls to it. Nothing else depends across tracks.
      increment.
 4. `git push origin HEAD:main`. **Never force-push.** If the push is rejected,
    rebase again and re-run the checks.
-5. **Author:** `Md Imran Hossain <rabitgulf@gmail.com>`. The local git config on
-   this machine says a different address, so pass
-   `-c user.email=rabitgulf@gmail.com` or set it in your worktree. **No AI
+5. **Author and committer:** `Md Imran Hossain <me.imran.personal@gmail.com>`,
+   which the repository's local git config already sets; the `pre-commit` hook
+   refuses any other identity. Never pass `--no-verify`. **No AI
    attribution anywhere**: no `Co-Authored-By`, no mention of an assistant,
-   in messages, trailers or file headers. (The last five commits before this
+   in messages, trailers or file headers. (The 34 commits before this
    document broke this rule. History is not rewritten, but it stops here.)
 6. **Logs, not shared-doc edits.** Each track appends to its own
    `docs/log/track-a.md`, `track-b.md` or `track-c.md` (change log entries,

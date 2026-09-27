@@ -39,9 +39,11 @@ The name: *hisab* (হিসাব) — the account, the reckoning.
 6. Futuristic, dense, instrument-panel visual language — and it must not read as
    generated. See §4.
 7. Mobile first, 360px design width.
-8. Every commit is authored as **Md Imran Hossain <rabitgulf@gmail.com>** with no
-   AI attribution anywhere — not in commit messages, not in trailers, not in
-   file headers.
+8. Every commit is authored and committed as **Md Imran Hossain
+   <me.imran.personal@gmail.com>** with no AI attribution anywhere — not in
+   commit messages, not in trailers, not in file headers. The repository's
+   local git config sets that identity, and local `commit-msg` / `pre-commit`
+   hooks refuse anything else.
 
 ---
 
