@@ -221,3 +221,23 @@ a marigold plus by day (`--plus-bg` / `--plus-ink`).
 Verified at 360 in both themes on Home against
 `docs/visual-v2/shots/home-night.png` and `home-day.png`: the bar, the tab
 states and both + treatments match.
+
+## A4.5 — category glyphs in the sprite
+
+Eight category glyphs from `docs/visual-v2/cat.svg`, redrawn onto the
+sprite's grid and its 1.5 stroke: `i-cat-food`, `i-cat-transport`,
+`i-cat-home`, `i-cat-utilities`, `i-cat-dining`, `i-cat-shopping`,
+`i-cat-mobile`, `i-cat-health`, plus `i-backspace` for the entry pad. For
+B5: `<span class="row__glyph cat-food">` + `icon('cat-food')` gives the tint's
+icon on the tint at 15%.
+
+Verified: check-sprite passes; all nine rendered at 360 at night inside
+`.row__glyph` tiles, each in its own tint.
+
+## Stopping point
+
+Not yet done in A4: deleting the v1 token aliases (waits on B and C to move
+off `--flow-*`, `--ink*`, `--surface*`); dark-by-default with a "follow the
+phone" option (A7, needs `state.js` to store 'night' on first run, since the
+pre-paint block is frozen); the flaky vault generator (a 24-character
+password has no digit about 8% of the time); qa-viewport at 390.
