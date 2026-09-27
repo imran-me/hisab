@@ -85,6 +85,10 @@ is(formatMoney(125049, 'BDT', { decimals: false }), '1,250', 'decimals suppresse
 is(formatMoney(125050, 'BDT', { decimals: false }), '1,251', 'decimals suppressed, half rounds up');
 is(formatMoney(-125050, 'BDT', { decimals: false }), '−1,251', 'and a negative rounds the same distance');
 is(formatMoney(12345, 'KWD', { minor: 'never' }), '12', "rounding follows the currency's own minor unit");
+is(formatMoney(-40, 'BDT', { minor: 'never' }), '0', 'a negative that rounds to zero loses its sign');
+is(formatMoneyHTML(-40, 'BDT', { minor: 'never' }), '<span class="money__sym">৳</span>0', 'no −৳0 in the HTML form either');
+is(formatMoney(40, 'BDT', { minor: 'never', sign: 'always' }), '0', 'nor a +0');
+is(formatMoney(-50, 'BDT', { minor: 'never' }), '−1', 'half a taka still rounds away from zero');
 is(formatMoney(125000, 'BDT', { minor: 'auto' }), '1,250', 'auto hides a zero minor part');
 is(formatMoney(125050, 'BDT', { minor: 'auto' }), '1,250.50', 'and keeps a non-zero one');
 is(formatMoney(125000, 'BDT'), '1,250.00', 'the input form keeps the minor part by default, so it round-trips');

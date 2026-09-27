@@ -267,9 +267,12 @@ function parts(minor, cur, mode) {
   }
   const showMinor = cur.minorUnit > 0 && (mode === 'always' || (mode === 'auto' && rest !== 0));
 
+  // The sign follows the figure as SHOWN: −40 poisha rounded to nothing is
+  // ৳0, not −৳0, which reads as a debt that does not exist.
+  const shown = whole > 0 || rest > 0;
   return {
-    negative: n < 0,
-    positive: n > 0,
+    negative: n < 0 && shown,
+    positive: n > 0 && shown,
     whole: groupDigits(String(whole), cur.group),
     minor: showMinor ? String(rest).padStart(cur.minorUnit, '0') : '',
   };

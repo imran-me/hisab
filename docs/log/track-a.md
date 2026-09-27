@@ -89,3 +89,19 @@ Browser tests: settings passes; vault has one flaky assertion (a generated
 fix in the vault); auth fails because it expects owner@hisab.test, which the
 throwaway DB does not have (not a regression). `run-browser-tests.sh` now
 takes `DEBUG_PORT` from the environment; shoot-mobile takes `BEFORE`.
+Fix-up before push: the Ledger fallback is `?compose=<type>`, the form B's
+`mountCompose()` reads; checked that + on Accounts opens the sheet there.
+
+## Review round fixes
+
+- `formatMoneyHTML(-40, 'BDT', { minor: 'never' })` printed `−৳0`. The sign
+  now follows the figure as shown, so a negative that rounds to nothing is
+  `৳0` (and a positive one is never `+0`). Four new assertions.
+- `tests/Unit` was not tracked, so `artisan test` failed in a clean checkout
+  (phpunit.xml names it). Committed with a `.gitkeep`.
+- `shoot-mobile.mjs` crashed on Windows for a path with a query string: the
+  file name kept `?` and `=`. Anything outside `[A-Za-z0-9_-]` is now `_`.
+
+Verified: test-money (92), artisan test (139 passed), shoot-mobile of
+`modules/ledger/list.html?compose=income` writes
+`modules_ledger_list_compose_income-1.png`.

@@ -129,7 +129,9 @@ if (env.EMAIL && env.PASSWORD) {
 for (const path of PAGES) {
   problems.length = 0;
   await go(path);
-  const name = path.replace(/\.html$/, '').replace(/[/.]/g, '_');
+  // Everything outside [A-Za-z0-9_-] becomes _, so a path with a query string
+  // (?compose=expense) is still a legal file name on Windows.
+  const name = path.replace(/\.html(?=$|[?#])/, '').replace(/[^A-Za-z0-9_-]/g, '_');
   const size = await evaluate('[document.documentElement.scrollWidth, document.documentElement.scrollHeight]');
   const [sw, sh] = size || [0, 0];
   if (env.BEFORE) { await evaluate(env.BEFORE); await sleep(700); }
