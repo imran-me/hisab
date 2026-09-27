@@ -153,7 +153,10 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
   color: var(--text-3);
 }
 
-.money__sign { margin-inline-end: 0.04em; }
+/* The sign is set bold: at 13px a regular U+2212 is short and thin enough to
+   read as a hyphen, and the sign is the one character that says which way
+   the money went. */
+.money__sign { font-weight: var(--fw-bold); margin-inline-end: 0.06em; }
 
 .money--sm  { font-size: var(--fs-13); }
 .money--md  { font-size: var(--t-body); }
@@ -185,15 +188,38 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
   .money--xl { font-size: var(--fs-28); }
 }
 
-/* Colour says "not the usual". Only money arriving, money saved and a
-   transfer carry a hue; an outflow is plain ink, because most rows are
-   spending and a list coloured red is an alarm that never stops. The minus
-   sign says it is money out. */
-.money--in    { color: var(--in); }
-.money--out   { color: var(--text-1); }
+/* Direction colour (owner, 2026-09-27: expense red, income green,
+   everywhere). formatMoneyHTML wraps every directed figure in .money-dir, so
+   no page has to opt in: a negative or typed-expense figure is red with a −,
+   a signed or typed-income figure green with a +. Transfers stay neutral and
+   deposits keep their own violet. A page's own .money--hold / .money--move
+   class wins over the sign, because a deposit is negative money that is
+   still yours. */
+.money-dir--out   { color: var(--money-out); }
+.money-dir--in    { color: var(--money-in); }
+.money-dir--saved { color: var(--saved); }
+.money-dir--move  { color: var(--move); }
+
+.money--hold .money-dir,
+.money--move .money-dir { color: inherit; }
+
+/* The page-level classes say the same thing for figures that carry no sign
+   of their own (a month's "Out" total is a positive number). They add the
+   sign too, so an expense total reads −৳50,422 like the rows under it. */
+.money--in    { color: var(--money-in); }
+.money--out   { color: var(--money-out); }
 .money--hold  { color: var(--saved); }
 .money--move  { color: var(--move); }
 .money--flat  { color: var(--text-1); }
+
+.money--out:not(:has(.money__sign))::before { content: '\2212'; font-weight: var(--fw-bold); margin-inline-end: 0.06em; }
+.money--in:not(:has(.money__sign))::before  { content: '+'; font-weight: var(--fw-bold); margin-inline-end: 0.06em; }
+
+/* Poisha inside a coloured figure keep the colour, a step quieter, rather
+   than turning grey in the middle of a red number. */
+.money-dir .money__minor,
+.money--in .money__minor,
+.money--out .money__minor { color: inherit; opacity: 0.72; }
 
 /* A converted figure is never presented as if it were the real one — it is
    dimmed and marked, and the rate that produced it is in the title attribute.

@@ -359,3 +359,34 @@ before the rename; check-pages passes.
 signed-in data renders before it measures. NOT YET RUN end to end: a full
 13 x 3 run behind the serial `php -S` did not finish in 10 minutes, so it
 needs `?only=` batches. Tracked as a follow-up.
+
+## Expense red, income green, everywhere (owner override of §3.7)
+
+Tokens: `--money-out` #FF6B6B and `--money-in` #3DD68C at night, #B42318 and
+#04703A by day, each at 4.5:1 or better on every surface a figure sits on
+(night red 6.9/6.5/6.0, green 10.2/9.6/8.8 on bg-0/1/2; day red
+5.9/6.6/5.4, green 5.3/5.9/4.8). `--in`/`--out` and their washes now derive
+from them. `--move` (transfers) and `--saved` (deposits) are unchanged.
+
+`formatMoneyHTML()` wraps every figure that has a direction in
+`<span class="money-dir money-dir--out|in|saved|move">`, so no page has to
+opt in:
+- negative, or `type: 'expense'`: red with −. An expense passed as a
+  positive amount still gets the minus.
+- `type: 'income'`, or positive with `sign: 'always'`: green with +.
+- `type: 'deposit'`: violet. `type: 'transfer'`: neutral.
+- no direction (a balance, a total), or anything that rounds to ৳0: ink.
+- `direction: false` keeps a figure ink.
+A page's own `.money--hold` / `.money--move` wins over the sign. The page
+classes `.money--out` / `.money--in` are now red and green, and add the −
+or + to a figure that carries no sign of its own (a month's Out total).
+Poisha inside a coloured figure keep the colour at 72%. The sign is bold,
+so a 13px U+2212 no longer reads as a hyphen (Dev B's request 2).
+
+For B and C: pass `type:` wherever you know it (ledger rows, Home's
+In/Saved/Out trio, account detail). Home's "Out" in the trio stays ink
+until C passes `type: 'expense'` or adds `.money--out`.
+
+Verified: test-money 97 assertions (7 new). At 360 in both themes the
+Ledger's rows, day totals and the Out tile are red with −, and In is green
+with +; Home and Accounts are unchanged where no direction applies.

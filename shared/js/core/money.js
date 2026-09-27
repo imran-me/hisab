@@ -388,10 +388,52 @@ function compactBody(absMinor, cur) {
  * that did not come from this file, so it is escaped anyway.)
  */
 export function formatMoneyHTML(minor, code = 'BDT', opts = {}) {
+  const inner = moneyBody(minor, code, opts);
+  // A figure that rounds to nothing has no direction: ৳0 is ink, never red.
+  const shown = parts(minor, currency(code), minorMode(opts, 'auto'));
+  const dir = shown.negative || shown.positive ? direction(minor, opts) : null;
+  // The direction wrapper is what makes every expense red and every income
+  // green on every page with no page opting in (owner, 2026-09-27). A figure
+  // with no direction — a balance, a total — is left as it is.
+  return dir ? `<span class="money-dir money-dir--${dir}">${inner}</span>` : inner;
+}
+
+/**
+ * Which way a figure moved, from its type when the caller knows it, and
+ * otherwise from its sign:
+ *
+ *   type 'expense' or a negative figure         → 'out'  (red, −)
+ *   type 'income', or a positive figure the
+ *   caller asked to sign (sign: 'always')       → 'in'   (green, +)
+ *   type 'deposit'                              → 'saved'
+ *   type 'transfer'                             → 'move' (neutral)
+ *   anything else (a balance, a total)          → null   (ink)
+ *
+ * `direction: false` turns it off for a figure that must stay ink.
+ */
+export function direction(minor, opts = {}) {
+  if (opts.direction === false) return null;
+  const t = opts.type;
+  if (t === 'deposit') return 'saved';
+  if (t === 'transfer') return 'move';
+  if (t === 'expense') return 'out';
+  if (t === 'income') return 'in';
+  const n = Number.isFinite(minor) ? Math.trunc(minor) : 0;
+  if (n < 0) return 'out';
+  if (n > 0 && opts.sign === 'always') return 'in';
+  return null;
+}
+
+function moneyBody(minor, code, opts) {
   const cur = currency(code);
   const p = parts(minor, cur, minorMode(opts, 'auto'));
 
-  const s = signChar(p, opts.sign);
+  // A typed expense shown as a positive amount still reads as money out.
+  let signOpt = opts.sign;
+  if (opts.type === 'expense' && p.positive) p.negative = true, p.positive = false;
+  if (opts.type === 'income' && p.positive && signOpt !== 'never') signOpt = 'always';
+
+  const s = signChar(p, signOpt);
   const signPart = s ? `<span class="money__sign">${s}</span>` : '';
 
   const mark = marker(cur, opts.code === undefined ? 'auto' : opts.code);

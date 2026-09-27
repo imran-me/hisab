@@ -60,14 +60,20 @@
   --plus-ink: var(--on-accent);
 
   /* ---------------------------------------------------------------------
-     4 · MONEY — only what is NOT the usual carries colour
+     4 · MONEY — expense red, income green (owner, 2026-09-27)
 
-     Out has a colour for the entry sheet's Out and for chart bars, but an
-     outflow AMOUNT in a list is --text-1. Each has a -wash (13–14%) for glyph
-     tiles and badges.
+     This overrides §3.7's "outflows are plain ink": the owner wants to see at
+     a glance which way money went. --money-out and --money-in are the two
+     direction colours; every expense figure is red with a −, every income
+     figure green with a +, decided by the shared formatter, not by a page.
+     Contrast (WCAG 2) against bg-0 / bg-1 / bg-2: red 6.9 / 6.5 / 6.0, green
+     10.2 / 9.6 / 8.8 at night; by day red 5.9 / 6.6 / 5.4, green 5.3 / 5.9 /
+     4.8. Transfers stay neutral (--move) and deposits keep --saved.
      --------------------------------------------------------------------- */
-  --in:    #5AD7A0;  --in-wash:    rgba(90, 215, 160, .13);    /* arriving     */
-  --out:   #F58BA0;  --out-wash:   rgba(245, 139, 160, .13);   /* entry, charts */
+  --money-out: #FF6B6B;
+  --money-in:  #3DD68C;
+  --in:    var(--money-in);   --in-wash:  color-mix(in srgb, var(--money-in) 14%, transparent);
+  --out:   var(--money-out);  --out-wash: color-mix(in srgb, var(--money-out) 14%, transparent);
   --saved: #A899FF;  --saved-wash: rgba(168, 153, 255, .14);   /* deposits     */
   --move:  #94A5BC;  --move-wash:  rgba(148, 165, 188, .13);   /* transfers    */
   --warn:  #FF9A52;  --warn-wash:  rgba(255, 154, 82, .13);    /* with an icon */
@@ -352,8 +358,7 @@
   --text-1: #16181D;  --text-2: #474D59;  --text-3: #5C6270;  --text-4: #A3A6AD;
   --accent-text: #8A5A00;  --accent-wash: rgba(245, 181, 63, .20);  --accent-glow: rgba(245, 181, 63, .40);
   --plus-bg: #16181D;  --plus-ink: #F5B53F;
-  --in: #07754C;     --in-wash: rgba(7, 117, 76, .09);
-  --out: #B8335A;    --out-wash: rgba(184, 51, 90, .08);
+  --money-out: #B42318;  --money-in: #04703A;
   --saved: #5641CF;  --saved-wash: rgba(86, 65, 207, .09);
   --move: #50607A;   --move-wash: rgba(80, 96, 122, .09);
   --warn: #A94E07;   --warn-wash: rgba(169, 78, 7, .09);
@@ -381,8 +386,7 @@
     --text-1: #16181D;  --text-2: #474D59;  --text-3: #5C6270;  --text-4: #A3A6AD;
     --accent-text: #8A5A00;  --accent-wash: rgba(245, 181, 63, .20);  --accent-glow: rgba(245, 181, 63, .40);
     --plus-bg: #16181D;  --plus-ink: #F5B53F;
-    --in: #07754C;     --in-wash: rgba(7, 117, 76, .09);
-    --out: #B8335A;    --out-wash: rgba(184, 51, 90, .08);
+    --money-out: #B42318;  --money-in: #04703A;
     --saved: #5641CF;  --saved-wash: rgba(86, 65, 207, .09);
     --move: #50607A;   --move-wash: rgba(80, 96, 122, .09);
     --warn: #A94E07;   --warn-wash: rgba(169, 78, 7, .09);

@@ -141,13 +141,38 @@ is(
 );
 is(
   formatMoneyHTML(-45000, 'BDT'),
-  '<span class="money__sign">−</span><span class="money__sym">৳</span>450',
-  'HTML: the sign comes first'
+  '<span class="money-dir money-dir--out"><span class="money__sign">−</span><span class="money__sym">৳</span>450</span>',
+  'HTML: a negative figure is tagged as money out, sign first'
 );
 is(
   formatMoneyHTML(45000, 'BDT', { sign: 'always', code: false }),
-  '<span class="money__sign">+</span>450',
-  'HTML: code:false drops the marker'
+  '<span class="money-dir money-dir--in"><span class="money__sign">+</span>450</span>',
+  'HTML: a signed positive is money in; code:false drops the marker'
+);
+is(
+  formatMoneyHTML(25000, 'BDT', { type: 'expense' }),
+  '<span class="money-dir money-dir--out"><span class="money__sign">−</span><span class="money__sym">৳</span>250</span>',
+  'HTML: an expense given as a positive amount still renders red with a minus'
+);
+is(
+  formatMoneyHTML(25000, 'BDT', { type: 'income' }),
+  '<span class="money-dir money-dir--in"><span class="money__sign">+</span><span class="money__sym">৳</span>250</span>',
+  'HTML: income gets its plus without asking'
+);
+is(
+  formatMoneyHTML(-500000, 'BDT', { type: 'deposit' }),
+  '<span class="money-dir money-dir--saved"><span class="money__sign">−</span><span class="money__sym">৳</span>5,000</span>',
+  'HTML: a deposit keeps its own colour'
+);
+is(
+  formatMoneyHTML(-500000, 'BDT', { type: 'transfer' }),
+  '<span class="money-dir money-dir--move"><span class="money__sign">−</span><span class="money__sym">৳</span>5,000</span>',
+  'HTML: a transfer is neutral'
+);
+is(
+  formatMoneyHTML(-500000, 'BDT', { direction: false }),
+  '<span class="money__sign">−</span><span class="money__sym">৳</span>5,000',
+  'HTML: direction:false leaves a figure ink'
 );
 is(
   formatMoneyHTML(26600000, 'BDT', { compact: true }),
