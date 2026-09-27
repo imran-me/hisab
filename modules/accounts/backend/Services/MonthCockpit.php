@@ -6,7 +6,8 @@ use App\Models\User;
 use Hisab\Accounts\Models\FinanceSetting;
 use Hisab\Accounts\Models\MonthClose;
 use Hisab\Ledger\Models\Transaction;
-use Hisab\Ledger\Services\BalanceSheet;
+use Hisab\Fx\Services\Converter;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -32,11 +33,21 @@ use Illuminate\Support\Collection;
  * context.md §1 says they exist to prevent: a household grocery bill has no
  * business inside a profit figure, and a client invoice is not pocket money.
  *
- * The month's income, spending and deposits come from the ledger's own
- * BalanceSheet::summary() rather than being summed again here, so the two
- * screens cannot drift apart: there is one implementation of the counting
- * rules, and this class adds only what the ledger does not know (carry-over,
- * the necessity mix, the review).
+ * ONE CURRENCY PER FIGURE. Every row is converted to the display currency
+ * (BDT unless `?currency=` says otherwise) BEFORE it is added, through
+ * Hisab\Fx\Services\Converter: the row's own rate snapshot when it has one for
+ * that pair, else the rate on file for its date. A sum of amount_minor over
+ * mixed currencies counts USD 450.00 as ৳450, and no later step can undo
+ * that. A currency with no rate is left out and NAMED in `unconverted`,
+ * never counted as 1.
+ *
+ * ONE ENGINE INSIDE THIS CLASS. Every sum here - the month's totals, the
+ * carry-over replay, the archive, the month-on-month comparison, the leak and
+ * the quality score - goes through amount() and signed(), so a row counts the
+ * same way in all of them. The ledger's BalanceSheet::summary() applies the
+ * same counting rules and, for a single-currency month, gives the same
+ * figures (a test pins it). It does not yet convert; until it does, this is
+ * the server figure for a month that holds a foreign-currency row.
  *
  * The finance SETTINGS (opening balance, budget, goal) belong to the personal
  * book. A business's money does not start from your pocket's opening balance,
@@ -46,8 +57,62 @@ class MonthCockpit
 {
     public const PERSONAL = 'personal';
 
-    public function __construct(private readonly BalanceSheet $sheet)
+    public const HOME_CURRENCY = 'BDT';
+
+    private ?Converter $fx = null;
+
+    private string $currency = self::HOME_CURRENCY;
+
+    /** @var array<string, string> account id => its currency, for the snapshot rule */
+    private array $accountCurrency = [];
+
+    /** @var array<string, true> currencies left out for want of a rate */
+    private array $unconverted = [];
+
+    /**
+     * Start one request's worth of arithmetic: the converter, the currency the
+     * figures are in, and a clean list of what could not be converted.
+     */
+    private function begin(User $user, string $currency): void
     {
+        $this->fx = new Converter((string) $user->id);
+        $this->currency = $currency;
+        $this->unconverted = [];
+        $this->accountCurrency = DB::table('accounts')
+            ->where('user_id', $user->id)->pluck('currency', 'id')->all();
+    }
+
+    /**
+     * A row's amount in the display currency, unsigned.
+     *
+     * The snapshot is the rate from the row's currency to its ACCOUNT's, so it
+     * applies only when the account is in the currency being reported.
+     */
+    private function amount(Transaction $row): int
+    {
+        if ($row->currency === $this->currency || $row->currency === null) {
+            return (int) $row->amount_minor;
+        }
+
+        $snapshot = ($this->accountCurrency[$row->account_id] ?? null) === $this->currency
+            ? $row->getRawOriginal('fx_rate')
+            : null;
+
+        $converted = $this->fx?->convert(
+            (int) $row->amount_minor,
+            (string) $row->currency,
+            $this->currency,
+            substr((string) $row->occurred_on, 0, 10),
+            $snapshot === null ? null : (string) $snapshot,
+        );
+
+        if ($converted === null) {
+            $this->unconverted[(string) $row->currency] = true;
+
+            return 0;
+        }
+
+        return $converted;
     }
 
     /**
@@ -65,8 +130,13 @@ class MonthCockpit
     /**
      * @return array<string, mixed>
      */
-    public function month(User $user, string $monthKey, string $book = self::PERSONAL): array
-    {
+    public function month(
+        User $user,
+        string $monthKey,
+        string $book = self::PERSONAL,
+        string $currency = self::HOME_CURRENCY,
+    ): array {
+        $this->begin($user, $currency);
         $settings = $this->settingsFor($user, $book);
 
         [$from, $to] = $this->bounds($monthKey);
@@ -77,15 +147,23 @@ class MonthCockpit
             ->orderByDesc('id')
             ->get();
 
-        $totals = $this->ledgerTotals($user, $book, $from, $to);
+        $totals = $this->totals($rows);
         $carry = $this->carry($user, $settings, $monthKey, $book);
         $closing = $carry['opening'] + $totals['net'];
 
         $breakdown = $this->breakdown($rows);
+        $leak = $this->leak($rows);
+        $quality = $this->quality($rows);
+        $insights = $this->insights($user, $settings, $monthKey, $totals, $breakdown, $book);
 
         return [
             'month' => $monthKey,
             'book' => $book,
+            'currency' => $this->currency,
+            // Currencies with no rate on file, whose rows are NOT in the
+            // figures. Named so the screen can say so rather than show a total
+            // that is quietly short.
+            'unconverted' => array_keys($this->unconverted),
             'from' => $from,
             'to' => $to,
             'opening_minor' => $carry['opening'],
@@ -98,8 +176,8 @@ class MonthCockpit
             'net_minor' => $totals['net'],
             'kept_minor' => $totals['kept'],
             'savings_rate' => $totals['savings_rate'],
-            'leak_minor' => $this->leak($rows),
-            'quality' => $this->quality($rows),
+            'leak_minor' => $leak,
+            'quality' => $quality,
             'recurring' => $this->recurring($user, $monthKey, $book),
             'closed' => $book === self::PERSONAL ? $this->closeFor($user, $monthKey) : null,
             'rows' => $this->shape($rows),
@@ -113,7 +191,7 @@ class MonthCockpit
             'soft_spend_minor' => $breakdown['soft'],
             'sectors' => $breakdown['sectors'],
             'methods' => $breakdown['methods'],
-            'insights' => $this->insights($user, $settings, $monthKey, $totals, $breakdown, $book),
+            'insights' => $insights,
             'settings' => [
                 'opening_balance_minor' => $settings->opening_balance_minor,
                 'carry_forward' => $settings->carry_forward,
@@ -145,20 +223,25 @@ class MonthCockpit
         // One pass over every counted row rather than a query per month: the
         // ledger of one person is small, and a month-by-month replay is N
         // queries to answer one question.
-        foreach ($this->counted($user, $book)->get(['type', 'direction', 'amount_minor', 'occurred_on', 'reverses_id']) as $row) {
+        $columns = ['type', 'direction', 'amount_minor', 'currency', 'account_id', 'fx_rate', 'occurred_on', 'reverses_id'];
+
+        foreach ($this->counted($user, $book)->get($columns) as $row) {
             $key = substr((string) $row->occurred_on, 0, 7);
-            if ($key === '') {
+            // The mirror leg of a two-leg deposit is not money leaving your
+            // hand a second time. The replay used to subtract both legs, so
+            // every deposit into a tracked DPS cost the next month's opening
+            // twice what it cost this month's figures.
+            if ($key === '' || ($row->type === 'deposit' && ! $this->isCountedDepositLeg($row))) {
                 continue;
             }
 
-            $sign = $row->reverses_id === null ? 1 : -1;
-            $amount = $sign * (int) $row->amount_minor;
+            $amount = $this->signed($row);
 
             if ($on && $key < $monthKey) {
                 $opening += $row->type === 'income' ? $amount : -$amount;
             }
 
-            if ($row->type === 'deposit' && $row->direction === 'out' && $key <= $monthKey) {
+            if ($row->type === 'deposit' && $key <= $monthKey) {
                 $vault += $amount;
             }
         }
@@ -172,11 +255,11 @@ class MonthCockpit
      * A reversal is stored as a row of the SAME type as the entry it cancels -
      * a reversed expense is still `type: expense` - so summing by type alone
      * counts a corrected 450 as 945 spent. That bug shipped once. Every sum on
-     * this screen goes through here.
+     * this screen goes through here, in the display currency.
      */
     private function signed(Transaction $row): int
     {
-        return ($row->reverses_id === null ? 1 : -1) * (int) $row->amount_minor;
+        return ($row->reverses_id === null ? 1 : -1) * $this->amount($row);
     }
 
     /**
@@ -452,8 +535,9 @@ class MonthCockpit
      *
      * @return array<string, mixed>
      */
-    public function archive(User $user, string $book = self::PERSONAL): array
+    public function archive(User $user, string $book = self::PERSONAL, string $currency = self::HOME_CURRENCY): array
     {
+        $this->begin($user, $currency);
         $settings = $this->settingsFor($user, $book);
         $carryOn = (bool) $settings->carry_forward;
 
@@ -554,7 +638,12 @@ class MonthCockpit
             ? 0 : intdiv($life['expense_minor'], count($spending));
 
         // Newest first, the way an archive is read.
-        return ['months' => array_reverse($out), 'lifetime' => $life];
+        return [
+            'currency' => $this->currency,
+            'unconverted' => array_keys($this->unconverted),
+            'months' => array_reverse($out),
+            'lifetime' => $life,
+        ];
     }
 
     /** @return array{score: float, grade: string} */
@@ -578,35 +667,6 @@ class MonthCockpit
         [$from, $to] = $this->bounds($monthKey);
 
         return $this->counted($user, $book)->whereBetween('occurred_on', [$from, $to])->get();
-    }
-
-    /**
-     * The month's totals, taken from the ledger rather than summed again.
-     *
-     * BalanceSheet::summary() is what /api/ledger/summary answers with, so Home
-     * and this screen read the same three numbers from the same code. The two
-     * derived figures keep the names this screen has always used: `net` is
-     * what moved in your hand (the ledger's spendable_minor) and `kept` is what
-     * you still have of what came in, a deposit included.
-     *
-     * @return array<string, int|float>
-     */
-    private function ledgerTotals(User $user, string $book, string $from, string $to): array
-    {
-        $s = $this->sheet->summary($user, $book, $from, $to);
-
-        $income = (int) $s['income_minor'];
-        $expense = (int) $s['expense_minor'];
-        $deposit = (int) $s['deposit_minor'];
-
-        return [
-            'income' => $income,
-            'expense' => $expense,
-            'deposit' => $deposit,
-            'net' => (int) $s['spendable_minor'],
-            'kept' => $income - $expense,
-            'savings_rate' => $income > 0 ? round((($income - $expense) / $income) * 100, 1) : 0.0,
-        ];
     }
 
     /**
@@ -641,7 +701,7 @@ class MonthCockpit
     {
         $sum = fn (callable $keep): int => $rows
             ->filter($keep)
-            ->sum(fn (Transaction $t): int => ($t->reverses_id === null ? 1 : -1) * (int) $t->amount_minor);
+            ->sum(fn (Transaction $t): int => $this->signed($t));
 
         $income = $sum(fn (Transaction $t): bool => $t->type === 'income');
         $expense = $sum(fn (Transaction $t): bool => $t->type === 'expense');
@@ -681,8 +741,8 @@ class MonthCockpit
             fn (Transaction $t): bool => $t->type === 'expense' && $t->reverses_id === null,
         );
 
-        $avoidable = (int) $spend->where('necessity', 4)->sum('amount_minor');
-        $discretionary = (int) $spend->where('necessity', 3)->sum('amount_minor');
+        $avoidable = (int) $spend->where('necessity', 4)->sum(fn (Transaction $t): int => $this->amount($t));
+        $discretionary = (int) $spend->where('necessity', 3)->sum(fn (Transaction $t): int => $this->amount($t));
 
         return $avoidable + intdiv($discretionary, 2);
     }
@@ -696,8 +756,8 @@ class MonthCockpit
         $spend = $rows->filter(fn (Transaction $t): bool => $t->type === 'expense' && $t->reverses_id === null);
 
         $tagged = $spend->filter(fn (Transaction $t): bool => $t->necessity !== null);
-        $taggedTotal = (int) $tagged->sum('amount_minor');
-        $untagged = (int) $spend->sum('amount_minor') - $taggedTotal;
+        $taggedTotal = (int) $tagged->sum(fn (Transaction $t): int => $this->amount($t));
+        $untagged = (int) $spend->sum(fn (Transaction $t): int => $this->amount($t)) - $taggedTotal;
 
         if ($taggedTotal === 0) {
             // No score rather than a zero. Zero reads as "all avoidable", which
@@ -706,7 +766,7 @@ class MonthCockpit
         }
 
         $weighted = $tagged->sum(
-            fn (Transaction $t): float => (self::QUALITY_WEIGHT[$t->necessity] ?? 0.0) * (int) $t->amount_minor,
+            fn (Transaction $t): float => (self::QUALITY_WEIGHT[$t->necessity] ?? 0.0) * $this->amount($t),
         );
 
         $score = ($weighted / $taggedTotal) * 100;

@@ -491,6 +491,7 @@ class FinanceCockpitTest extends TestCase
         $this->actingAs($this->owner)->postJson('/api/ledger/demo', ['months' => 3])->assertOk();
 
         $months = [now()->format('Y-m'), now()->subMonthNoOverflow()->format('Y-m')];
+        $compared = 0;
 
         foreach (['personal', 'business'] as $book) {
             foreach ($months as $key) {
@@ -500,6 +501,15 @@ class FinanceCockpitTest extends TestCase
                     ->getJson("/api/ledger/summary?book={$book}&period={$key}")->assertOk()->json('data');
 
                 $this->assertSame($book, $cockpit['book']);
+
+                // The ledger summary does not convert yet (Track B), so it is
+                // only a reference for a month held in one currency. A month
+                // with a dollar row is pinned by the conversion tests below.
+                if ($summary['currencies'] !== ['BDT']) {
+                    continue;
+                }
+                $compared++;
+
                 $this->assertSame($summary['income_minor'], $cockpit['income_minor'], "{$book} {$key} income");
                 $this->assertSame($summary['expense_minor'], $cockpit['expense_minor'], "{$book} {$key} spent");
                 $this->assertSame($summary['deposit_minor'], $cockpit['deposit_minor'], "{$book} {$key} deposited");
@@ -511,6 +521,110 @@ class FinanceCockpitTest extends TestCase
                 );
             }
         }
+
+        $this->assertGreaterThanOrEqual(2, $compared, 'the business book is BDT-only and must be compared');
+    }
+
+    // ------------------------------------------------------------ currencies
+
+    private function usdAccount(): Account
+    {
+        return Account::query()->create([
+            'id' => strtoupper((string) Str::ulid()), 'user_id' => $this->owner->id,
+            'name' => 'Payoneer', 'type' => 'wallet', 'currency' => 'USD',
+            'book' => 'personal', 'opening_balance_minor' => 0,
+        ]);
+    }
+
+    public function test_a_dollar_row_is_converted_before_it_is_added(): void
+    {
+        $usd = $this->usdAccount();
+
+        $this->record('income', 100000, '2026-09-05');                      // ৳1,000.00
+        $this->record('income', 45000, '2026-09-06', [                      // $450.00
+            'account_id' => $usd->id, 'currency' => 'USD',
+        ]);
+
+        $m = $this->month('2026-09');
+
+        // $450 at the seeded 122.50 is ৳55,125.00. Adding the cents to the
+        // poisha would have said ৳1,450.00.
+        $this->assertSame('BDT', $m['currency']);
+        $this->assertSame(100000 + 5512500, $m['income_minor']);
+        $this->assertSame([], $m['unconverted']);
+    }
+
+    public function test_a_dollar_charge_rounds_half_away_from_zero(): void
+    {
+        $this->record('expense', 1299, '2026-09-10', ['currency' => 'USD']);  // $12.99 on a taka account
+
+        // 1299 × 122.50 = 159,127.5 poisha, which rounds to 159,128 - and a
+        // refund of the same size must round the same distance the other way.
+        $this->assertSame(159128, $this->month('2026-09')['expense_minor']);
+    }
+
+    public function test_a_row_dated_before_every_rate_uses_the_first_rate_on_file(): void
+    {
+        $usd = $this->usdAccount();
+        // The seed is dated 2026-09-01; an August payout still converts.
+        $this->record('income', 10000, '2026-08-20', ['account_id' => $usd->id, 'currency' => 'USD']);
+
+        $this->assertSame(1225000, $this->month('2026-08')['income_minor']);
+    }
+
+    public function test_a_currency_with_no_rate_is_named_not_counted_as_one(): void
+    {
+        $this->record('income', 100000, '2026-09-05');
+        $this->record('income', 5000, '2026-09-06', ['currency' => 'EUR']);
+
+        // No EUR/AED rate on file in either direction.
+        $m = $this->actingAs($this->owner)->getJson('/api/finance/2026-09?currency=AED')->assertOk()->json('data');
+
+        $this->assertSame('AED', $m['currency']);
+        $this->assertSame(['EUR'], $m['unconverted']);
+        // ৳1,000 at the inverse of 33.35 is AED 29.99 (2998.5 fils, half up).
+        $this->assertSame(2999, $m['income_minor']);
+    }
+
+    public function test_the_archive_converts_the_same_way_as_the_month(): void
+    {
+        $usd = $this->usdAccount();
+        $this->record('income', 100000, '2026-08-05');
+        $this->record('income', 45000, '2026-08-06', ['account_id' => $usd->id, 'currency' => 'USD']);
+        $this->record('expense', 1299, '2026-09-10', ['currency' => 'USD']);
+
+        $archive = collect(
+            $this->actingAs($this->owner)->getJson('/api/finance/archive')->json('data.months'),
+        )->keyBy('month');
+
+        foreach (['2026-08', '2026-09'] as $key) {
+            $month = $this->month($key);
+            foreach (['income_minor', 'expense_minor', 'opening_minor', 'closing_minor'] as $field) {
+                $this->assertSame($month[$field], $archive[$key][$field], "{$key}.{$field}");
+            }
+        }
+    }
+
+    public function test_a_two_leg_deposit_leaves_the_next_opening_once(): void
+    {
+        $dps = Account::query()->create([
+            'id' => strtoupper((string) Str::ulid()), 'user_id' => $this->owner->id,
+            'name' => 'DPS', 'type' => 'savings', 'currency' => 'BDT',
+            'book' => 'personal', 'opening_balance_minor' => 0,
+        ]);
+
+        $this->record('income', 100000, '2026-08-01');
+        $this->record('deposit', 20000, '2026-08-02', ['to_account_id' => $dps->id]);
+
+        // In hand after August: 1,000 − 200, not 1,000 − 400.
+        $this->assertSame(80000, $this->month('2026-08')['closing_minor']);
+        $this->assertSame(80000, $this->month('2026-09')['opening_minor']);
+    }
+
+    public function test_an_unknown_book_is_422_not_a_month_of_zeros(): void
+    {
+        $this->actingAs($this->owner)->getJson('/api/finance/2026-03?book=persnal')->assertStatus(422);
+        $this->actingAs($this->owner)->getJson('/api/finance/archive?book=persnal')->assertStatus(422);
     }
 
     public function test_the_cockpit_defaults_to_the_personal_book(): void
@@ -541,6 +655,11 @@ class FinanceCockpitTest extends TestCase
 
     public function test_another_book_does_not_inherit_the_personal_opening_balance(): void
     {
+        Account::query()->create([
+            'id' => strtoupper((string) Str::ulid()), 'user_id' => $this->owner->id,
+            'name' => 'Shop', 'type' => 'bank', 'currency' => 'BDT',
+            'book' => 'business', 'opening_balance_minor' => 0,
+        ]);
         $this->actingAs($this->owner)->patchJson('/api/finance/settings', ['opening_balance_minor' => 500000])->assertOk();
 
         $business = $this->actingAs($this->owner)

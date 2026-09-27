@@ -9,6 +9,7 @@ use Hisab\Accounts\Services\MonthCockpit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The Accounts screen's data, in one place.
@@ -28,7 +29,9 @@ class FinanceController extends Controller
     {
         $this->assertMonth($month);
 
-        return response()->json(['data' => $this->cockpit->month($request->user(), $month, $this->book($request))]);
+        return response()->json(['data' => $this->cockpit->month(
+            $request->user(), $month, $this->book($request), $this->currency($request),
+        )]);
     }
 
     /**
@@ -40,7 +43,9 @@ class FinanceController extends Controller
      */
     public function archive(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->cockpit->archive($request->user(), $this->book($request))]);
+        return response()->json(['data' => $this->cockpit->archive(
+            $request->user(), $this->book($request), $this->currency($request),
+        )]);
     }
 
     /** Which months have anything in them. */
@@ -132,8 +137,28 @@ class FinanceController extends Controller
     private function book(Request $request): string
     {
         $f = $request->validate(['book' => ['sometimes', 'string', 'max:32']]);
+        $book = (string) ($f['book'] ?? MonthCockpit::PERSONAL);
 
-        return (string) ($f['book'] ?? MonthCockpit::PERSONAL);
+        // A book is personal or one the owner has an account in. Anything else
+        // is a typo, and answering `?book=persnal` with a month of zeros reads
+        // as "no data" rather than as the mistake it is.
+        $known = $book === MonthCockpit::PERSONAL || DB::table('accounts')
+            ->where('user_id', $request->user()->id)->where('book', $book)->exists();
+
+        abort_unless($known, 422, 'No such book.');
+
+        return $book;
+    }
+
+    /**
+     * `?currency=` for the figures, the home currency when absent. Every row
+     * is converted into it before it is added.
+     */
+    private function currency(Request $request): string
+    {
+        $f = $request->validate(['currency' => ['sometimes', 'string', 'size:3', 'exists:currencies,code']]);
+
+        return strtoupper((string) ($f['currency'] ?? MonthCockpit::HOME_CURRENCY));
     }
 
     /**
