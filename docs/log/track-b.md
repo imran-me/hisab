@@ -199,3 +199,18 @@ moves the taka balance by its converted value).
 The client `summary()` called income − spent − held `kept_minor`; the server
 and the cockpit call it `spendable_minor` and use `kept_minor` for income −
 spent. Renamed. Nothing read the old name (grep across modules, index, shared).
+
+C's request 4 in the next commit: `entryActions()` deleted (no references left).
+
+## Review (Medium): a snapshotted rate must be for the row's own pair
+
+`LedgerWriter::snapshotRate()` accepted any visible `fx_rate_id`, so a EUR/BDT
+rate could be snapshotted onto a USD charge on a taka card. It now requires
+`base` = the row's currency and `quote` = the account's; anything else (another
+pair, the inverse pair, a rate that is not the owner's or a seed) is a 422 on
+`fx_rate_id` for the leg the rate was chosen for. The incoming leg of a pair,
+on another account, simply is not snapshotted when the rate does not fit it.
+The browser never sends `fx_rate_id` today, so no client change.
+
+**Verified:** php artisan test 149 passed (2 new: another pair refused with
+nothing written; the inverse pair refused).

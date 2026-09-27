@@ -297,6 +297,36 @@ class LedgerTest extends TestCase
         $this->assertSame([], $res->json('meta.unconverted'));
     }
 
+    public function test_a_rate_for_another_pair_is_refused(): void
+    {
+        $card = $this->account('Card');
+        $euroRate = \Illuminate\Support\Facades\DB::table('fx_rates')
+            ->where('base', 'EUR')->where('quote', 'BDT')->value('id');
+
+        // A USD charge on a taka card, snapshotting the EURO rate. Accepted,
+        // every figure read through it would be converted at 133.20 not 122.50.
+        $this->entry(['type' => 'expense', 'account_id' => $card->id, 'fx_rate_id' => $euroRate,
+            'amount_minor' => 1299, 'currency' => 'USD', 'occurred_on' => '2026-09-10'])
+            ->assertStatus(422)->assertJsonValidationErrors('fx_rate_id');
+
+        $this->assertSame(0, Transaction::query()->count());
+    }
+
+    public function test_the_inverse_pair_is_refused_too(): void
+    {
+        $card = $this->account('Card');
+        $usdRate = \Illuminate\Support\Facades\DB::table('fx_rates')
+            ->where('base', 'USD')->where('quote', 'BDT')->value('id');
+
+        // BDT on a USD account needs BDT → USD; a USD → BDT rate read the
+        // wrong way round is off by the square of the rate.
+        $wallet = $this->account('Payoneer', ['currency' => 'USD']);
+        $this->entry(['type' => 'expense', 'account_id' => $wallet->id, 'fx_rate_id' => $usdRate,
+            'amount_minor' => 50000, 'currency' => 'BDT', 'occurred_on' => '2026-09-10'])
+            ->assertStatus(422);
+        $this->assertSame(0, Transaction::query()->where('account_id', $card->id)->count());
+    }
+
     public function test_a_row_with_no_rate_is_left_out_of_a_balance_and_named(): void
     {
         $euro = $this->account('Euro wallet', ['currency' => 'EUR', 'opening_balance_minor' => 5000]);

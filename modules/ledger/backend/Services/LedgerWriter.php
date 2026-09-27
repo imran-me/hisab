@@ -270,7 +270,11 @@ class LedgerWriter
         }
 
         $this->snapshotCategory($transaction);
-        $this->snapshotRate($transaction, $data['fx_rate_id'] ?? null);
+        // Strict on the leg the rate was chosen for. The incoming leg of a pair
+        // sits on another account, possibly in another currency, so a rate that
+        // does not fit it is simply not snapshotted there.
+        $secondLeg = in_array($type, Transaction::PAIRABLE, true) && ($overrides['direction'] ?? null) === 'in';
+        $this->snapshotRate($transaction, $data['fx_rate_id'] ?? null, strict: ! $secondLeg);
 
         $transaction->save();
 
@@ -322,7 +326,7 @@ class LedgerWriter
      * that can post its own rate can post any figure it likes into a converted
      * total, which is the same class of problem as posting a balance.
      */
-    private function snapshotRate(Transaction $transaction, ?string $rateId): void
+    private function snapshotRate(Transaction $transaction, ?string $rateId, bool $strict = true): void
     {
         $accountCurrency = DB::table('accounts')
             ->where('id', $transaction->account_id)
@@ -341,9 +345,27 @@ class LedgerWriter
             // The owner's own rate, or a shared seeded one. Anything else is
             // not theirs to snapshot.
             ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $transaction->user_id))
-            ->first(['rate', 'as_of']);
+            ->first(['base', 'quote', 'rate', 'as_of']);
 
-        if ($rate === null) {
+        // The rate has to be FOR this row: from its currency into its
+        // account's. Any rate id used to be accepted, so a EUR/BDT rate could
+        // be snapshotted onto a USD charge and every balance and total read
+        // through it would be converted at the wrong currency's rate - a
+        // figure that is wrong and looks like a conversion. Refused, not
+        // quietly dropped, so the client learns its rate was the wrong one.
+        $fits = $rate !== null
+            && $rate->base === $transaction->currency
+            && $rate->quote === $accountCurrency;
+
+        if (! $fits) {
+            if ($strict) {
+                throw ValidationException::withMessages([
+                    'fx_rate_id' => __('That rate is not from :from to :to.', [
+                        'from' => $transaction->currency, 'to' => $accountCurrency,
+                    ]),
+                ]);
+            }
+
             return;
         }
 
