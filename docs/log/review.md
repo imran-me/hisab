@@ -15,6 +15,125 @@ and `tools/shoot-mobile.mjs` at 360×780.
 
 ---
 
+## Round 5 — `a58fa8f..df932b3` (8 commits: A ×5, B ×2, C ×1)
+
+**What was run**
+
+- 360×780 screenshots of all ten screens, in both themes, compared with
+  `docs/visual-v2/shots/`.
+- `php artisan test`: **139 passed, 522 assertions**.
+- `test-money`: 92 assertions. `check-pages`: ok. `check-sprite`: ok.
+- `tools/run-browser-tests.sh`, all four harnesses:
+  - Static server: vault 51, settings 13, ledger 33, all passed.
+  - Against `serve.php`: vault 19, settings 13, auth 19, all passed.
+
+**Identity.** Every commit in this batch is authored and committed as
+`Md Imran Hossain`. They predate `69ef8ea`, so per the owner's correction the
+`rabitgulf` author with `me.imran.personal` committer is not flagged.
+
+**Ownership.** No track edited another's files. One borderline case: A's
+`df932b3` moves fonts out of `docs/visual-v2/f/` and edits
+`docs/visual-v2/v2.css`, which is the director's mock. That is harmless, but it
+is worth telling the director.
+
+**Closed from earlier rounds**
+
+- Round 3 High, today's row hidden. Fixed by `4368832`: each day is its own
+  `<li>`, and the card clips with `overflow: clip`. After a save, "local bazar"
+  shows under TODAY in both themes.
+- Round 2 Medium, −৳0. Fixed by `5f11c2b` for the list form.
+- Round 1 Low, `tests/Unit`. Fixed by `5f11c2b`.
+- Round 2 visual 1, the ৳ reading as "b". Fixed by `df932b3`, which draws ৳ in
+  its own `Hisab Taka` face at the digits' weight. At hero size it now reads as
+  taka.
+
+### High: the production CSP strips every inline `style="…"` the JS writes. Owners: C (Home), A (`spark.js`)
+
+- `.htaccess:288` sends `style-src 'self'` with no `'unsafe-inline'`. That
+  policy applies to style **attributes** as well as `<style>` blocks.
+- Home's category bar builds its bands as
+  `<i style="--seg-share:…;--seg-color:…">`
+  (`modules/overview/overview-page.js:332`, `:335`). `spark.js:93` and `:148`
+  build bars the same way. On the live site every band loses its width and
+  colour, so "Where it went" renders as an empty or equal-width bar.
+- Local screenshots cannot show this, because `tools/serve.php` and
+  `python -m http.server` send no CSP.
+- **Checked:** a two-line page served locally with the same policy in headless
+  Chrome. An `innerHTML` element with `style="width:37px"` computed as
+  **`auto`**, while `el.style.setProperty('width', '41px')` computed as
+  **41px**.
+- **Fix:** write the variables with `el.style.setProperty('--seg-share', …)`
+  after inserting the markup. CSSOM writes are allowed under the policy.
+- The same applies to the static `style="…"` attributes in `login.html:70`,
+  `vault/list.html:74`, the stub pages and the ledger skeletons. Move those into
+  classes.
+- **Also for A:** make `serve.php` send the same CSP as `.htaccess`, so
+  screenshots show what production shows.
+
+### Medium: a correction made offline never reaches the server. Owner: B (B9)
+
+- `155c2a2` correctly stops the double-post. But in `update()`
+  (`ledger/backend/api.js`), a PATCH that fails with `reason: 'offline'` keeps
+  the local mirror and replacement and returns ok, and nothing queues the PATCH.
+- The device then shows a corrected entry that the server never hears about.
+  The next `memo = null` read from the server silently brings the original
+  back.
+- It needs the outbox (B9), or refusing corrections while offline until B9
+  lands.
+
+### Low: compact figures still print −৳0. Owner: A
+
+- `formatMoney(-1, 'BDT', {compact: true, symbol: true})` returns `−৳0`. The
+  compact path takes its sign from `parts()` in `'always'` mode, where one
+  poisha still counts as shown.
+- It is rare in practice, but it is the same bug in the one path `5f11c2b` did
+  not cover.
+
+### Low: the vault harness quietly runs fewer checks with a backend. Owner: A
+
+- `test-vault-browser.html` reports **51** assertions on a static server and
+  **19** against `serve.php`. Both say "passed".
+- A run that silently skips 32 checks looks like full coverage. Print "N
+  skipped (server mode)", or run both modes in `run-browser-tests.sh`.
+
+### Low: the "Reaching hand" setting describes a button that no longer moves. Owner: A
+
+- The hint at `modules/settings/index.html:124` says "Moves the compose button
+  to the reachable side". Since `a58fa8f` the `+` is centred in the tab bar.
+- Either make the setting mirror the pad's `⌫` column and chip grid, as §3.6
+  says, or drop it.
+
+### Visual, compared with `docs/visual-v2/shots`
+
+- **Home (C).** It is now close to `home-night.png`:
+  - The "Left to spend" hero, the labelled In / Saved / Out row, Today, the
+    account strip and "Where it went" are all there.
+  - The marigold `+` notch matches the mock, and the day theme's warm paper
+    reads well.
+  - The differences at `df932b3`:
+    1. The header Out/In buttons were still there. Fixed later by `29ff132` /
+       `45ea669`.
+    2. The account strip started at x=0 with no gutter. Fixed later by
+       `deff71b`.
+    3. The category bar used the old cyan, pink and green, not the mock's muted
+       tints. Fixed later by `6470ba9`.
+    4. The hero shows `.72` poisha. The mock hides them at hero size, and I
+       would too.
+    5. A 48px "Hisab Home" header sits above a month line the mock uses as its
+       header.
+- **Ledger (B).** Still the v1 layout:
+  - The grey month box and the edge-to-edge filter chips remain.
+  - Every row has the same arrow tile, and the day headings are heavy bands.
+  - Against `ledger-night.png` (plain day labels, category glyphs, one
+    segmented filter, totals in one line), this is the screen furthest from
+    the mock. It is B5/B6 plus the glyphs from `db2595d`.
+- **Vault (A).** It now has the tab bar. But its accent is still the old
+  cyan/teal (icon tile, "Create the vault" button) on a marigold app, and the
+  password placeholder still indents for an icon that is not there.
+- **Settings (A).** The grouped cards read well, and Sign out is reachable.
+
+---
+
 ## Round 4 — `18e1b3b` (Track C: convert each row in the cockpit), `c47d5ab` (Track B: convert each row in the ledger summary)
 
 Both commits answer round 1's High. Authors and emails are correct, with no AI
