@@ -261,7 +261,11 @@
   gap: var(--s-2);
   list-style: none;
   margin-block: 0;
-  padding-block: 2px;
+  /* The strip bleeds to the screen edge (.scroll-x), but its first tile
+     starts on the page gutter like everything else, and a swipe snaps back
+     to it. Set here as well because a list reset would otherwise zero it. */
+  padding: 2px var(--gutter);
+  scroll-padding-inline: var(--gutter);
 }
 
 .home-account {
