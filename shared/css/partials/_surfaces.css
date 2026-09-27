@@ -1,14 +1,16 @@
 /* =========================================================================
    Hisab · Surfaces
-   Cards, panels, list rows, empty and loading states. A surface that sits on
-   the page gets a hairline; only a surface that FLOATS above it gets a shadow.
+   Cards, panels, list rows, empty and loading states. A card is a luminance
+   step (--bg-1 on --bg-0) with no border at night and a 1px ring on paper.
+   Cards hold GROUPS OF ROWS; a hero or a section head never sits in one.
    ========================================================================= */
 
 /* ---- Card / panel ------------------------------------------------------- */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-3);
+  background: var(--bg-1);
+  border: 0;
+  border-radius: var(--r-lg);
+  box-shadow: var(--ring-card);
   padding: var(--s-4);
   min-width: 0;   /* so a wide child truncates instead of widening the card */
 }
@@ -16,7 +18,7 @@
 .card--flush { padding: 0; overflow: hidden; }   /* a card that is all table or all list */
 .card--tight { padding: var(--s-3); }
 .card--roomy { padding: var(--s-5); }
-.card--sunken { background: var(--surface-3); border-color: var(--line-soft); }
+.card--sunken { background: var(--bg-3); box-shadow: none; }
 
 /* An interactive card. The lift is 1px and the border brightens — no scale,
    no shadow bloom. On a phone :hover never fires, so the pressed state is
@@ -29,8 +31,8 @@
   transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), transform var(--t-instant) var(--ease);
 }
 
-.card--action:hover { border-color: var(--line-hot); background: var(--surface-2); }
-.card--action:active { transform: translateY(1px); background: var(--surface-3); }
+.card--action:hover { background: var(--bg-2); }
+.card--action:active { transform: scale(0.99); background: var(--bg-3); }
 
 /* The accent edge. A 2px inline-start border in a flow colour, used to say
    which book or which flow a card belongs to at a glance. Drawn with a
@@ -43,8 +45,8 @@
   inset-block: 0;
   inset-inline-start: 0;
   width: 3px;
-  border-start-start-radius: var(--r-3);
-  border-end-start-radius: var(--r-3);
+  border-start-start-radius: var(--r-lg);
+  border-end-start-radius: var(--r-lg);
   background: var(--edge-color, var(--line-hot));
 }
 
@@ -77,15 +79,29 @@
    announcement, and this list is the primary way the product is read.
    ------------------------------------------------------------------------ */
 .list { list-style: none; padding: 0; margin: 0; min-width: 0; }
-.list > li + li { border-top: 1px solid var(--line-soft); }
+
+/* The separator starts where the TEXT starts (16 gutter + 40 glyph + 12 gap),
+   never full width: a full-width rule cuts the glyph column into boxes, an
+   indented one groups each glyph with its own line. Rows without a glyph
+   rule from the gutter. */
+.list > li { position: relative; }
+.list > li + li::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: calc(var(--s-4) + 40px + var(--s-3)) 0;
+  border-top: 1px solid var(--line-soft);
+  pointer-events: none;
+}
+.list > li + li:not(:has(.row__glyph))::before { inset-inline-start: var(--s-4); }
 
 .row {
   display: flex;
   align-items: center;
   gap: var(--s-3);
   width: 100%;
-  min-height: var(--tap);
-  padding: var(--s-3) var(--s-4);
+  min-height: 60px;
+  padding: var(--s-2) var(--s-4);
   background: transparent;
   border: 0;
   color: inherit;
@@ -107,19 +123,30 @@
 
 .row--stripe:nth-child(even) { background: var(--wash-stripe); }
 
-/* The leading glyph. A square with a wash, never a circle: circles read as
-   avatars, and none of these are people. */
+/* The leading glyph: a 40px tile, never a circle (circles read as avatars).
+   A category tile is its tint's icon on the tint at 15% — set --tint on the
+   tile (a .cat-* class) and it follows. With no tint: --text-3. */
 .row__glyph {
   flex: none;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--r-2);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
   display: grid;
   place-items: center;
-  background: var(--surface-3);
-  color: var(--ink-2);
-  border: 1px solid var(--line-soft);
+  color: var(--tint, var(--text-2));
+  background: color-mix(in srgb, var(--tint, var(--text-3)) 15%, transparent);
+  border: 0;
 }
+
+/* Category tints, by name. A module sets the class; the colour is a token. */
+.cat-food      { --tint: var(--cat-food); }
+.cat-transport { --tint: var(--cat-transport); }
+.cat-home      { --tint: var(--cat-home); }
+.cat-utilities { --tint: var(--cat-utilities); }
+.cat-dining    { --tint: var(--cat-dining); }
+.cat-shopping  { --tint: var(--cat-shopping); }
+.cat-mobile    { --tint: var(--cat-mobile); }
+.cat-health    { --tint: var(--cat-health); }
 
 .row__glyph--in    { background: var(--flow-in-wash);   color: var(--flow-in-ink);   border-color: transparent; }
 .row__glyph--out   { background: var(--flow-out-wash);  color: var(--flow-out-ink);  border-color: transparent; }
@@ -131,8 +158,8 @@
 /* The middle column. flex:1 with min-width:0 — the min-width is what lets the
    title truncate; without it the amount on the right is pushed off screen. */
 .row__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.row__title { font-size: var(--fs-14); font-weight: var(--fw-medium); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row__sub { font-size: var(--fs-12); color: var(--ink-3); display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.row__title { font-size: var(--t-body); font-weight: var(--fw-medium); line-height: 1.25; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row__sub { font-size: var(--t-meta); color: var(--text-3); display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
 .row__sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The trailing column — the amount, and under it the running balance. Right
@@ -145,12 +172,6 @@
    name shown whole and one cut to an ellipsis. */
 .row > .btn--icon:last-child { flex: none; margin-inline-end: calc(-1 * var(--s-2)); }
 
-@media (max-width: 380px) {
-  /* Tighter gaps on a narrow phone: three gaps of 12px is a fifth of the
-     name's width, and the name is the part of a row that is read first. */
-  .row { gap: var(--s-2); padding-inline: var(--s-3); }
-  .row__glyph { margin-inline-end: 2px; }
-}
 
 /* A chevron on a row that navigates. Hidden from assistive tech — the link
    text already says where it goes. */
@@ -168,21 +189,17 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--s-3);
-  padding: var(--s-2) var(--s-4);
-  background: var(--surface-2);
-  border-block: 1px solid var(--line-soft);
-  font-size: var(--fs-11);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--ink-3);
+  /* Text only, no band (v2): the day on the left, its net on the right, on
+     the list's own surface so it can stick without a stripe across it. */
+  padding: var(--s-4) var(--s-4) var(--s-1);
+  background: var(--bg-1);
+  border: 0;
+  font-size: var(--t-meta);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.02em;
+  color: var(--text-3);
 }
 
-/* Keeps the day heading's text on the same left edge as the rows under it,
-   which step in on a narrow phone (see .row above). */
-@media (max-width: 380px) {
-  .list-group-head { padding-inline: var(--s-3); }
-}
 
 /* ---- Empty state -------------------------------------------------------
    Every empty state names the thing that is missing AND offers the action

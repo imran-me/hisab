@@ -36,12 +36,11 @@
   max-height: min(92dvh, 46rem);
   padding: 0;
 
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-bottom: 0;
-  border-radius: var(--r-4) var(--r-4) 0 0;
-  box-shadow: var(--e-3);
-  color: var(--ink);
+  background: var(--bg-2);
+  border: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: var(--shadow-sheet);
+  color: var(--text-1);
   overflow: hidden;
 
   display: flex;
@@ -71,8 +70,8 @@
   content: '';
   width: 36px;
   height: 4px;
-  border-radius: var(--r-full);
-  background: var(--line-hot);
+  border-radius: var(--r-pill);
+  background: var(--text-4);
 }
 
 .sheet__head {
@@ -81,18 +80,17 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s-3);
-  padding: var(--s-2) var(--s-4) var(--s-3);
-  border-bottom: 1px solid var(--line-soft);
+  padding: var(--s-1) var(--s-4) var(--s-2);
   min-width: 0;
 }
 
-.sheet__title { font-size: var(--fs-16); font-weight: var(--fw-semibold); min-width: 0; }
+.sheet__title { font-size: var(--t-head); font-weight: var(--fw-semibold); line-height: 1; min-width: 0; }
 
 .sheet__body {
   flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;   /* scrolling to the end must not scroll the page behind */
-  padding: var(--s-4);
+  padding: var(--s-2) var(--s-4) calc(var(--s-3) + var(--safe-bottom));
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
@@ -110,8 +108,7 @@
     inset: 0;
     margin: auto;
     max-height: min(86dvh, 52rem);
-    border-radius: var(--r-3);
-    border-bottom: 1px solid var(--line);
+    border-radius: var(--r-lg);
   }
 
   .sheet[open] { animation: hisab-dialog-in var(--t-base) var(--ease-out) both; }
@@ -130,11 +127,11 @@
   width: min(26rem, calc(100vw - var(--s-6)));
   max-height: 80dvh;
   padding: var(--s-5);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--r-3);
-  box-shadow: var(--e-3);
-  color: var(--ink);
+  background: var(--bg-2);
+  border: 0;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-menu), 0 0 0 1px var(--line);
+  color: var(--text-1);
 }
 
 .dialog[open] { animation: hisab-dialog-in var(--t-base) var(--ease-out) both; }

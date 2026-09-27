@@ -14,9 +14,10 @@
   flex-direction: column;
   gap: var(--s-1);
   padding: var(--s-3);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-3);
+  background: var(--bg-1);
+  border: 0;
+  border-radius: var(--r-lg);
+  box-shadow: var(--ring-card);
   min-width: 0;
   /* The tinted rule along the top. Drawn as a pseudo-element rather than a
      border-top, because a coloured border changes the box's height and would
@@ -120,10 +121,10 @@
   align-items: center;
   gap: var(--s-1);
   padding: 2px var(--s-2);
-  border-radius: var(--r-1);
-  background: var(--surface-3);
-  border: 1px solid var(--line-soft);
-  color: var(--ink-2);
+  border-radius: var(--r-xs);
+  background: var(--bg-3);
+  border: 0;
+  color: var(--text-2);
   font-size: var(--fs-11);
   font-weight: var(--fw-medium);
   line-height: 1.5;
@@ -166,9 +167,9 @@
   min-height: 34px;
   padding-inline: var(--s-3);
   border: 1px solid var(--line);
-  border-radius: var(--r-2);
-  background: var(--surface-2);
-  color: var(--ink-2);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-2);
   font-size: var(--fs-13);
   font-weight: var(--fw-medium);
   white-space: nowrap;
@@ -178,11 +179,13 @@
 
 .pill:hover { border-color: var(--line-hot); color: var(--ink); }
 
+/* Selected is a fill, not marigold: picking a filter is a view, not an
+   action (v2 keeps the accent for "do"). */
 .pill[aria-pressed='true'],
 .pill.is-active {
-  background: var(--accent-wash);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+  background: var(--bg-3);
+  border-color: transparent;
+  color: var(--text-1);
 }
 
 .pill__count {

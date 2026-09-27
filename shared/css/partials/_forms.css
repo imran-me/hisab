@@ -41,10 +41,10 @@
   min-height: var(--tap);
   padding: var(--s-2) var(--s-3);
 
-  background: var(--surface-3);
-  border: 1px solid var(--line);
-  border-radius: var(--r-2);
-  color: var(--ink);
+  background: var(--bg-3);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  color: var(--text-1);
 
   /* 16px exactly, and never smaller. iOS Safari zooms the whole viewport when
      a focused input's font-size is below 16px, and it does not zoom back out
@@ -295,9 +295,9 @@
   min-height: 40px;
   padding: var(--s-2) var(--s-3);
   border: 1px solid var(--line);
-  border-radius: var(--r-2);
-  background: var(--surface-2);
-  color: var(--ink-2);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--text-2);
   font-size: var(--fs-13);
   font-weight: var(--fw-medium);
   cursor: pointer;
@@ -309,9 +309,9 @@
 .choice:has(input:focus-visible) { box-shadow: var(--e-focus); }
 
 .choice:has(input:checked) {
-  background: var(--accent-wash);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+  background: var(--bg-3);
+  border-color: var(--line-hot);
+  color: var(--text-1);
 }
 
 /* Per-flow colouring, so the type picker is colour-coded to the same four

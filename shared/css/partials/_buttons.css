@@ -1,8 +1,9 @@
 /* =========================================================================
    Hisab · Buttons
    One .btn, five variants, three sizes. A button in this product is a
-   rectangle with a hairline and a 6px radius — never a pill, never a
-   gradient, never a drop shadow. The affordance is the edge and the label.
+   rectangle with a 6px radius — never a pill, never a gradient, never a drop
+   shadow. Marigold fills the one primary action on a screen and nothing else
+   (v2, DIRECTION §3.7).
    ========================================================================= */
 
 .btn {
@@ -20,10 +21,10 @@
   padding: var(--s-2) var(--s-4);
 
   font-family: var(--font-body);
-  font-size: var(--fs-14);
+  font-size: var(--t-ui);
   font-weight: var(--fw-semibold);
   line-height: var(--lh-snug);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
   text-align: center;
   text-decoration: none;
   white-space: nowrap;
@@ -40,12 +41,15 @@
     background-color var(--t-fast) var(--ease),
     border-color     var(--t-fast) var(--ease),
     color            var(--t-fast) var(--ease),
-    transform        var(--t-instant) var(--ease);
+    transform        var(--t-press) var(--ease);
 }
 
-/* A 1px press is enough to feel on a phone and small enough not to reflow
-   anything around it. Scale would blur the label mid-transition. */
-.btn:active:not(:disabled) { transform: translateY(1px); }
+/* Press: a .97 scale and a surface step, inside the 90ms press window, so a
+   thumb feels the button take the tap before anything else happens. Nothing
+   in this product relies on hover. */
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn--secondary:active:not(:disabled),
+.btn--ghost:active:not(:disabled) { background: var(--wash-press); }
 
 .btn:disabled,
 .btn[aria-disabled='true'] {
@@ -61,18 +65,26 @@
   background: var(--accent);
   border-color: var(--accent);
   color: var(--on-accent);
+  font-size: var(--t-body);
 }
 
-.btn--primary:hover:not(:disabled) { background: var(--accent-ink); border-color: var(--accent-ink); }
+/* Hover mixes toward the text colour: lighter at night, deeper by day. It
+   cannot use --accent-text, which is a dark brown on paper. */
+.btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, var(--text-1));
+  border-color: transparent;
+}
 
-/* SECONDARY — the default for almost everything. A hairline box. */
+/* SECONDARY — the default for almost everything. An outline on the surface
+   it sits on, the same edge as a chip, so a screen of them is not a screen of
+   boxes. */
 .btn--secondary {
-  background: var(--surface-2);
+  background: transparent;
   border-color: var(--line);
-  color: var(--ink);
+  color: var(--text-1);
 }
 
-.btn--secondary:hover:not(:disabled) { background: var(--surface-3); border-color: var(--line-hot); }
+.btn--secondary:hover:not(:disabled) { background: var(--wash-hover); border-color: var(--line-hot); }
 
 /* GHOST — a button that is only a label until you touch it. Toolbars, table
    row actions, anything that would otherwise put twenty boxes on a screen. */
@@ -90,9 +102,9 @@
   background: transparent;
 }
 
-.btn--danger:hover:not(:disabled) { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn--danger:hover:not(:disabled) { background: var(--danger); border-color: var(--danger); color: var(--bg-0); }
 
-/* VAULT — the only button style that carries the vault's gold. Used for
+/* VAULT — the only button style that carries the vault's colour. Used for
    unlock and reveal, so those two actions never look like ordinary ones. */
 .btn--vault {
   background: var(--vault-wash);
@@ -164,34 +176,38 @@
 
 .btn .icon { flex: none; }
 
-/* ---- Groups -------------------------------------------------------------
-   Segmented control. Buttons share a border, so the seam between two is one
-   hairline rather than two touching. */
+/* ---- Segmented control ---------------------------------------------------
+   A --bg-3 track with 3px of padding; the selected segment LIFTS to --bg-1
+   with a 1px shadow, as a physical switch would. No accent: choosing a view
+   is not an action, and marigold means "do". */
 .btn-group {
   display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: var(--r-2);
-  background: var(--surface-2);
-  overflow: hidden;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-md);
+  background: var(--bg-3);
   max-width: 100%;
 }
 
 .btn-group > .btn {
-  border-radius: 0;
   border: 0;
-  border-inline-start: 1px solid var(--line);
-  min-height: 38px;
+  border-radius: calc(var(--r-md) - 2px);
+  min-height: 34px;
+  padding-inline: var(--s-3);
   flex: 1 1 auto;
   min-width: 0;
+  color: var(--text-2);
+  font-weight: var(--fw-medium);
 }
 
-.btn-group > .btn:first-child { border-inline-start: 0; }
+.btn-group > .btn:hover:not(:disabled) { color: var(--text-1); }
 
 .btn-group > .btn[aria-pressed='true'],
 .btn-group > .btn[aria-selected='true'],
 .btn-group > .btn.is-active {
-  background: var(--accent-wash);
-  color: var(--accent-ink);
+  background: var(--bg-1);
+  color: var(--text-1);
+  box-shadow: var(--shadow-lift);
 }
 
 /* ---- The floating compose action: retired ------------------------------

@@ -177,3 +177,31 @@ loaded, so no figure uses another face and the ৳ comes from Hisab Taka
 `docs/visual-v2/shots/home-night.png`: the figures, taka and weights match;
 the bar and tab colours differ until A4.4. check-pages passes.
 
+
+## A4.3 — v2 partials: buttons, cards, rows, sheet, chips, segments
+
+- Buttons: press is scale .97 plus a surface step in the 90ms press window.
+  Primary is marigold at the body size; its hover mixes toward `--text-1`
+  (never `--accent-text`, which is brown on paper). Secondary is an outline,
+  the same edge as a chip. Danger hover text is `--bg-0`, not `#fff`.
+- Segmented control (`.btn-group`): a `--bg-3` track with 3px padding, 34px
+  segments, the selected one lifting to `--bg-1` with `--shadow-lift`. No
+  accent.
+- Cards and stat tiles: `--bg-1`, `--r-lg`, no border at night, a 1px
+  `--line-soft` ring by day (new token `--ring-card`).
+- Rows: 60px minimum; a 40px glyph tile at `--r-md` painted from `--tint`
+  (the tint at 15% behind its icon, `--text-3` without one); `.cat-food` …
+  `.cat-health` set `--tint` from the category tokens, for B5. Name 15/500,
+  meta 12.5 `--text-3`. Separators start at the text (68px), not full width.
+  The narrow-phone gap tweak from A1 is gone: v2's type fits without it.
+- Day headers (`.list-group-head`): text only, no band, 12.5/500 `--text-3`.
+- Sheet: `--bg-2`, `--r-lg` top corners, `--shadow-sheet`, no border, a
+  36 × 4 `--text-4` handle, no rule under the head, 12px plus the safe area
+  at the bottom. The dialog matches.
+- Pills and choices: pill radius for pills; selected is a `--bg-3` fill in
+  `--text-1` (a filter is a view, not an action, so no marigold). Badges
+  (`.chip`) are `--r-xs` on `--bg-3`. Inputs are `--bg-3` wells, no border.
+
+Verified at 360 in both themes on the Ledger, Accounts and Settings: no
+figure clipped, no row name cut below 18 characters (the one ellipsis is
+"Cash in hand" beside its Default badge, in C's markup); check-pages passes.
