@@ -279,3 +279,25 @@ Verified: Node check of the name mapping (Rent → home, Gadgets / tech →
 shopping, Subscriptions → mobile, Business → none, Business travel →
 transport); Home at 360 in both themes shows the v2 tints in the bar and
 the legend.
+
+## A6 — the shared month grid, and a stepper that is not a grey box
+
+`shared/js/components/month-grid.js` exports `openMonthGrid({ value, onPick,
+earliest })`: a sheet with the year (‹ 2026 ›, no stepping past this year)
+and its twelve months as a 3 × 4 grid of 52px keys. Future months are
+disabled, not hidden. The chosen month has an ink ring and the current month
+the marigold "today" tick; "Back to this month" appears when another is
+chosen. Defaults: the app's period, and `state.setPeriod` on pick. It is
+re-exported from `shell.js`, so C can replace Home's month sheet with
+`openMonthGrid()` from the import it already has.
+
+`periodStepper()` is now ‹ September 2026 ⌄ ›: the name is a display-face
+heading that opens the grid (v1 left it a bare button the browser drew as a
+grey box), and a sideways swipe across the stepper steps the month (48px,
+clearly more across than down; `touch-action: pan-y`). The arrows stay, so a
+swipe is never the only way. `attachSwipe(node, step)` is exported for
+Home's header.
+
+Verified at 360 in both themes on the Ledger: the stepper is 250px and fits
+beside search; tapping the name opens the grid with 12 months, 3 disabled
+(Oct–Dec 2026), September ringed with its tick. check-pages passes.

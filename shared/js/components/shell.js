@@ -24,6 +24,11 @@ import { session, signOut } from '../core/session.js';
 import { openSheet } from './sheet.js';
 import { menu } from './menu.js';
 import { toast } from './toast.js';
+import { openMonthGrid } from './month-grid.js';
+
+// Re-exported so a page that shows a month name can open the same picker
+// from the shell it already imports.
+export { openMonthGrid };
 
 /**
  * The destinations on the phone tab bar, either side of +.
@@ -343,7 +348,12 @@ function attachScrollProgress(header) {
 }
 
 /**
- * The month stepper used at the top of the ledger, the dashboard and reports.
+ * The month stepper used at the top of the Ledger, and anywhere else a screen
+ * is "one month of something".
+ *
+ * ‹  September 2026 ⌄  ›   — the arrows step, the name opens the month grid,
+ * and a horizontal swipe across the stepper steps too (left = next month,
+ * the way a page turns). The arrows stay: a swipe is never the only way.
  *
  * Returns a node rather than writing to a container, so the caller decides
  * where it goes. It reads and writes app state directly, which is the one thing
@@ -356,13 +366,14 @@ export function periodStepper() {
     const p = state.period();
     const atNow = p >= currentPeriod();
     node.innerHTML = `
-      <button type="button" class="btn btn--icon btn--sm" data-step="-1" aria-label="Previous month">
+      <button type="button" class="btn btn--icon" data-step="-1" aria-label="Previous month">
         ${icon('chevron-left', { class: 'icon' })}
       </button>
-      <button type="button" class="period-stepper__label" data-open-picker>
-        ${esc(formatPeriod(p))}
+      <button type="button" class="period-stepper__label" data-open-picker aria-haspopup="dialog" aria-label="${esc(formatPeriod(p))}, choose a month">
+        <span>${esc(formatPeriod(p))}</span>
+        ${icon('chevron-down', { class: 'icon icon--sm' })}
       </button>
-      <button type="button" class="btn btn--icon btn--sm" data-step="1" aria-label="Next month"${atNow ? ' disabled' : ''}>
+      <button type="button" class="btn btn--icon" data-step="1" aria-label="Next month"${atNow ? ' disabled' : ''}>
         ${icon('chevron-right', { class: 'icon' })}
       </button>
     `;
@@ -370,14 +381,49 @@ export function periodStepper() {
 
   render();
 
-  delegate(node, 'click', '[data-step]', (_event, button) => {
-    const next = shiftPeriod(state.period(), Number(button.dataset.step));
+  const step = (n) => {
+    const next = shiftPeriod(state.period(), n);
     // Never step into the future. There is nothing there, and an empty month
     // that looks like a bug is worse than a disabled button.
     if (next > currentPeriod()) return;
     state.setPeriod(next);
-  });
+  };
+
+  delegate(node, 'click', '[data-step]', (_event, button) => step(Number(button.dataset.step)));
+  delegate(node, 'click', '[data-open-picker]', () => openMonthGrid());
+  attachSwipe(node, step);
 
   on(EVENTS.PERIOD_CHANGED, render);
   return node;
+}
+
+/**
+ * A horizontal swipe on `node` calls step(+1) or step(-1).
+ *
+ * Only a swipe that is clearly sideways counts (48px across, and more across
+ * than down), so a vertical scroll that starts on the stepper still scrolls.
+ * touch-action: pan-y in the CSS hands the vertical axis to the browser and
+ * keeps the horizontal one for this.
+ */
+export function attachSwipe(node, step) {
+  let x0 = null;
+  let y0 = 0;
+
+  node.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse') return;
+    x0 = event.clientX;
+    y0 = event.clientY;
+  });
+
+  const end = (event) => {
+    if (x0 === null) return;
+    const dx = event.clientX - x0;
+    const dy = event.clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    step(dx < 0 ? 1 : -1);
+  };
+
+  node.addEventListener('pointerup', end);
+  node.addEventListener('pointercancel', () => { x0 = null; });
 }

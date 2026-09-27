@@ -368,3 +368,97 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
 .more__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .more__email { font-size: var(--fs-14); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .more__account .btn { flex: none; min-height: var(--tap-min); }
+
+/* ---- Month stepper ------------------------------------------------------
+   ‹  September 2026 ⌄  ›. The name is a real control (it opens the month
+   grid) but it reads as a heading, not a box: v1 left it as a bare <button>
+   and the browser drew it as a grey filled rectangle. */
+.period-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-width: 0;
+  touch-action: pan-y;   /* the horizontal swipe steps the month */
+}
+
+.period-stepper__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap-min);
+  min-width: 0;
+  padding: 0 var(--s-2);
+  background: none;
+  border: 0;
+  border-radius: var(--r-sm);
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: var(--t-head);
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-title);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--t-press) var(--ease);
+}
+
+.period-stepper__label > .icon { color: var(--text-3); }
+.period-stepper__label:active { background: var(--wash-press); }
+.period-stepper > .btn--icon { color: var(--text-2); }
+
+/* ---- Month grid (the sheet behind the month name) ------------------------ */
+.month-grid { display: flex; flex-direction: column; gap: var(--s-3); }
+
+.month-grid__year {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.month-grid__year-label {
+  font-family: var(--font-display);
+  font-size: var(--t-head);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.month-grid__months {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.month-grid__month {
+  min-height: 52px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease), background-color var(--t-fast) var(--ease);
+}
+
+.month-grid__month:active:not(:disabled) { transform: scale(0.97); }
+.month-grid__month:disabled { background: transparent; color: var(--text-4); cursor: default; box-shadow: inset 0 0 0 1px var(--line-soft); }
+
+/* The chosen month: an ink ring, not a marigold fill (picking a month is a
+   view, not an action). The CURRENT month carries the marigold "today" tick
+   under its name, the same mark as the pace bar's. */
+.month-grid__month[aria-pressed='true'] { background: var(--bg-1); box-shadow: inset 0 0 0 1.5px var(--text-1); }
+.month-grid__month.is-now::after {
+  content: '';
+  position: absolute;
+  inset-block-end: 8px;
+  inset-inline-start: 50%;
+  width: 14px;
+  height: 2px;
+  margin-inline-start: -7px;
+  border-radius: 1px;
+  background: var(--accent);
+}
