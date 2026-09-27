@@ -244,3 +244,18 @@ a transfer and when correcting.
 250 / Transport / Cash in hand, and Save recorded it ("Added ৳250 · Transport
 · Cash in hand"). Looked at the sheet with the strip: it matches the mock.
 Ledger harness 39, check-pages ok.
+
+## The browser's month totals read each row's snapshot
+
+`summary()` (and `series()`) in `ledger/backend/api.js` converted every row at
+today's rate, so entering a new USD rate rewrote last month's spending, and
+Home could differ from the server. Rows now go through `sumIn()`: the row's
+`fx_rate` snapshot when its account is in the target currency (the server's
+rule), else today's rate (the browser holds no rate history, the one place it
+can still differ from the server's as-of rate), else named as missing.
+`series()` also netted nothing: a reversal mirror (still type expense) was
+ADDED, and a deposit mirror ignored. It now counts exactly as `summary()` does.
+(`series()` has no caller today.)
+
+**Verified:** ledger harness 40 (1 new: setting a new USD rate leaves
+September's converted expense unchanged).

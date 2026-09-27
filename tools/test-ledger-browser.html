@@ -134,6 +134,17 @@ function check(label, condition) {
     check('and moves the taka balance by its taka value, not by 12.99',
       cash.currency === 'USD' || beforeUsd - afterUsd === convert(1299, 'USD', cash.currency, snap));
 
+    // --- a month total reads the row's snapshot, not today's rate -----------
+    // Changing today's USD rate must not rewrite September's spending.
+    if (cash.currency === 'BDT') {
+      const fx = await import('../modules/fx/backend/api.js');
+      const before = (await ledger.summary({ period: '2026-09', currency: 'BDT' })).data.expense_minor;
+      await fx.setRate('USD', 'BDT', 200);
+      const after = (await ledger.summary({ period: '2026-09', currency: 'BDT' })).data.expense_minor;
+      check('a new rate today does not change last month\'s converted total', before === after);
+      fx.invalidate();
+    }
+
     // --- the draft survives the sheet being dismissed ------------------------
     // It was never written: sheet.js removes the sheet before onClose runs,
     // and the draft's isConnected guard returned every time.

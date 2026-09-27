@@ -513,6 +513,7 @@ export async function summary({ book = 'personal', period = toPeriodKey(new Date
   // reads differently depending on whether a backend happens to be reachable.
   const rows = (await list({ book, period, includeBothLegs: true, includeReversed: true })).data;
   const rates = await fx.rates();
+  const accountCurrency = await accountCurrencies();
 
   // A REVERSAL IS STILL type = expense. Summing by type alone reports a
   // corrected 45,000 expense as 94,500 spent - wrong, and plausible enough that
@@ -532,8 +533,8 @@ export async function summary({ book = 'personal', period = toPeriodKey(new Date
       && (r.reverses_id ? r.direction === 'in' : r.direction === 'out'),
   ));
 
-  const total = (set) => convertAndSum(set, currency, rates).amountMinor;
-  const missing = (set) => convertAndSum(set, currency, rates).missing;
+  const total = (set) => sumIn(set, currency, rates, accountCurrency).amountMinor;
+  const missing = (set) => sumIn(set, currency, rates, accountCurrency).missing;
 
   const totalIn = total(income);
   const totalOut = total(expense);
@@ -553,17 +554,17 @@ export async function summary({ book = 'personal', period = toPeriodKey(new Date
       // Guarded: a month with no income divides by zero and renders NaN%,
       // which is the first thing anyone notices on a fresh install.
       savings_rate: totalIn > 0 ? ((totalHeld + spendable) / totalIn) * 100 : 0,
-      by_category: groupSum(expense, 'category_label', currency, rates),
-      by_method: groupSum(expense, 'method', currency, rates),
-      by_necessity: groupSum(expense, 'necessity', currency, rates),
-      income_by_category: groupSum(income, 'category_label', currency, rates),
+      by_category: groupSum(expense, 'category_label', currency, rates, accountCurrency),
+      by_method: groupSum(expense, 'method', currency, rates, accountCurrency),
+      by_necessity: groupSum(expense, 'necessity', currency, rates, accountCurrency),
+      income_by_category: groupSum(income, 'category_label', currency, rates, accountCurrency),
       unconvertible: [...new Set([...missing(income), ...missing(expense), ...missing(held)])],
     },
   };
 }
 
 /** Totals per key, biggest first — the order every breakdown is read in. */
-function groupSum(rows, key, currency, rates) {
+function groupSum(rows, key, currency, rates, accountCurrency) {
   const buckets = new Map();
   for (const row of rows) {
     const bucket = row[key] ?? 'Uncategorised';
@@ -571,7 +572,7 @@ function groupSum(rows, key, currency, rates) {
     buckets.get(bucket).push(row);
   }
   return [...buckets.entries()]
-    .map(([name, set]) => ({ name, value: convertAndSum(set, currency, rates).amountMinor, count: set.length }))
+    .map(([name, set]) => ({ name, value: sumIn(set, currency, rates, accountCurrency).amountMinor, count: set.length }))
     .sort((a, b) => b.value - a.value);
 }
 
@@ -579,13 +580,55 @@ function groupSum(rows, key, currency, rates) {
 export async function series(periods, { book = 'personal', type = 'expense', currency = 'BDT' } = {}) {
   const rates = await fx.rates();
   const rows = await load();
+  const accountCurrency = await accountCurrencies();
   return periods.map((period) => {
     const { from, to } = periodBounds(period);
-    const set = rows.filter((r) => r.book === book && r.type === type
-      && (type !== 'deposit' || r.direction === 'out')
-      && isWithin(r.occurred_on, from, to));
-    return { label: period, value: convertAndSum(set, currency, rates).amountMinor };
+    // The same counting as summary(): a reversal mirror SUBTRACTS (it is still
+    // type = expense, so it used to be added and a corrected month read
+    // high), and a deposit counts once, on its out leg - or, for a mirror, its
+    // in leg.
+    const set = rows
+      .filter((r) => r.book === book && r.type === type && isWithin(r.occurred_on, from, to))
+      .filter((r) => type !== 'deposit' || (r.reverses_id ? r.direction === 'in' : r.direction === 'out'))
+      .map((r) => (r.reverses_id ? { ...r, amount_minor: -r.amount_minor } : r));
+    return { label: period, value: sumIn(set, currency, rates, accountCurrency).amountMinor };
   });
+}
+
+/** account id → its currency, for reading a row's snapshot. */
+async function accountCurrencies() {
+  const res = await accounts.list({ includeArchived: true });
+  return Object.fromEntries((res.data || []).map((a) => [a.id, a.currency]));
+}
+
+/**
+ * Sum rows into one currency, converting each row first.
+ *
+ * The row's own snapshot when it converts into the target - it is the rate
+ * the money moved at, and the rule the server follows (BalanceSheet via the
+ * fx Converter). A snapshot is the rate from the row's currency to its
+ * ACCOUNT's, so it applies only when that account is in the target currency.
+ * Otherwise today's rate: the browser holds no rate history, which is the one
+ * place it can still differ from the server's as-of rate. A row with no rate
+ * is named in `missing`, never counted one to one.
+ */
+function sumIn(rows, currency, rates, accountCurrency = {}) {
+  let total = 0;
+  const missing = new Set();
+  for (const row of rows) {
+    const minor = Math.trunc(row.amount_minor || 0);
+    if (row.currency === currency) { total += minor; continue; }
+
+    const snapshot = Number(row.fx_rate);
+    const rate = accountCurrency[row.account_id] === currency && Number.isFinite(snapshot) && snapshot > 0
+      ? snapshot
+      : rates?.[`${row.currency}/${currency}`];
+
+    const value = Number.isFinite(rate) ? convert(minor, row.currency, currency, rate) : null;
+    if (value === null) { missing.add(row.currency); continue; }
+    total += value;
+  }
+  return { amountMinor: total, currency, missing: [...missing] };
 }
 
 /* =========================================================================
