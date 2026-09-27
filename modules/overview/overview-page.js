@@ -23,12 +23,11 @@ import { segmentColor } from '../../shared/js/components/spark.js';
 import * as accounts from '../accounts/backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import * as fx from '../fx/backend/api.js';
-import { openEntrySheet, mountCompose, entryActions } from '../ledger/entry-sheet.js';
+import { openEntrySheet, mountCompose } from '../ledger/entry-sheet.js';
 
-// The header's Out / In stay only until the tab bar's centre + lands (A2).
-// Removing them first would leave Home with no way to add anything; the
-// buttons already go through mountCompose(), so the switch is one line.
-mountShell({ title: 'Home', actions: entryActions() });
+// Adding is the tab bar's + (A2), which emits EVENTS.COMPOSE; mountCompose()
+// answers it here, so the sheet opens over Home and Home refreshes on save.
+mountShell({ title: 'Home' });
 mountCompose({ onSaved: () => refresh() });
 
 delegate(document.body, 'click', '[data-month-open]', () => openMonthSheet());

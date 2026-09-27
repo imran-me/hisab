@@ -150,3 +150,13 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
 - Verified at 360×780: list 946px, "Cash in hand" + Default in full, no
   OVERFLOW; detail opens from a row and from Home, back returns to the list,
   running balances check by hand (৳14,253 after ৳485 → ৳14,738 before).
+  Reshot after A's palette and Anek (`3fae58b`, `df932b3`) in both themes:
+  Home, Accounts and the detail match the v2 mock's structure.
+
+### C2 — compose through the tab bar only
+
+- A2's `+` is live, so Home drops the header Out / In; `mountCompose()`
+  answers the bar's `EVENTS.COMPOSE`. Home no longer imports
+  `entryActions()`, which B can now delete.
+- Where it went still colours by `segmentColor()`; it switches to the
+  category tint tokens when A ships them.
