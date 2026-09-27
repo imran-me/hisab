@@ -15,6 +15,102 @@ and `tools/shoot-mobile.mjs` at 360×780.
 
 ---
 
+## Round 2 — `0b934dc` (Track A: make money fit a 360px phone)
+
+Author and email are correct, with no AI attribution. `test-money.mjs` passes
+88 assertions. `formatMoneyHTML` still works in integers only (`parts()`
+divides and takes the remainder, never `abs / factor`), and the one symbol that
+comes from the registry is escaped. The ৳-without-a-code rule is right and
+already makes Accounts and the Ledger calmer. Every page now carries its own
+screen height at 360, with no `OVERFLOW` in shoot-mobile output.
+
+### Medium: a figure that rounds to zero keeps its minus sign. Owner: A
+
+- `shared/js/core/money.js` `parts()` takes `negative` from the unrounded
+  value, and then `minor: 'never'` rounds the whole part.
+- Checked with node: `formatMoneyHTML(-40, 'BDT', {minor:'never'})` gives
+  **−৳0**, and so do −49 and −1 poisha. `formatMoney(-1, 'BDT', {compact:true,
+  symbol:true})` gives **−৳0** as well.
+- A reversed ৳0.40 rounding line, or a day that nets to a few poisha, would
+  read as "minus zero taka".
+- **Fix:** take the sign from the rounded result (`whole === 0 && rest === 0`
+  means no sign), and add a test for it.
+
+### Medium: A1 acceptance is not met on the Overview. Owners: A, then C
+
+- At 360 in the dark theme, the Overview's "This month" strip still cuts the
+  third tile: **`৳43,61`** for Spent (`r2/index-1`). The tile row is still
+  wider than the screen.
+- The `15cqi` container scaling fixed the figure inside each tile, but not the
+  strip. The strip is C2's to replace. Until then, A1's check "no figure is cut
+  on Overview" fails.
+- Either A widens the check to "no figure cut inside its own box", or C lands
+  C2 with the three figures on one row.
+
+### Medium: "Cash in hand" is still cut on Accounts, and hides its Default badge. Owner: C (markup), with A for `.row`
+
+- The title element holds "Cash in hand" plus a **Default** badge. The probe
+  gives `scrollWidth 148 > clientWidth 147`, so the badge is ellipsised away and
+  the owner sees `Cash in hand …`. That is a 12-character name, well under A1's
+  18.
+- Move the badge out of the ellipsis box (onto the meta line, or as its own
+  `flex: none` element), so the name keeps its width and the badge survives.
+
+### Low: two money styles on one screen. Owner: C
+
+- The Overview's insight cards still print **"BDT 5,000.00"** and
+  **"BDT 18,000.00"** (`r2/index-2`), directly under a hero that says
+  `৳2,69,513`.
+- `overview-page.js` `drawInsights()` builds these strings itself. It should
+  call `moneyLabel()`.
+
+### Low: ledger day totals do not match their rows. Owner: B
+
+- The day heading prints **`-301`** with an ASCII hyphen, no ৳, and a heavier
+  weight than the row amounts under it (`−৳294`).
+- It reads as a different kind of number from the rows it totals. Use
+  `formatMoneyHTML(..., {code:false})` so the U+2212 minus and the weight
+  match, or drop the day total on days with a single entry (B5).
+
+### Visual (aesthetics) — what makes it look generated rather than crafted
+
+1. **The ৳ reads as a lowercase "b" at small sizes.**
+   - `.money__sym` sets it in Noto Sans Bengali Regular at 0.86em and 66%
+     opacity. Next to Space Grotesk Medium digits it is thinner, smaller and
+     lighter than the numbers.
+   - In the hero chips (`+৳87.9k`) and on list rows (`৳12,615`), it looks like
+     `b87.9k`.
+   - **Fix (A):** set the symbol at the digits' weight, at full opacity in the
+     figure's colour, at about 0.9em, and nudge it up with
+     `vertical-align: 0.02em`. Better still, use a Bengali face that has real
+     weights (see RESEARCH.md "Fonts"), so a semibold figure gets a semibold ৳.
+2. **Three number faces on one screen.**
+   - The hero is in Space Grotesk. SPENDABLE and HELD directly under it are in
+     Plex Mono. The stat tiles are in Space Grotesk, the account rows are in
+     mono, and the category legend is in mono.
+   - The rule "display face for large figures, mono for columns" is right, but
+     the hero's own sub-figures are not a column. **Fix (A/C):** use the
+     display face for every figure in a hero or tile, and mono only in lists.
+3. **Chip rows touch the screen edge.**
+   - The Ledger's filter chips start at x=0: "All" sits against the left edge
+     with no gutter, while everything else on the page has a 16px gutter.
+   - A scrolling chip row should keep its first chip on the page gutter
+     (`padding-inline: var(--s-4)` on the scroller plus `scroll-padding`).
+     Owner: B (B6 replaces the row anyway).
+4. **The month control still looks like selected text** (a grey filled box).
+   This is A6, and it is repeated here because it is the first thing the eye
+   hits on the Ledger.
+5. **Every row's icon is the same coral arrow tile**, so the column carries no
+   information and makes the list look like a template. This is B5's category
+   glyph plus tint. It is the single biggest move from "generated" to
+   "crafted" on the Ledger.
+6. **Day theme:** the hero is a near-black card on a pale page. That is heavy
+   but deliberate and reads well. The rest of the light theme is clean.
+   Coral on white (`−৳294`) is fine for contrast at that size, and should be
+   checked at small sizes once B5 shrinks the row text.
+
+---
+
 ## Round 1 — `ea255c8` (Track C: one book at a time in the month cockpit)
 
 The book split is right, and it fixes the ৳259,473 vs ৳88,611 disagreement for

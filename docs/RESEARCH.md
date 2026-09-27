@@ -503,6 +503,56 @@ obvious at a glance.
 
 **How hard.** Trivial once C6's book switch exists. Until then, a static label.
 
+### R3. Fonts for a Latin + Bengali finance app — S–M — `shared/css/partials/_typography.css`, `assets/fonts`
+
+**The problem, from the round 2 screenshots.** The app already self-hosts IBM
+Plex Sans, IBM Plex Mono and Space Grotesk, plus Noto Sans Bengali at a
+**single** weight (400). None of the three Latin faces draws ৳ (U+09F3), so
+every symbol falls back to that one Bengali weight. The result is a thin ৳
+beside medium-weight digits, which reads as a "b". A Bengali label would have
+the same problem next to a semibold Latin heading.
+
+**Candidates.** All are OFL, free to self-host, and on Google Fonts, so there
+are subsetted woff2 builds to take from.
+
+| Face | Scripts | Weights / axes | Figures | Character | Fit here |
+|---|---|---|---|---|---|
+| **Noto Sans Bengali** | Bengali (+ Latin via Noto Sans) | variable, 100–900; width axis 62.5–100 | proportional by default | neutral and very complete (conjuncts, ৳, Bengali digits) | the safe fallback. Ship the **variable** file, not one static weight |
+| **Anek Bangla** (Ek Type) | Bengali + its own Latin | variable weight **and width** | check `tnum` before relying on it | modern, slightly geometric, confident at display sizes | best match for Space Grotesk's personality; the width axis helps at 360px |
+| **Hind Siliguri** (ITF) | Bengali + Latin (Hind) | 5 static weights (300–700) | proportional | humanist; very common on Bangladeshi sites and apps | familiar and readable, but five files, and its Latin is plain next to Plex |
+| **Baloo Da 2** | Bengali + Latin | variable 400–800 | proportional | rounded, friendly | too soft for "instrument panel"; fine for a marketing page |
+| **Tiro Bangla** | Bengali + Latin | 400 + italic | proportional | serif, bookish | wrong register for a money app |
+
+For Latin with **tabular figures** (`font-variant-numeric: tabular-nums`):
+Space Grotesk, IBM Plex Sans / Mono, Inter and Manrope all have them.
+Inter is the default "generated" look that `context.md` §4 avoids by name.
+Manrope is pleasant but rounder than the brand. Plex and Space Grotesk are
+already paid for in bytes.
+
+**Recommendation.**
+
+- **Figures:** Space Grotesk with `tnum`, for heroes and tiles (as A4 plans).
+- **Lists and columns:** IBM Plex Mono, unchanged.
+- **Body and UI Latin:** IBM Plex Sans, unchanged.
+- **Bengali, including ৳:** **Anek Bangla variable**, subset to Bengali +
+  U+09F3 + the Bengali digits. It carries real weights, so the ৳ matches the
+  digits it sits beside (a 500 figure gets a 500 ৳), and it supports the
+  Bangla-labels option (R#7) without a second family later.
+- **Fallback:** keep Noto Sans Bengali behind it, switched to the variable
+  file, for anything Anek's subset misses.
+- Set `size-adjust` / `ascent-override` on the Bengali `@font-face`, so a ৳ or
+  a Bangla word does not shift the line height of a Latin row.
+- **Budget:** one variable Bengali subset is typically well under 100 KB. The
+  current 400-only Noto file can go once Anek is in.
+- **Check before adopting:** render ৳, ০–৯ and a few conjuncts (ক্ষ, ন্ত,
+  স্ত্র) at 12px and 32px in both themes, and confirm the `tnum`/`lnum`
+  features with a quick `font-feature-settings` test page.
+
+Sources: [Anek on GitHub (EkType)](https://github.com/EkType/Anek),
+[Anek Bangla on Google Fonts](https://fonts.google.com/specimen/Anek+Bangla),
+[Google Design — Anek multiscript](https://design.google/library/anek-multiscript),
+[IBM Plex (no Bengali released)](https://github.com/IBM/plex).
+
 ## What the reference apps are good at, in one line each
 
 - **Monzo** — "left to spend" as the home number; spending grouped into pots
