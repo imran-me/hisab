@@ -194,55 +194,10 @@
   color: var(--accent-ink);
 }
 
-/* ---- The floating compose action ---------------------------------------
-   "Add a transaction" is the single most-used control in the product, so it
-   is thumb-reachable on a phone and it follows the tab bar rather than the
-   page. Right-aligned because the right thumb is the common case; it moves to
-   the left under [data-hand="left"].
-
-   It is a real <button> in the tab bar's markup — not a separate fixed
-   element — so the tab order stays in one place. */
-.fab {
-  position: fixed;
-  inset-block-end: calc(var(--tabbar-h) + var(--safe-bottom) + var(--s-4));
-  inset-inline-end: calc(var(--gutter) + var(--safe-right));
-  z-index: var(--z-tabbar);
-
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  min-height: 52px;
-  padding-inline: var(--s-4);
-
-  background: var(--accent);
-  color: var(--on-accent);
-  border: 0;
-  border-radius: var(--r-3);
-  box-shadow: var(--e-2);
-  font-weight: var(--fw-semibold);
-  font-size: var(--fs-14);
-  cursor: pointer;
-
-  transition: transform var(--t-base) var(--ease-out), opacity var(--t-fast) var(--ease);
-}
-
-[data-hand='left'] .fab {
-  inset-inline-end: auto;
-  inset-inline-start: calc(var(--gutter) + var(--safe-left));
-}
-
-.fab:active { transform: scale(0.97); }
-
-/* Retracts while the page is scrolling down, so it never covers the row you
-   are reading toward. Restored by shared/js/components/fab.js on scroll stop. */
-.fab.is-tucked {
-  transform: translateY(calc(100% + var(--s-6)));
-  opacity: 0;
-  pointer-events: none;
-}
-
-@media (min-width: 900px) {
-  /* With the rail in place there is no tab bar to sit above, and the compose
-     action lives in the rail instead. */
-  .fab { display: none; }
-}
+/* ---- The floating compose action: retired ------------------------------
+   Adding an entry is the raised + in the tab bar (and the first item in the
+   rail). A floating button on top of that sat over the content it was meant
+   to add to — the category bar on Home, the amounts in the Ledger's last
+   rows — so it is hidden everywhere. The rule stays until every page's own
+   markup has dropped its .fab (Ledger and Home: tracks B and C). */
+.fab { display: none !important; }

@@ -192,13 +192,14 @@
 .menu__sep { height: 1px; background: var(--line-soft); margin: var(--s-1) 0; }
 
 /* ---- Toast -------------------------------------------------------------
-   Above the tab bar, never over it. Announced through a live region in the
-   markup, so a confirmation is not silent for a screen-reader user.
+   Above the tab bar, never over it — and above the raised +, which stands
+   22px proud of the bar (hence the 28px). Announced through a live region in
+   the markup, so a confirmation is not silent for a screen-reader user.
    ------------------------------------------------------------------------ */
 .toast-stack {
   position: fixed;
   inset-inline: 0;
-  inset-block-end: calc(var(--tabbar-h) + var(--safe-bottom) + var(--s-2));
+  inset-block-end: calc(var(--tabbar-h) + var(--safe-bottom) + 28px);
   z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
@@ -255,6 +256,17 @@
   /* No blur here. A blurred screenshot of a secret is still a screenshot of a
      secret, and iOS renders the app switcher's thumbnail from the live view —
      the content is REPLACED, not obscured. */
+}
+
+/* On a phone the lock stops at the tab bar, so the way out of the vault is
+   the same as everywhere else — not the browser's back gesture. The bar
+   carries no secret, and the content is still replaced, not obscured. */
+@media (max-width: 899px) {
+  .lock {
+    inset-block-end: calc(var(--tabbar-h) + var(--safe-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .lock[hidden] { display: none; }

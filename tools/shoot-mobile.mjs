@@ -22,6 +22,8 @@
  *   SCREENS   viewports to capture per page, default 3
  *   THEME     dark | light (prefers-color-scheme)
  *   CHROME    path to chrome.exe
+ *   BEFORE    a JS expression run on each page before capturing (open a
+ *             sheet, tap a button); captures then wait 700ms for it to settle
  *   PROBE     a JS expression evaluated on each page after the wait; its
  *             JSON result is printed (measure a width instead of guessing)
  *   CDP_PORT  Chrome debug port, default random 9400-9799 (fix it when
@@ -130,6 +132,7 @@ for (const path of PAGES) {
   const name = path.replace(/\.html$/, '').replace(/[/.]/g, '_');
   const size = await evaluate('[document.documentElement.scrollWidth, document.documentElement.scrollHeight]');
   const [sw, sh] = size || [0, 0];
+  if (env.BEFORE) { await evaluate(env.BEFORE); await sleep(700); }
   const count = Math.min(SCREENS, Math.max(1, Math.ceil(sh / H)));
   for (let i = 0; i < count; i++) {
     await evaluate(`window.scrollTo(0, ${i * (H - 120)})`);

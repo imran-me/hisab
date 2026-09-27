@@ -6,8 +6,9 @@
    ========================================================================= */
 
 /* ---- Header -------------------------------------------------------------
-   56px, sticky, glass. It holds the page title and at most two actions: a
-   phone header with five icons is a header nobody can hit.
+   48px, sticky, glass. It holds the page title and at most one icon action
+   (DIRECTION §3.2): adding an entry lives in the tab bar now, so the header
+   no longer has to carry it, and every pixel it gives back is content.
    ------------------------------------------------------------------------ */
 .app-header {
   position: sticky;
@@ -81,8 +82,9 @@
 }
 
 /* ---- Tab bar (phone) ----------------------------------------------------
-   Five destinations, fixed to the bottom, inside the safe area. Five is the
-   ceiling: a sixth makes each target narrower than a thumb.
+   Home · Ledger · + · Accounts · More, fixed to the bottom, inside the safe
+   area. Five slots is the ceiling: a sixth makes each target narrower than a
+   thumb. Each slot is a fifth of 360px — 72px wide, 56px tall.
    ------------------------------------------------------------------------ */
 .tabbar {
   position: fixed;
@@ -117,19 +119,28 @@
   position: relative;
   -webkit-tap-highlight-color: transparent;
   transition: color var(--t-fast) var(--ease);
+  /* The More slot and + are buttons, not links; they must look identical. */
+  background: none;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .tab__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tab:active { color: var(--ink-2); }
+.tab:active > .icon { transform: scale(0.94); }
+.tab > .icon { transition: transform var(--t-instant) var(--ease); }
 
 /* aria-current is the source of truth for "you are here" — the same attribute
    the screen reader reads, so the visual state cannot disagree with it. */
-.tab[aria-current='page'] { color: var(--accent-ink); }
+.tab[aria-current='page'],
+.tab[data-current] { color: var(--accent-ink); }
 
 /* The active marker is a 2px bar at the TOP of the tab, against the border.
    A filled pill behind the icon would put a coloured blob under a thumb that
    is already covering it. */
-.tab[aria-current='page']::before {
+.tab[aria-current='page']::before,
+.tab[data-current]::before {
   content: '';
   position: absolute;
   inset-block-start: 0;
@@ -156,6 +167,47 @@
   display: grid;
   place-items: center;
   line-height: 1;
+}
+
+/* ---- + : the one way to add an entry ------------------------------------
+   Centred, raised, in the accent — the only accent FILL on the bar, so it is
+   the thing the thumb finds without looking. Raised by lifting the square
+   above the bar's top edge, ringed in the canvas colour so it reads as sitting
+   in a notch rather than floating: an outline, not a shadow.
+
+   The whole 72 × 56 slot is the target, not just the square, so a press that
+   lands beside it still counts. */
+.tab--compose { color: var(--on-accent); }
+
+.tab__plus {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-block-start: -22px;
+  border-radius: var(--r-3);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 0 0 4px var(--void);
+  transition: transform var(--t-instant) var(--ease), background-color var(--t-fast) var(--ease);
+}
+
+/* The glyph is drawn heavier than the sprite's 1.5 hairline: at 26px on a
+   solid fill, a hairline cross reads as a smudge rather than a command. */
+.tab--compose .tab__plus .icon { width: 26px; height: 26px; stroke-width: 2.25; }
+
+/* The vault's lock screen covers the page at --z-lock; the bar stays above
+   it so the raised + is not cut off at the bar's edge. */
+body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
+
+.tab--compose:active .tab__plus { transform: scale(0.94); }
+.tab--compose:active { color: var(--on-accent); }
+.tab--compose:focus-visible { outline: none; }
+.tab--compose:focus-visible .tab__plus { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tab__plus, .tab > .icon { transition: none; }
+  .tab--compose:active .tab__plus, .tab:active > .icon { transform: none; }
 }
 
 @media (min-width: 900px) {
@@ -214,6 +266,18 @@
 
   .app-rail .tab__badge { position: static; margin-inline-start: auto; }
 
+  /* + in the rail: a full-width primary button above the destinations. */
+  .app-rail .tab--compose-rail {
+    margin-block-end: var(--s-3);
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: var(--fw-semibold);
+  }
+  .app-rail .tab--compose-rail:hover { background: var(--accent-ink); color: var(--on-accent); }
+  .app-rail .tab--compose-rail .tab__plus {
+    width: auto; height: auto; margin: 0; background: none; box-shadow: none; color: inherit;
+  }
+
   .rail__head { padding: var(--s-2) var(--s-3) var(--s-4); }
   .rail__group { margin-top: var(--s-4); }
   .rail__group-label { padding: var(--s-2) var(--s-3); }
@@ -269,3 +333,26 @@
   color: var(--ink);
   border-bottom-color: var(--accent);
 }
+
+/* ---- More sheet ----------------------------------------------------------
+   The destinations that are not on the bar, then who is signed in and the
+   way out. Rows at full tap height; the account block sits last because it
+   is the least-used thing in the sheet, not the most dangerous. */
+.more { display: flex; flex-direction: column; gap: var(--s-4); }
+.more__list { margin-inline: calc(-1 * var(--s-4)); }
+.more__list .row { min-height: 56px; }
+.more__list .row[aria-current='page'] .row__title { color: var(--accent-ink); }
+
+.more__account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-block-start: var(--s-4);
+  border-top: 1px solid var(--line-soft);
+  min-width: 0;
+}
+
+.more__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.more__email { font-size: var(--fs-14); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more__account .btn { flex: none; min-height: var(--tap-min); }

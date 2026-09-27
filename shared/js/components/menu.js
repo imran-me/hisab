@@ -19,7 +19,7 @@ let openMenu = null;
  * @param {HTMLElement} anchor          the button that opened it
  * @param {Array} items                 { label, icon?, danger?, onClick } or { separator: true }
  * @param {object} [opts]
- * @param {'start'|'end'} [opts.align='end']
+ * @param {'start'|'center'|'end'} [opts.align='end']
  */
 export function openMenu_(anchor, items, opts = {}) {
   closeMenu();
@@ -50,7 +50,9 @@ export function openMenu_(anchor, items, opts = {}) {
   const flipUp = spaceBelow < size.height + gap + margin && rect.top > spaceBelow;
 
   let top = flipUp ? rect.top - size.height - gap : rect.bottom + gap;
-  let left = align === 'end' ? rect.right - size.width : rect.left;
+  let left = align === 'end' ? rect.right - size.width
+    : align === 'center' ? rect.left + (rect.width - size.width) / 2
+    : rect.left;
 
   // Clamp inside the viewport on both axes. A menu opened from a row action at
   // the far right of a 360px screen otherwise sits half off the edge.

@@ -69,32 +69,6 @@ function initReveal() {
 }
 
 /**
- * The compose button retracts while scrolling down and returns when scrolling
- * stops or reverses, so it never covers the row you are reading toward.
- *
- * The 40px threshold exists because a scroll of a few pixels — which is what a
- * finger resting on a list produces — should not move it at all.
- */
-function initFab() {
-  const fab = document.querySelector('.fab');
-  if (!fab) return;
-
-  let lastY = window.scrollY;
-  let idle = null;
-
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    const delta = y - lastY;
-
-    if (delta > 40 && y > 120) { fab.classList.add('is-tucked'); lastY = y; }
-    else if (delta < -40) { fab.classList.remove('is-tucked'); lastY = y; }
-
-    window.clearTimeout(idle);
-    idle = window.setTimeout(() => fab.classList.remove('is-tucked'), 400);
-  }, { passive: true });
-}
-
-/**
  * Connectivity, reported once rather than per failed request.
  *
  * The wording matters: nothing is lost when offline, it is queued, and a
@@ -155,7 +129,6 @@ function boot() {
   warnFileProtocol();
   initSessionGate();
   initReveal();
-  initFab();
   initConnectivity();
 }
 

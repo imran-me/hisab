@@ -206,10 +206,3 @@
 
 /* ---- The vault's own accent --------------------------------------------- */
 .row__glyph--vault { background: var(--vault-wash); color: var(--vault-ink); border-color: transparent; }
-
-/* The compose button is gold here rather than cyan, so the one action that
-   writes a secret does not look like every other primary action in the app. */
-.fab {
-  background: var(--vault);
-  color: var(--void);
-}

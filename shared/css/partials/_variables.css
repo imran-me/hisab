@@ -278,7 +278,7 @@
      env() term the last row of a list sits under the bar on every iPhone, and
      it is invisible in a desktop browser, which is where it gets missed.
      --------------------------------------------------------------------- */
-  --header-h: 56px;
+  --header-h: 48px;
   --tabbar-h: 56px;
   --safe-top:    env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

@@ -23,7 +23,7 @@
 set -uo pipefail
 
 PORT="${1:-8777}"
-DEBUG_PORT=9315
+DEBUG_PORT="${DEBUG_PORT:-9315}"   # override when several runs share a machine
 TIMEOUT=90
 PROFILE="${TMPDIR:-/tmp}/hisab-test-profile-$$"
 

@@ -50,3 +50,42 @@ third tile off-screen by design; C2 replaces it.
 Tooling: `shoot-mobile.mjs` takes `CDP_PORT` (a fixed debug port, so agents
 on one machine do not collide) and `PROBE` (a JS expression evaluated per
 page, its result printed).
+
+## A2 — The bottom bar, +, and More
+
+The phone bar is Home · Ledger · + · Accounts · More on every page, Vault
+included. Each slot measures 72 × 55 at 360px. The header is 48px.
+
+- **+** is raised, centred, and the only accent fill on the bar. Tap asks for
+  an expense; hold (420ms) or drag up offers In, Save and Move in a menu.
+  It emits `EVENTS.COMPOSE` (`{ type }`) when something listens
+  (`hasListeners()` is new in bus.js). Until B1/C2 ship `mountCompose()`, it
+  clicks the page's own `[data-compose]` trigger (so it opens the existing
+  sheet on Home and the Ledger today), and otherwise goes to
+  `modules/ledger/list.html?compose=<type>` (the form B's `mountCompose()` reads). The bridge in `compose()`
+  should be deleted once no page has `[data-compose]` left.
+- **More** is a sheet: Vault and Settings (the only built destinations in
+  it), then the signed-in email and Sign out. `SECONDARY` in shell.js lists
+  only built destinations; Insights, Business, Investments, Budgets and
+  Categories are out of the bar, the More sheet and the rail until their
+  track ships them and adds its line.
+- The rail gets an "Add an entry" button at the top.
+- `.fab` is hidden everywhere (`display:none !important`); `main.js` no
+  longer tucks it. Home and the Ledger still carry fab markup and header
+  Out/In buttons: B1 and C2 remove them.
+- Vault: the lock screen stops at the tab bar on phones, so there is a way
+  out; its own Add moved from the floating button into the header (gold,
+  shown only while unlocked), so a secret is never one mis-aimed tap from an
+  expense.
+- Toasts sit 28px above the bar, clear of the raised +.
+
+Verified at 360: all ten pages render the new bar, header 48px, no
+horizontal overflow; + on Home opens the entry sheet, + on Accounts lands on
+the Ledger with the sheet open; hold opens the type menu above +; More opens
+with Vault, Settings, the email and Sign out, on the Ledger and on the locked
+Vault. Both themes checked. test-money, check-pages, check-sprite pass.
+Browser tests: settings passes; vault has one flaky assertion (a generated
+24-char password has no digit about 8% of the time: a real generator gap, to
+fix in the vault); auth fails because it expects owner@hisab.test, which the
+throwaway DB does not have (not a regression). `run-browser-tests.sh` now
+takes `DEBUG_PORT` from the environment; shoot-mobile takes `BEFORE`.

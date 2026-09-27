@@ -28,6 +28,11 @@ export const EVENTS = {
   ACCOUNT_ARCHIVED: 'account:archived',
 
   // The frame
+  // The one exception to past tense: the tab bar's + ASKS for an entry sheet.
+  // Payload { type: 'expense' | 'income' | 'deposit' | 'transfer' }. Whoever
+  // owns the sheet on this page listens; with no listener the shell falls
+  // back to the Ledger with ?compose=1.
+  COMPOSE:          'compose:requested',
   BOOK_CHANGED:     'book:changed',      // personal <-> a business
   PERIOD_CHANGED:   'period:changed',    // the month being viewed
   CURRENCY_CHANGED: 'currency:changed',  // the display currency
@@ -91,6 +96,11 @@ export function emit(event, payload) {
       console.error(`[bus] listener for "${event}" threw:`, err);
     }
   }
+}
+
+/** Whether anything is listening — how the shell knows a page can handle COMPOSE itself. */
+export function hasListeners(event) {
+  return (listeners.get(event)?.size ?? 0) > 0;
 }
 
 /** For tests and for the lock screen, which drops every subscription it made. */

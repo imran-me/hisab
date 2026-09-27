@@ -29,7 +29,13 @@ import * as session from './backend/session.js';
 
 mountShell({
   title: 'Vault',
-  actions: `<button type="button" class="btn btn--icon" data-lock-now aria-label="Lock the vault" hidden>
+  // The vault's own add is a header action, in vault gold, and not the tab
+  // bar's +: that one records money, and a secret must never be one mis-aimed
+  // tap away from an expense. Both hidden while locked.
+  actions: `<button type="button" class="btn btn--vault btn--sm" data-new-entry data-open-only hidden>
+              ${icon('plus', { class: 'icon icon--sm' })}<span>Add</span>
+            </button>
+            <button type="button" class="btn btn--icon" data-lock-now data-open-only aria-label="Lock the vault" hidden>
               ${icon('lock', { class: 'icon' })}
             </button>`,
 });
@@ -93,7 +99,7 @@ async function boot() {
 
 function showLock() {
   lockEl.hidden = false;
-  qs('[data-lock-now]')?.setAttribute('hidden', '');
+  qsa('[data-open-only]').forEach((node) => node.setAttribute('hidden', ''));
   qs('[data-list]').innerHTML = '';       // the decrypted list leaves the DOM
   qs('[data-search]').value = '';
   filters.q = '';
@@ -103,7 +109,7 @@ function showLock() {
 
 function hideLock() {
   lockEl.hidden = true;
-  qs('[data-lock-now]')?.removeAttribute('hidden');
+  qsa('[data-open-only]').forEach((node) => node.removeAttribute('hidden'));
 }
 
 /* Reveal-the-password toggles, on both forms. */
