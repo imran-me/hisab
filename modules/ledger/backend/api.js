@@ -23,11 +23,13 @@ import * as categories from '../../categories/backend/api.js';
 
 const store = moduleStore('ledger');
 
+// `short` is the word on the entry sheet's segmented control: four of them
+// have to fit one row at 320px without truncating to 'Expe…'.
 export const TYPES = [
-  { key: 'expense',  label: 'Expense',  tone: 'out',  icon: 'arrow-out',  direction: 'out' },
-  { key: 'income',   label: 'Income',   tone: 'in',   icon: 'arrow-in',   direction: 'in' },
-  { key: 'deposit',  label: 'Deposit',  tone: 'hold', icon: 'arrow-hold', direction: 'out' },
-  { key: 'transfer', label: 'Transfer', tone: 'move', icon: 'arrow-move', direction: 'out' },
+  { key: 'expense',  label: 'Expense',  short: 'Out',  tone: 'out',  icon: 'arrow-out',  direction: 'out' },
+  { key: 'income',   label: 'Income',   short: 'In',   tone: 'in',   icon: 'arrow-in',   direction: 'in' },
+  { key: 'deposit',  label: 'Deposit',  short: 'Save', tone: 'hold', icon: 'arrow-hold', direction: 'out' },
+  { key: 'transfer', label: 'Transfer', short: 'Move', tone: 'move', icon: 'arrow-move', direction: 'out' },
 ];
 
 export const typeOf = (key) => TYPES.find((t) => t.key === key) || TYPES[0];

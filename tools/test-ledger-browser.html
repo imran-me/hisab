@@ -120,6 +120,31 @@ function check(label, condition) {
     const again = await ledger.reverse(second.data.id, 'again');
     check('reversing twice is refused', again.ok === false);
 
+    // --- the entry sheet's number pad ------------------------------------------
+    // Pure functions, so they are checked here without opening a sheet. The
+    // pad is the only way an amount gets typed on a phone, so what it refuses
+    // is as much a part of the ledger as what the API refuses.
+    const pad = await import('../modules/ledger/numpad.js');
+    const keys = (seq, places = 2) => seq.reduce((b, k) => pad.press(b, k, places), '');
+
+    check('pad: 2-5-0 is 250 taka', pad.evaluate(keys(['2', '5', '0']), 'BDT') === 25000);
+    check('pad: 120+45 is 165', pad.evaluate(keys(['1', '2', '0', '+', '4', '5']), 'BDT') === 16500);
+    check('pad: 500-120 is 380', pad.evaluate(keys(['5', '0', '0', '-', '1', '2', '0']), 'BDT') === 38000);
+    check('pad: a third decimal cannot be typed', keys(['1', '2', '.', '9', '9', '9']) === '12.99');
+    check('pad: 0.1+0.2 is exactly 30 poisha', pad.evaluate(keys(['.', '1', '+', '.', '2']), 'BDT') === 30);
+    check('pad: no decimal point in yen', keys(['5', '.', '5'], 0) === '55');
+    check('pad: no leading zeros', keys(['0', '0', '7']) === '7');
+    check('pad: 00 on nothing is one zero', keys(['00']) === '0');
+    check('pad: an operator cannot start a sum', keys(['+', '-', '5']) === '5');
+    check('pad: a second operator replaces the first', keys(['9', '+', '-', '1']) === '9-1');
+    check('pad: a trailing operator is ignored', pad.evaluate('120+', 'BDT') === 12000);
+    check('pad: backspace', keys(['1', '2', 'back']) === '1');
+    check('pad: empty is null, not zero', pad.evaluate('', 'BDT') === null);
+    check('pad: a sum below zero is negative, for the sheet to refuse', pad.evaluate('5-9', 'BDT') < 0);
+    check('pad: bufferFor round-trips', pad.evaluate(pad.bufferFor(123450, 'BDT'), 'BDT') === 123450);
+    check('pad: bufferFor drops zero poisha', pad.bufferFor(25000, 'BDT') === '250');
+    check('pad: grouping is Indian for taka', pad.pretty('125000+5', 'BDT') === '1,25,000 + 5');
+
   } catch (err) {
     check(`no exception escaped (${err?.message ?? err})`, false);
   }

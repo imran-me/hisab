@@ -17,24 +17,19 @@ import { mountShell, periodStepper } from '../../shared/js/components/shell.js';
 import * as ledger from './backend/api.js';
 import * as accounts from '../accounts/backend/api.js';
 import * as fx from '../fx/backend/api.js';
-import { openEntrySheet, entryActions } from './entry-sheet.js';
+import { openEntrySheet, mountCompose } from './entry-sheet.js';
 
-mountShell({ title: 'Ledger', actions: entryActions() });
+// No header actions: adding an entry is the tab bar's + and nothing else
+// (docs/DIRECTION.md §3.2). Three buttons for one job was two too many.
+mountShell({ title: 'Ledger' });
 qs('[data-period-slot]')?.append(periodStepper());
 
 const filters = { type: '', q: '', includeReversed: false };
 
-/* The compose action can be reached from the app shortcut on a phone's home
-   screen, which lands here with ?compose=1. */
-if (new URLSearchParams(location.search).get('compose')) {
-  openEntrySheet({ onSaved: refresh });
-}
-
-/* One handler for three buttons. The FAB carries a bare data-compose and so
-   asks for no particular type; the header's Out and In name one. */
-delegate(document.body, 'click', '[data-compose]', (_event, button) => {
-  openEntrySheet({ type: button.dataset.compose || undefined, onSaved: refresh });
-});
+/* Every way of asking for a new entry - the tab bar's +, ?compose=1 from the
+   home-screen shortcut or another page, an empty state's button - lands in
+   one place. */
+mountCompose({ onSaved: refresh });
 
 delegate(document.body, 'click', '[data-type]', (_event, button) => {
   filters.type = button.dataset.type;

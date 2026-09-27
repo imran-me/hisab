@@ -1,0 +1,250 @@
+/* =========================================================================
+   Ledger · the entry sheet
+   -------------------------------------------------------------------------
+   Its own file, loaded by entry-sheet.js rather than by a page, because the
+   sheet opens on pages that are not the Ledger — Home, account detail — and a
+   page should not have to know which of another module's stylesheets its
+   compose button needs.
+
+   Laid out for a thumb at 360px: the type and the amount at the top (read,
+   rarely touched), the chips that say what will be used, then the pad, with
+   Save in the bottom corner the thumb rests nearest to.
+   ========================================================================= */
+
+.sheet--entry .sheet__body {
+  padding: var(--s-3) var(--s-4) calc(var(--s-3) + var(--safe-bottom));
+  gap: 0;
+}
+
+/* The form fills the body, and only the Details region scrolls. The pad never
+   scrolls out of reach, however much of the form is open. */
+.entry {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.entry > * { flex: none; }
+
+/* ---- Type: a segmented control ------------------------------------------ */
+.entry .segment {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--r-2);
+  background: var(--surface-3);
+}
+
+.entry .segment__option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 36px;
+  border-radius: var(--r-1);
+  color: var(--ink-2);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.entry .segment__option input { position: absolute; opacity: 0; width: 0; height: 0; }
+.entry .segment__option:has(input:focus-visible) { box-shadow: var(--e-focus); }
+.entry .segment__option:has(input:checked) { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-hot); }
+.entry .segment__option--out:has(input:checked)  { color: var(--flow-out-ink); }
+.entry .segment__option--in:has(input:checked)   { color: var(--flow-in-ink); }
+.entry .segment__option--hold:has(input:checked) { color: var(--flow-hold-ink); }
+
+/* ---- The amount ----------------------------------------------------------
+   The largest type in the app (DIRECTION §3.4), in the display face with
+   tabular figures, coloured by the type. It shrinks in steps as a sum gets
+   long rather than scrolling sideways, so the whole of "1,250 + 45" is always
+   readable. */
+.entry__amount {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 60px;
+  border-bottom: 1px solid var(--line);
+}
+
+.entry__currency {
+  flex: none;
+  min-height: var(--tap-min);
+  padding-inline: var(--s-2);
+  border: 0;
+  border-radius: var(--r-1);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.entry__display {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: end;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-44);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-figure);
+  line-height: var(--lh-flush);
+  color: var(--ink);
+  caret-color: var(--accent);
+}
+
+.entry__display:focus { outline: none; box-shadow: none; }
+.entry__display::placeholder { color: var(--ink-4); }
+.entry__display[data-size='m'] { font-size: var(--fs-34); }
+.entry__display[data-size='s'] { font-size: var(--fs-23); }
+
+/* A repeated or restored amount is "selected": the next digit replaces it. The
+   wash says so, the same way selected text would. */
+.entry__display.is-selected { background: var(--accent-wash); border-radius: var(--r-1); }
+
+[data-flow='expense']  .entry__display { color: var(--flow-out-ink); }
+[data-flow='income']   .entry__display { color: var(--flow-in-ink); }
+[data-flow='deposit']  .entry__display { color: var(--flow-hold-ink); }
+[data-flow='transfer'] .entry__display { color: var(--ink); }
+
+.entry__result {
+  margin-top: calc(-1 * var(--s-2));
+  text-align: end;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+.entry .field__error { margin: 0; }
+
+/* ---- Details: optional, collapsed, and the only part that scrolls -------- */
+.entry__details {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block: var(--s-1);
+}
+
+.entry__details[hidden] { display: none; }
+.entry [data-necessity-choices] { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+/* ---- What will be used, as chips ----------------------------------------- */
+.entry__picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.entry-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-width: 0;
+  min-height: var(--tap-min);
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--surface-3);
+  color: var(--ink);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-instant) var(--ease), background-color var(--t-fast) var(--ease);
+}
+
+.entry-chip[hidden] { display: none; }
+.entry-chip:active { transform: scale(.97); background: var(--wash-press); }
+
+/* The account is the one with a long name, so it takes the spare width and
+   ellipsises; the date and Details never do. */
+.entry-chip[data-pick='account'],
+.entry-chip[data-pick='to'] { flex: 1 1 0; }
+
+.entry-chip__label { flex: none; color: var(--ink-3); }
+.entry-chip__value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--fw-semibold); }
+
+.entry-chip--toggle { color: var(--ink-2); }
+.entry-chip--toggle .icon { transition: transform var(--t-fast) var(--ease); }
+.entry-chip--toggle[aria-expanded='true'] .icon { transform: rotate(180deg); }
+
+/* ---- The pad --------------------------------------------------------------
+   Digits in the order every phone dialler uses, and an action column beside
+   them. The "reaching hand" setting moves the action column — and Save with
+   it — to the thumb's side. */
+.numpad {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: auto;
+}
+
+[data-hand='left'] .numpad { flex-direction: row-reverse; }
+
+.numpad__digits,
+.numpad__ops {
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  gap: var(--s-2);
+}
+
+.numpad__digits { flex: 3 1 0; grid-template-columns: repeat(3, 1fr); }
+.numpad__ops    { flex: 1 1 0; }
+
+.numpad__key {
+  min-height: 52px;
+  border: 0;
+  border-radius: var(--r-2);
+  background: var(--surface-3);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-23);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;   /* no double-tap zoom on a fast "00" */
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-instant) var(--ease), background-color var(--t-instant) var(--ease);
+}
+
+.numpad__key:active:not(:disabled) { transform: scale(.97); background: var(--wash-press); }
+.numpad__key:disabled { color: var(--ink-4); cursor: default; }
+.numpad__key:focus-visible { outline: none; box-shadow: var(--e-focus); }
+
+.numpad__key--op { background: var(--surface); color: var(--ink-2); }
+
+.numpad__key--save {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-body);
+  font-size: var(--fs-16);
+  font-weight: var(--fw-semibold);
+}
+
+.numpad__key--save:active:not(:disabled) { background: var(--accent-ink); }
+.numpad__key--save.is-busy { opacity: .6; }
+
+@media (prefers-reduced-motion: reduce) {
+  .numpad__key,
+  .entry-chip { transition: none; }
+  .numpad__key:active:not(:disabled),
+  .entry-chip:active { transform: none; }
+}
+
+/* On a wide screen the sheet is a centred dialog and the pad would be a slab
+   of buttons across it. Capped, because a mouse does not need 80px keys. */
+@media (min-width: 700px) {
+  .numpad { max-width: 24rem; width: 100%; margin-inline: auto; }
+}
