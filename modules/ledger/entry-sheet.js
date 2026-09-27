@@ -187,23 +187,6 @@ export function mountCompose({ onSaved } = {}) {
   return () => { stopBus(); stopClicks?.(); };
 }
 
-/**
- * The header's two direct-entry buttons: Out and In.
- *
- * DEPRECATED — the tab bar's + replaces them (docs/DIRECTION.md §3.2). The
- * Ledger no longer uses this. It stays exported only until the Overview stops
- * passing it to mountShell(), so that page does not break in between.
- */
-export function entryActions() {
-  return `
-    <button type="button" class="btn btn--flow-out" data-compose="expense" aria-label="Add an expense">
-      ${icon('arrow-out', { class: 'icon icon--sm' })}<span>Out</span>
-    </button>
-    <button type="button" class="btn btn--flow-in" data-compose="income" aria-label="Add income">
-      ${icon('arrow-in', { class: 'icon icon--sm' })}<span>In</span>
-    </button>`;
-}
-
 /* =========================================================================
    Rendering
    ========================================================================= */
