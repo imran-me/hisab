@@ -14,11 +14,16 @@
   flex-direction: column;
 }
 
+/* Home runs tighter than other pages: the owner wants the month, the figure
+   and the sections close together, so the page top gives up most of its
+   padding (20 → 6px). */
+.page.home { padding-block-start: 6px; }
+
 /* ---- Left to spend ------------------------------------------------------ */
 .home-hero {
   display: flex;
   flex-direction: column;
-  padding-block: var(--s-3) var(--s-5);
+  padding-block: 0 6px;
 }
 
 .home-hero__label {
@@ -31,9 +36,11 @@
 
 /* The one large figure on the screen, in the display face. */
 .home-hero__figure {
-  margin-block-start: var(--s-2);
+  margin-block-start: var(--s-1);
   font-family: var(--font-display);
-  font-size: var(--t-hero);
+  /* 60% of the shared hero size: large enough to lead, small enough that
+     the rest of the month fits beside it on a phone. */
+  font-size: calc(var(--t-hero) * 0.6);
   font-weight: var(--fw-semibold);
   font-stretch: var(--wd-hero);
   line-height: var(--lh-flush);
@@ -150,15 +157,16 @@
 
 .home-flow__item--in   { --dot: var(--in); }
 .home-flow__item--hold { --dot: var(--saved); }
-.home-flow__item--out  { --dot: var(--text-2); }
+.home-flow__item--out  { --dot: var(--out); }
 .home-flow__item--in dd   { color: var(--in); }
 .home-flow__item--hold dd { color: var(--saved); }
+.home-flow__item--out dd  { color: var(--out); }
 
 /* ---- Sections ------------------------------------------------------------
    Lighter than the shared .section-head: no rule under the title, and the
    title at section size, because Home has five sections in a screen and a
    half and a heavy head on each is most of the page. */
-.home-sec { margin-block-start: var(--s-6); }
+.home-sec { margin-block-start: 8px; }
 
 .home-sec__head {
   display: flex;
