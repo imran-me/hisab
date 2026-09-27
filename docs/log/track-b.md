@@ -193,3 +193,9 @@ rows are still summed by the database.
 as-of conversion on a taka card, a JPY row on a EUR account reported as
 unconverted). Ledger harness 35 (2 new: a local USD row snapshots a rate and
 moves the taka balance by its converted value).
+
+## C's request 2: `kept_minor` → `spendable_minor` in the client summary
+
+The client `summary()` called income − spent − held `kept_minor`; the server
+and the cockpit call it `spendable_minor` and use `kept_minor` for income −
+spent. Renamed. Nothing read the old name (grep across modules, index, shared).

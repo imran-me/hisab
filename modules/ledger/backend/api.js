@@ -495,8 +495,12 @@ export async function usageCount(accountId) {
  *   expense = Σ type expense
  *   held    = Σ type deposit AND direction out          (once, not both legs)
  *   transfers are excluded entirely
- *   kept    = income − expense − held  → what is still in hand
- *   savings rate = (held + kept) / income
+ *   spendable = income − expense − held  → what is still in hand
+ *   savings rate = (held + spendable) / income
+ *
+ * `spendable_minor`, the server's name for the same figure (BalanceSheet and
+ * the month cockpit). It was `kept_minor` here, which the cockpit uses for
+ * income − spent - one name for two figures is how two screens disagree.
  *
  * The savings rate counts BOTH what was deliberately put away and what was
  * simply not spent. A rate that ignored the leftover would tell someone who
@@ -534,7 +538,7 @@ export async function summary({ book = 'personal', period = toPeriodKey(new Date
   const totalIn = total(income);
   const totalOut = total(expense);
   const totalHeld = total(held);
-  const kept = totalIn - totalOut - totalHeld;
+  const spendable = totalIn - totalOut - totalHeld;
 
   return {
     ok: true,
@@ -545,10 +549,10 @@ export async function summary({ book = 'personal', period = toPeriodKey(new Date
       income_minor: totalIn,
       expense_minor: totalOut,
       held_minor: totalHeld,
-      kept_minor: kept,
+      spendable_minor: spendable,
       // Guarded: a month with no income divides by zero and renders NaN%,
       // which is the first thing anyone notices on a fresh install.
-      savings_rate: totalIn > 0 ? ((totalHeld + kept) / totalIn) * 100 : 0,
+      savings_rate: totalIn > 0 ? ((totalHeld + spendable) / totalIn) * 100 : 0,
       by_category: groupSum(expense, 'category_label', currency, rates),
       by_method: groupSum(expense, 'method', currency, rates),
       by_necessity: groupSum(expense, 'necessity', currency, rates),
