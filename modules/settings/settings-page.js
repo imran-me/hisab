@@ -23,19 +23,13 @@ mountShell({ title: 'Settings' });
 
 const state = getState();
 
-/**
- * Check the radio matching the stored value.
- *
- * `?? ''` is load-bearing: an unset theme is null, and the "Follow device"
- * radio carries value="" — so the empty string is a real choice here rather
- * than a missing one.
- */
+/** Check the radio matching the stored value. */
 function select(group, value) {
   const input = qs(`[data-${group}-choices] input[value="${value ?? ''}"]`);
   if (input) input.checked = true;
 }
 
-select('theme', state.theme ?? '');
+select('theme', state.theme ?? 'night');
 select('density', state.density ?? 'default');
 select('hand', state.hand ?? 'right');
 
@@ -51,22 +45,20 @@ function describeTheme() {
   const hint = qs('[data-theme-hint]');
   const chosen = getState().theme;
 
-  if (chosen === 'day') { hint.textContent = 'Always light, whatever this device is set to.'; return; }
-  if (chosen === 'night') { hint.textContent = 'Always dark, whatever this device is set to.'; return; }
+  if (chosen === 'day') { hint.textContent = 'Always light, whatever your phone is set to.'; return; }
+  if (chosen === 'night') { hint.textContent = 'Always dark, whatever your phone is set to. This is the default.'; return; }
 
   const deviceIsDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   hint.textContent = deviceIsDark
-    ? 'This device is set to dark, so Hisab is dark. Choose Day to override it.'
-    : 'This device is set to light, so Hisab is light. Choose Night to override it.';
+    ? 'Your phone is set to dark, so Hisab is dark. It follows when the phone changes.'
+    : 'Your phone is set to light, so Hisab is light. It follows when the phone changes.';
 }
 
 describeTheme();
 
 qsa('[data-theme-choices] input').forEach((input) => {
   input.addEventListener('change', () => {
-    // '' means "no stored preference", which is what lets the media query take
-    // over again — setTheme removes the key rather than storing an empty value.
-    setTheme(input.value || null);
+    setTheme(input.value);
     describeTheme();
   });
 });
@@ -79,8 +71,8 @@ qsa('[data-hand-choices] input').forEach((input) => {
   input.addEventListener('change', () => setHand(input.value));
 });
 
-// The device changing its mind while this page is open. Only meaningful on
-// "Follow device", and describeTheme() already checks which setting is active.
+// The phone changing its mind while this page is open. Only meaningful on
+// "Follow phone", and describeTheme() already checks which setting is active.
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', describeTheme);
 
 /* ---- Account and storage -------------------------------------------------- */

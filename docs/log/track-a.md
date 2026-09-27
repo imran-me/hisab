@@ -301,3 +301,31 @@ Home's header.
 Verified at 360 in both themes on the Ledger: the stepper is 250px and fits
 beside search; tapping the name opens the grid with 12 months, 3 disabled
 (Oct–Dec 2026), September ringed with its tick. check-pages passes.
+
+## A7 (theme) — dark by default, "Follow phone" as a choice
+
+The theme is `'night'` (default), `'day'` or `'system'`, and is always
+stored. The inline pre-paint block is frozen, and it sets `data-theme` for a
+stored day or night and removes it for anything else, so the default is
+made real by `state.js` STORING `'night'` on the first run. From the second
+page on, night paints before the first frame. The one exception is the very
+first page ever opened on a light phone: it paints one light frame before
+`applyTheme()` corrects it. That cannot be removed without changing the
+frozen block (director's call). A stored null from before meant "followed
+the device by default, not by choice", so it becomes night too.
+`setTheme()` treats any unknown value as `'system'`, the one setting that
+cannot strand someone.
+
+Settings: Follow phone / Dark / Light, with the hint saying what the phone
+is doing. Every page's `<meta name="theme-color">` is now the v2 canvas
+`#0C0F14` (13 pages; `applyTheme()` still sets it per theme at runtime).
+
+Verified: test-settings-browser 14 passed (new: Follow phone removes the
+attribute and stores `system`; an unknown value falls back to it);
+test-vault-browser 52. At 360 with the phone set to LIGHT and a fresh
+profile: Accounts and Settings open dark, storage says night, meta says
+#0C0F14. Choosing Follow phone turns the page light, stores system, sets
+the meta to #F5F3EF, and the hint reads correctly. check-pages passes.
+
+Still in A7: Settings as a grouped list, and the "Reaching hand" hint still
+mentions the old compose button.

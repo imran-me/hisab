@@ -43,7 +43,7 @@
 
   <title>Settings — Hisab</title>
   <meta name="description" content="Appearance and preferences.">
-  <meta name="theme-color" content="#06080B">
+  <meta name="theme-color" content="#0C0F14">
   <meta name="color-scheme" content="dark light">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="../../assets/logo/favicon.svg" type="image/svg+xml">
@@ -72,25 +72,23 @@
               <!--
                 THREE options, not a two-way switch.
 
-                "Follow device" has to be a real, selectable state rather than
-                the absence of a choice: it is what the CSS expresses as
-                :root:not([data-theme]), and it is the only way back once
-                someone has picked one. A toggle with two positions can express
-                day and night and cannot express "whatever my phone is doing",
-                so choosing once would be permanent.
+                Dark is the default. "Follow phone" is a real, stored choice
+                ('system'), which the CSS expresses as :root:not([data-theme]).
+                A two-position switch could say dark or light and could not say
+                "whatever my phone is doing".
               -->
               <div class="choices" data-theme-choices role="radiogroup" aria-label="Theme">
                 <label class="choice">
-                  <input type="radio" name="theme" value="">
-                  <span>Follow device</span>
-                </label>
-                <label class="choice">
-                  <input type="radio" name="theme" value="day">
-                  <span>Day</span>
+                  <input type="radio" name="theme" value="system">
+                  <span>Follow phone</span>
                 </label>
                 <label class="choice">
                   <input type="radio" name="theme" value="night">
-                  <span>Night</span>
+                  <span>Dark</span>
+                </label>
+                <label class="choice">
+                  <input type="radio" name="theme" value="day">
+                  <span>Light</span>
                 </label>
               </div>
               <p class="field__hint" data-theme-hint></p>

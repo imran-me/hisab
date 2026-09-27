@@ -50,12 +50,17 @@ try {
   setTheme('night');
   check('choosing Night sets data-theme="night"', root.getAttribute('data-theme') === 'night');
 
-  setTheme(null);
-  // The important one. An empty string or the literal 'null' here would break
+  setTheme('system');
+  // The important one. Anything but removal here would break
   // :root:not([data-theme]) and strand someone on whichever theme they last
-  // picked, with no way back to following the device.
-  check('Follow device REMOVES the attribute', !root.hasAttribute('data-theme'));
-  check('and clears the stored value', !getState().theme);
+  // picked, with no way back to following the phone.
+  check('Follow phone REMOVES the attribute', !root.hasAttribute('data-theme'));
+  check('and stores the choice as system', getState().theme === 'system');
+  check('and the pre-paint block will read it as "no attribute"',
+        JSON.parse(localStorage.getItem('hisab:theme')) === 'system');
+
+  setTheme(null);
+  check('an unknown value falls back to following the phone', getState().theme === 'system' && !root.hasAttribute('data-theme'));
 
   // --- the selector the settings page uses to restore state ---------------
   // Reproduced exactly, against the real markup, because this is the part a
@@ -63,17 +68,16 @@ try {
   const group = document.createElement('div');
   group.setAttribute('data-theme-choices', '');
   group.innerHTML = `
-    <label class="choice"><input type="radio" name="t" value=""><span>Follow device</span></label>
-    <label class="choice"><input type="radio" name="t" value="day"><span>Day</span></label>
-    <label class="choice"><input type="radio" name="t" value="night"><span>Night</span></label>`;
+    <label class="choice"><input type="radio" name="t" value="system"><span>Follow phone</span></label>
+    <label class="choice"><input type="radio" name="t" value="night"><span>Dark</span></label>
+    <label class="choice"><input type="radio" name="t" value="day"><span>Light</span></label>`;
   document.body.appendChild(group);
 
-  const pick = (value) => group.querySelector(`input[value="${value ?? ''}"]`);
+  const pick = (value) => group.querySelector(`input[value="${value}"]`);
 
-  check('the empty value matches the Follow device radio', pick(null) !== null);
-  check('and it is the one with no value', pick(null).value === '');
-  pick(null).checked = true;
-  check('checking it works as a property', pick(null).checked === true);
+  check('system matches the Follow phone radio', pick('system') !== null);
+  pick('system').checked = true;
+  check('checking it works as a property', pick('system').checked === true);
   check('day radio is reachable', pick('day') !== null);
 
   group.remove();
@@ -95,7 +99,8 @@ try {
 
 // Leave nothing behind: this harness shares an origin with the app in dev, so a
 // stored preference here would follow the person into the real pages.
-setTheme(null); setDensity('default'); setHand('right');
+// Night is the default, so "nothing left behind" is night, not an absent key.
+setTheme('night'); setDensity('default'); setHand('right');
 
 document.title = `RESULT|${failures.length === 0 ? 'PASS' : 'FAIL'}|${passed}|${failures.length}|${failures.join(' ; ')}`;
 </script>

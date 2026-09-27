@@ -17,7 +17,7 @@ const NS = 'hisab';
 
 /** The complete list of keys. Namespaced so a shared origin cannot collide. */
 export const KEYS = {
-  THEME:     `${NS}:theme`,      // 'night' | 'day' | null (follow the device)
+  THEME:     `${NS}:theme`,      // 'night' | 'day' | 'system' (follow the phone); absent = night
   DENSITY:   `${NS}:density`,    // 'default' | 'compact'
   HAND:      `${NS}:hand`,       // 'right' | 'left' — which side the FAB sits on
   BOOK:      `${NS}:book`,       // the active book: 'personal' | a business ULID
