@@ -127,8 +127,9 @@ input:-webkit-autofill:focus {
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-title);
   line-height: var(--lh-tight);
-  letter-spacing: var(--track-figure);
+  letter-spacing: 0.005em;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }

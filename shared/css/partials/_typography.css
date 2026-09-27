@@ -4,77 +4,63 @@
    and never sets a font-size, a family or a weight of its own.
    ========================================================================= */
 
-/* ---- Web fonts ----------------------------------------------------------
-   Self-hosted in assets/fonts/, so the app renders identically offline and no
-   third party is told which pages an owner of a private ledger is opening.
+/* ---- Web fonts (visual identity v2, DIRECTION §3.7.3) --------------------
+   Two families and one symbol, self-hosted in assets/fonts/ so the app renders
+   the same offline and no third party learns which pages of a private ledger
+   are being opened. A Latin-only screen downloads about 112 KB of fonts.
 
-   Latin subsets only, plus a separately-ranged Bengali face — 152KB for the
-   whole product. `font-display: swap` throughout: text must be readable in a
-   fallback immediately, and every face here is same-origin, so the swap window
-   is short.
-
-   The mono is the one family declared per weight, because its two weights are
-   genuinely different files. The sans and the display face are variable and
-   each ship as a single file across a weight range — see the note on the first
-   block for how that was discovered.
+   Anek Bangla and Hisab Taka are subset instances (wght 400–700, wdth 80–100)
+   built with fonttools varLib.instancer and pyftsubset --flavor=woff2.
    ------------------------------------------------------------------------ */
 
-/* VARIABLE, and declared as one face across a weight RANGE.
-   The three static weights this used to declare turned out to be byte-identical
-   downloads — Google serves one variable file per subset and lets the browser
-   interpolate. Three copies of the same 45KB file was 91KB of pure waste, and
-   worse, three separate fetches racing to paint the same text. */
+/* IBM Plex Sans — the Latin body. Variable, one file across the weight range.
+   Its digits are all 600 units wide, so list amounts align without a mono. */
 @font-face {
   font-family: 'IBM Plex Sans';
-  src: url('../../../assets/fonts/ibm-plex-sans-var.woff2') format('woff2-variations'),
-       url('../../../assets/fonts/ibm-plex-sans-var.woff2') format('woff2');
+  src: url('../../../assets/fonts/ibm-plex-sans-var.woff2') format('woff2');
   font-weight: 100 700;
   font-style: normal;
   font-display: swap;
 }
 
+/* Anek Bangla, Latin half — figures and headings. Real tnum, and a width axis
+   that lets a hero figure condense at 360px instead of shrinking. */
 @font-face {
-  font-family: 'IBM Plex Mono';
-  src: url('../../../assets/fonts/ibm-plex-mono-400.woff2') format('woff2');
-  font-weight: 400;
+  font-family: 'Anek Bangla';
+  src: url('../../../assets/fonts/anek-latin.woff2') format('woff2');
+  font-weight: 400 700;
+  font-stretch: 80% 100%;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0000-00FF, U+2000-206F, U+2190-21FF, U+2212;
 }
 
+/* Anek Bangla, Bengali half. unicode-range means the 265 KB file is fetched
+   only when a Bangla codepoint is on the page — a category or payee typed in
+   Bangla — and never otherwise. */
 @font-face {
-  font-family: 'IBM Plex Mono';
-  src: url('../../../assets/fonts/ibm-plex-mono-500.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Also variable — same story as the sans above. */
-@font-face {
-  font-family: 'Space Grotesk';
-  src: url('../../../assets/fonts/space-grotesk-var.woff2') format('woff2-variations'),
-       url('../../../assets/fonts/space-grotesk-var.woff2') format('woff2');
-  font-weight: 300 700;
-  font-style: normal;
-  /* swap, not optional. It was `optional` on the reasoning that a heading
-     swapping in late is a visible reflow of the biggest thing on screen — but
-     `optional` means a slow first load never gets the face AT ALL, and on this
-     product the display face is the wordmark and every page title. Losing the
-     identity on a bad connection is worse than one reflow, and the file is
-     22KB and same-origin. */
-  font-display: swap;
-}
-
-/* Bengali. unicode-range means this file is only fetched when a Bangla
-   codepoint is actually on the page — which, for a category the owner typed
-   in Bangla, is exactly when it is needed and never otherwise. */
-@font-face {
-  font-family: 'Noto Sans Bengali';
-  src: url('../../../assets/fonts/noto-sans-bengali-400.woff2') format('woff2');
-  font-weight: 400;
+  font-family: 'Anek Bangla';
+  src: url('../../../assets/fonts/anek-bengali.woff2') format('woff2');
+  font-weight: 400 700;
+  font-stretch: 80% 100%;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0980-09FF, U+200C-200D, U+25CC;
+}
+
+/* Hisab Taka — Anek's ৳ (U+09F3) alone, 1.4 KB, first in both stacks. Every
+   taka is drawn by this one face at the figure's own weight, which is what
+   stops it reading as a "b". `block`, not `swap`: at 1.4 KB it arrives before
+   the block period ends, and a fallback ৳ swapping to the real one is a
+   visible jump on exactly the character this face exists for. */
+@font-face {
+  font-family: 'Hisab Taka';
+  src: url('../../../assets/fonts/hisab-taka.woff2') format('woff2');
+  font-weight: 400 700;
+  font-stretch: 80% 100%;
+  font-style: normal;
+  font-display: block;
+  unicode-range: U+09F3;
 }
 
 /* ---- Headings -----------------------------------------------------------
@@ -123,95 +109,91 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
 /* =========================================================================
    MONEY
 
-   Every amount in the product carries .money. This is the single most
-   important type role in the file, and the reasons are all mechanical:
+   Every amount in the product carries .money. Two settings, by size:
 
-   1. TABULAR FIGURES. Proportional digits make 1 narrower than 8, so a column
-      of amounts jitters left and right as the values change and the eye
-      cannot compare two rows by their shape. tabular-nums fixes the advance
-      width; slashed-zero keeps a 0 from reading as an O in an account number.
-   2. THE MONO FAMILY. Even with tabular figures, a proportional face sets the
-      minus sign, the decimal separator and the thousands separator at widths
-      that differ from the digits, so the decimal points still drift.
-   3. NEGATIVE TRACKING. The mono is wide; a large balance set at its natural
-      tracking overruns a 360px card.
+   IN A LIST (.money, --sm, --md): Plex Sans 500 with tabular figures. Plex's
+   digits are all one width, so a column of amounts aligns on its right edge
+   with no mono face. The ৳ is 0.9em in the figure's own colour and weight —
+   not dimmed, because a dimmed thin taka is what read as "b".
+
+   A FIGURE (--lg, --xl, --hero): Anek Bangla 600, condensed by the width
+   axis rather than shrunk, so a lakh-scale figure fits 360px at full size.
+   The ৳ and any minor part step down and go to --text-3, so the number read
+   is the number the eye lands on.
+
+   The ৳ itself is always drawn by 'Hisab Taka', first in both stacks.
    ========================================================================= */
 .money {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums slashed-zero;
-  font-feature-settings: 'tnum' 1, 'zero' 1;
-  letter-spacing: var(--track-figure);
+  font-family: var(--font-body);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
-/* The currency code and the minor part are set smaller and dimmer than the
-   major part, so the number a person is actually reading is the number their
-   eye lands on. The .money__minor span is produced by formatMoney(). */
-/* The home currency's symbol. Set in the Bengali face for ৳ specifically —
-   neither Plex nor Space Grotesk draws it, and a fallback taka picked by the
-   OS changes shape from one phone to the next. Dimmed by opacity rather than
-   by colour, so a mint or coral figure keeps its tone in the symbol too. */
 .money__sym {
-  font-family: 'Noto Sans Bengali', var(--font-body);
-  font-weight: var(--fw-regular);
-  font-size: 0.86em;
-  opacity: 0.66;
-  margin-inline-end: 0.08em;
+  font-size: 0.9em;
+  margin-inline-end: 0.04em;
   letter-spacing: 0;
 }
 
+/* A foreign currency's code: small and quiet, because it qualifies the
+   figure rather than being read as part of it. */
 .money__code {
   font-size: 0.72em;
   font-weight: var(--fw-medium);
-  color: var(--ink-3);
+  color: var(--text-3);
   margin-inline-end: 0.25em;
   letter-spacing: 0;
 }
 
 .money__minor {
-  font-size: 0.78em;
-  color: var(--ink-3);
+  font-size: 0.8em;
+  color: var(--text-3);
 }
 
-.money__sign { margin-inline-end: 0.05em; }
+.money__sign { margin-inline-end: 0.04em; }
 
-/* Sizes. .figure is the big one — one per screen.
-
-   From --lg up a figure is set in the DISPLAY face, not the mono. The mono is
-   right for a column, where digits must line up across rows; a single large
-   figure has nothing to line up with, and the mono's width is exactly what
-   cut 'BDT 89,998.00' off at the edge of a 360px tile. Space Grotesk with
-   tabular figures keeps the digits steady as the value ticks and is about a
-   fifth narrower. (2026-09-26, DIRECTION §3.5.1.) */
 .money--sm  { font-size: var(--fs-13); }
-.money--md  { font-size: var(--fs-16); }
-.money--lg  { font-size: var(--fs-23); font-weight: var(--fw-medium); }
-.money--xl  { font-size: var(--fs-34); font-weight: var(--fw-medium); line-height: var(--lh-flush); }
-.money--hero{ font-size: var(--fs-44); font-weight: var(--fw-medium); line-height: var(--lh-flush); }
+.money--md  { font-size: var(--t-body); }
+.money--lg  { font-size: var(--fs-23); }
+.money--xl  { font-size: var(--fs-34); line-height: var(--lh-flush); }
+.money--hero{ font-size: var(--t-hero); line-height: var(--lh-flush); }
 
 .money--lg, .money--xl, .money--hero {
   font-family: var(--font-display);
-  letter-spacing: -0.015em;
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-fig);
+  letter-spacing: var(--track-figure);
 }
+
+.money--xl, .money--hero { font-stretch: var(--wd-hero); }
+
+/* On a figure the symbol sits at half size on the baseline and the minor part
+   smaller still, both in --text-3 (the hero spec, §3.7.3). */
+.money--hero .money__sym,
+.money--xl .money__sym { font-size: 0.5em; font-weight: var(--fw-medium); color: var(--text-3); margin-inline-end: 0.1em; }
+.money--lg .money__sym { font-size: 0.66em; font-weight: var(--fw-medium); color: var(--text-3); margin-inline-end: 0.06em; }
+.money--hero .money__minor,
+.money--xl .money__minor { font-size: 0.42em; font-weight: var(--fw-medium); }
+.money--lg .money__minor { font-size: 0.6em; font-weight: var(--fw-medium); }
 
 @media (max-width: 380px) {
-  /* A ten-digit balance in three currencies does not fit a 360px card at 44px.
-     Stepping the hero down here is cheaper than truncating the number, which
-     is the one thing a ledger must never do. */
-  .money--hero { font-size: var(--fs-34); }
-  .money--xl   { font-size: var(--fs-28); }
+  /* Condensed first, then stepped down: a ten-digit balance with poisha still
+     has to fit a 360px screen whole, because a ledger never truncates. */
+  .money--xl { font-size: var(--fs-28); }
 }
 
-/* Directional colour. These are the only classes that colour a number, and
-   they map one-to-one onto the four transaction types, so a colour on a
-   figure always means the same thing on every screen. */
-.money--in    { color: var(--flow-in-ink); }
-/* An outflow is plain ink (v2): most rows are spending, and a list coloured
-   red is an alarm that never stops. The minus sign says it is money out. */
+/* Colour says "not the usual". Only money arriving, money saved and a
+   transfer carry a hue; an outflow is plain ink, because most rows are
+   spending and a list coloured red is an alarm that never stops. The minus
+   sign says it is money out. */
+.money--in    { color: var(--in); }
 .money--out   { color: var(--text-1); }
-.money--hold  { color: var(--flow-hold-ink); }
-.money--move  { color: var(--flow-move); }
-.money--flat  { color: var(--ink); }
+.money--hold  { color: var(--saved); }
+.money--move  { color: var(--move); }
+.money--flat  { color: var(--text-1); }
 
 /* A converted figure is never presented as if it were the real one — it is
    dimmed and marked, and the rate that produced it is in the title attribute.

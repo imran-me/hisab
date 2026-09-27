@@ -154,3 +154,26 @@ Verified: shoot-mobile of Home, Ledger, Accounts and Settings at 360 in both
 themes: the new palettes apply through the aliases, no overflow;
 check-pages passes.
 
+## A4.2 — v2 fonts
+
+`assets/fonts/` now holds exactly four files: `ibm-plex-sans-var.woff2`
+(46 KB, kept), `anek-latin.woff2` (65 KB), `anek-bengali.woff2` (265 KB,
+`unicode-range` U+0980–09FF so it loads only when Bengali is on screen) and
+`hisab-taka.woff2` (1.4 KB, U+09F3 only, `font-display: block`). Space
+Grotesk, both Plex Mono files and Noto Sans Bengali are deleted. The three
+new files moved from `docs/visual-v2/f/`, which is gone; the mock's
+`v2.css` now points at `assets/fonts/` so it still renders.
+
+`.money` is Plex Sans 500 tabular in lists, with the ৳ at 0.9em in the
+figure's own colour. From `--lg` up a figure is Anek 600 condensed
+(`--wd-fig` 92%, `--wd-hero` 86% for xl and hero), with the ৳ at 0.5em and
+the minor part at 0.42em in `--text-3`. Headings are Anek 600 at 96%.
+`--font-mono` is now an alias of the body stack (no mono face ships).
+
+Verified at 360, both themes, Home, Ledger, Accounts: `document.fonts`
+lists only IBM Plex Sans, Anek Bangla (Latin half) and Hisab Taka as
+loaded, so no figure uses another face and the ৳ comes from Hisab Taka
+(the Bengali half is never fetched on these screens). Home compared against
+`docs/visual-v2/shots/home-night.png`: the figures, taka and weights match;
+the bar and tab colours differ until A4.4. check-pages passes.
+
