@@ -8,16 +8,17 @@
  */
 
 import { qs, icon, esc, delegate } from '../../shared/js/core/dom.js';
-import { formatMoneyHTML, formatMoney, moneyLabel, parseAmount, convertAndSum, CURRENCIES } from '../../shared/js/core/money.js';
+import { formatMoneyHTML, moneyLabel, convertAndSum } from '../../shared/js/core/money.js';
 import { on, EVENTS } from '../../shared/js/core/bus.js';
 import * as state from '../../shared/js/core/state.js';
 import { mountShell } from '../../shared/js/components/shell.js';
-import { openSheet, confirmDialog } from '../../shared/js/components/sheet.js';
+import { confirmDialog } from '../../shared/js/components/sheet.js';
 import { menu } from '../../shared/js/components/menu.js';
 import { toastOk, toastFailure, toast } from '../../shared/js/components/toast.js';
 import * as accounts from './backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import * as fx from '../fx/backend/api.js';
+import { openAccountSheet } from './account-form.js';
 
 mountShell({ title: 'Accounts' });
 
@@ -174,7 +175,10 @@ async function openRowMenu(button) {
   if (account.archived_at) {
     items.push({ label: 'Restore', icon: 'refresh', onClick: async () => { await accounts.restore(id); toastOk('Restored.'); } });
   } else {
-    items.push({ label: 'Edit', icon: 'edit', onClick: () => openAccountSheet(account) });
+    items.push({
+      label: 'Edit', icon: 'edit',
+      onClick: async () => openAccountSheet(account, { balance: (await ledger.balances({ book: account.book })).data[id] ?? 0 }),
+    });
     if (!account.is_default) {
       items.push({ label: 'Make default', icon: 'check', onClick: async () => { await accounts.makeDefault(id); toastOk(`${account.name} is now the default.`); } });
     }
@@ -224,130 +228,5 @@ async function archiveAccount(account) {
   toast(`${account.name} archived.`, {
     tone: 'good',
     action: { label: 'Undo', onClick: () => accounts.restore(account.id) },
-  });
-}
-
-/* =========================================================================
-   The account form
-   ========================================================================= */
-
-function openAccountSheet(account = null) {
-  const editing = Boolean(account);
-  const form = document.createElement('form');
-  form.className = 'stack stack--4';
-  form.noValidate = true;
-
-  const current = account || { type: 'cash', currency: state.currency() };
-
-  form.innerHTML = `
-    <div class="field">
-      <label class="field__label" for="acc-name">Name <span class="field__req" aria-hidden="true">*</span></label>
-      <input class="input" id="acc-name" name="name" value="${esc(current.name || '')}"
-             placeholder="Cash in hand, bKash, City Bank…" autocomplete="off" data-autofocus>
-      <p class="field__error" data-error="name" hidden></p>
-    </div>
-
-    <fieldset class="fieldset">
-      <legend class="field__label">Type</legend>
-      <div class="choices" role="radiogroup">
-        ${accounts.TYPES.map((t) => `
-          <label class="choice">
-            <input type="radio" name="type" value="${t.key}"${t.key === current.type ? ' checked' : ''}>
-            ${icon(t.icon, { class: 'icon icon--sm' })}
-            <span>${esc(t.label)}</span>
-          </label>`).join('')}
-      </div>
-      <p class="field__hint" data-type-hint></p>
-    </fieldset>
-
-    <div class="grid grid--pair">
-      <div class="field">
-        <label class="field__label" for="acc-currency">Currency</label>
-        <select class="select" id="acc-currency" name="currency"${editing ? ' disabled' : ''}>
-          ${Object.values(CURRENCIES).map((c) => `
-            <option value="${c.code}"${c.code === current.currency ? ' selected' : ''}>${c.code} — ${esc(c.name)}</option>`).join('')}
-        </select>
-        ${editing ? '<p class="field__hint">Fixed once set — changing it would reinterpret every amount already recorded.</p>' : ''}
-      </div>
-
-      <div class="field">
-        <label class="field__label" for="acc-opening">Opening balance</label>
-        <input class="input" id="acc-opening" name="opening" inputmode="decimal" autocomplete="off"
-               value="${current.opening_balance_minor ? esc(formatMoney(current.opening_balance_minor, current.currency)) : ''}"
-               placeholder="0">
-        <p class="field__hint">What was in it before you started recording.</p>
-      </div>
-    </div>
-
-    <div class="grid grid--pair">
-      <div class="field">
-        <label class="field__label" for="acc-institution">Bank or provider</label>
-        <input class="input" id="acc-institution" name="institution" autocomplete="off"
-               value="${esc(current.institution || '')}" placeholder="Optional">
-      </div>
-      <div class="field">
-        <label class="field__label" for="acc-tail">Last 4 digits</label>
-        <input class="input" id="acc-tail" name="number_tail" inputmode="numeric" maxlength="4"
-               value="${esc(current.number_tail || '')}" placeholder="Optional">
-        <p class="field__hint">Only four. A full number belongs in the vault.</p>
-      </div>
-    </div>
-
-    <div class="field" data-limit-field${current.type === 'card' ? '' : ' hidden'}>
-      <label class="field__label" for="acc-limit">Credit limit</label>
-      <input class="input" id="acc-limit" name="credit_limit" inputmode="decimal" autocomplete="off"
-             value="${current.credit_limit_minor ? esc(formatMoney(current.credit_limit_minor, current.currency)) : ''}">
-    </div>
-
-    <div class="form-actions">
-      <button type="submit" class="btn btn--primary btn--lg">${editing ? 'Save changes' : 'Add account'}</button>
-    </div>
-  `;
-
-  const sheet = openSheet({ title: editing ? 'Edit account' : 'New account', body: form });
-
-  const hints = {
-    savings: 'Kept out of the spendable total — money here is yours but is not money you can spend today.',
-    investment: 'Kept out of the spendable total, and its value is tracked separately from its cost.',
-    card: 'The balance runs negative; a credit limit turns it into an “available” figure.',
-  };
-
-  const syncType = () => {
-    const type = form.elements.type.value;
-    qs('[data-limit-field]', form).hidden = type !== 'card';
-    qs('[data-type-hint]', form).textContent = hints[type] || '';
-  };
-  syncType();
-  delegate(form, 'change', '[name="type"]', syncType);
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    const currency = form.elements.currency.value;
-    const payload = {
-      name: form.elements.name.value,
-      type: form.elements.type.value,
-      currency,
-      book: state.book(),
-      opening_balance_minor: parseAmount(form.elements.opening.value, currency) ?? 0,
-      institution: form.elements.institution.value,
-      number_tail: form.elements.number_tail.value,
-      credit_limit_minor: parseAmount(form.elements.credit_limit.value, currency) ?? null,
-    };
-
-    const res = editing ? await accounts.update(account.id, payload) : await accounts.create(payload);
-
-    if (!res.ok) {
-      if (res.reason === 'invalid') {
-        for (const [field, messages] of Object.entries(res.errors || {})) {
-          const node = qs(`[data-error="${field}"]`, form);
-          if (node) { node.textContent = messages[0]; node.hidden = false; }
-        }
-      } else toastFailure(res, 'Could not save the account.');
-      return;
-    }
-
-    sheet.close('saved');
-    toastOk(editing ? 'Account updated.' : `${payload.name} added.`);
   });
 }

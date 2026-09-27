@@ -25,17 +25,44 @@ class Account extends Model
      */
     public const HELD_TYPES = ['savings', 'investment'];
 
+    /** What a bank account is, as the bank calls it. FDR and DPS are held, not spendable. */
+    public const BANK_ACCOUNT_TYPES = ['savings', 'current', 'salary', 'fdr', 'dps'];
+
+    public const CARD_NETWORKS = ['visa', 'mastercard', 'amex', 'unionpay', 'other'];
+
+    /**
+     * The colours an account can wear, by token name. A name, never a hex:
+     * the palette lives in _variables.css and changes with the theme.
+     */
+    public const COLOURS = [
+        'marigold', 'green', 'violet', 'blue', 'rose', 'teal', 'orange', 'slate',
+    ];
+
     protected $table = 'accounts';
 
     protected $fillable = [
         'id', 'user_id', 'name', 'type', 'currency', 'book',
         'opening_balance_minor', 'opening_on', 'institution', 'number_tail',
         'credit_limit_minor', 'is_default', 'is_demo', 'sort_order', 'archived_at',
+        'branch', 'holder_name', 'account_number', 'bank_account_type', 'routing_number',
+        'card_network', 'statement_day', 'colour', 'notes',
+        'statement_balance_minor', 'statement_on',
     ];
+
+    /**
+     * Never serialised by accident. The full number leaves the server only
+     * through AccountController::show(), which adds it on purpose.
+     */
+    protected $hidden = ['account_number'];
 
     protected function casts(): array
     {
         return [
+            // The app key encrypts it at rest: a stolen database holds
+            // ciphertext here, not a list of account numbers.
+            'account_number' => 'encrypted',
+            'statement_day' => 'integer',
+            'statement_balance_minor' => 'integer',
             // Integers in the currency's minor unit. Never floats, and never
             // divided by a constant 100 - the number of decimal places comes
             // from the currency row, because it is 3 for KWD and 0 for JPY.
@@ -57,6 +84,19 @@ class Account extends Model
      * tests. api-contract.md specifies a local date here, not an instant.
      */
     protected function openingOn(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): ?string => $value === null ? null : substr($value, 0, 10),
+            set: fn (mixed $value): ?string => match (true) {
+                $value === null, $value === '' => null,
+                $value instanceof \DateTimeInterface => $value->format('Y-m-d'),
+                default => substr((string) $value, 0, 10),
+            },
+        );
+    }
+
+    /** The statement date, as a plain 'Y-m-d' for the same reason as opening_on. */
+    protected function statementOn(): Attribute
     {
         return Attribute::make(
             get: fn (?string $value): ?string => $value === null ? null : substr($value, 0, 10),

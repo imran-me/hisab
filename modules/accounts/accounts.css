@@ -163,3 +163,149 @@
 }
 
 .acc-row__after { font-size: var(--fs-12); color: var(--text-3); }
+
+/* =========================================================================
+   Account colours, by name
+   An account stores a colour NAME (Account::COLOURS); the shade is a palette
+   token, so it follows the theme. Anything that wears it reads --acc.
+   ========================================================================= */
+.acc-colour--marigold { --acc: var(--accent); }
+.acc-colour--green    { --acc: var(--in); }
+.acc-colour--violet   { --acc: var(--saved); }
+.acc-colour--blue     { --acc: var(--biz); }
+.acc-colour--rose     { --acc: var(--cat-health); }
+.acc-colour--teal     { --acc: var(--vault); }
+.acc-colour--orange   { --acc: var(--warn); }
+.acc-colour--slate    { --acc: var(--move); }
+
+/* An institution's mark: a monogram tile in its colour. */
+.acc-mark {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 36px;
+  height: 36px;
+  padding-inline: var(--s-1);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--acc, var(--text-3)) 18%, transparent);
+  color: var(--acc, var(--text-2));
+  font-family: var(--font-display);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.02em;
+}
+
+/* =========================================================================
+   The form
+   ========================================================================= */
+
+/* The five kinds, one row of tiles that fits 360px. */
+.acc-kinds { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s-2); }
+
+.acc-kind {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  min-height: 64px;
+  padding: var(--s-2) var(--s-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--text-2);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+
+.acc-kind input { position: absolute; opacity: 0; width: 0; height: 0; }
+.acc-kind:has(input:checked) { background: var(--bg-3); border-color: var(--accent); color: var(--text-1); }
+.acc-kind:has(input:focus-visible) { box-shadow: var(--e-focus); }
+.acc-kind:has(input:disabled) { cursor: default; }
+.acc-kind:has(input:disabled:not(:checked)) { opacity: 0.4; }
+
+/* The bank picker: a search box with the picked bank's mark beside it. */
+.acc-picker { position: relative; }
+.acc-picker__input { display: flex; align-items: center; gap: var(--s-2); }
+.acc-picker__input .input { flex: 1 1 auto; min-width: 0; }
+
+.acc-picker__list {
+  list-style: none;
+  margin: var(--s-1) 0 0;
+  padding: var(--s-1);
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+  display: flex;
+  flex-direction: column;
+}
+
+.acc-picker__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-1) var(--s-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-1);
+  font-size: var(--fs-14);
+  text-align: start;
+  cursor: pointer;
+}
+
+.acc-picker__item:active,
+.acc-picker__item:hover { background: var(--wash-hover); }
+
+/* Wallet providers: four tiles with their marks. */
+.acc-providers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); }
+
+.acc-provider {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+  padding: var(--s-2) var(--s-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: var(--fs-12);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.acc-provider input { position: absolute; opacity: 0; width: 0; height: 0; }
+.acc-provider:has(input:checked) { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 10%, transparent); color: var(--text-1); }
+.acc-provider:has(input:focus-visible) { box-shadow: var(--e-focus); }
+
+/* Colour swatches. */
+.acc-swatches { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+.acc-swatch {
+  position: relative;
+  /* Eight in one row at 360px: 8 × 32 + 7 × 8 = 312 of 328. */
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  background: var(--acc);
+  cursor: pointer;
+}
+
+.acc-swatch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.acc-swatch:has(input:checked) { box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 4px var(--text-1); }
+.acc-swatch:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.acc-reconcile { padding-block-start: var(--s-3); border-block-start: 1px solid var(--line-soft); }
+
+.acc-reconcile__gap .btn { display: flex; margin-block-start: var(--s-2); }
+
+.acc-reconcile__gap {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-13);
+  color: var(--text-2);
+}
+
+.acc-reconcile__gap strong { color: var(--text-1); }

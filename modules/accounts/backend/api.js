@@ -88,10 +88,11 @@ export async function create(input) {
     opening_balance_minor: Math.trunc(Number(input.opening_balance_minor) || 0),
     opening_on: input.opening_on || today(),
     institution: input.institution?.trim() || null,
-    // Only the last four digits are ever stored. A full account number is a
-    // secret, and a secret belongs in the vault, not in a list that renders
-    // unmasked on the accounts screen.
-    number_tail: tail(input.number_tail),
+    // Only the last four digits are kept on this device. The full number
+    // goes to the server, which stores it encrypted and serves it only to
+    // the edit form (details()); the list cached here never holds it.
+    number_tail: tail(input.account_number || input.number_tail),
+    ...detailFields(input),
     credit_limit_minor: input.type === 'card' ? (Math.trunc(Number(input.credit_limit_minor) || 0) || null) : null,
     // The first account in a book becomes its default, so the entry sheet
     // always has something selected and never opens with an empty picker.
@@ -106,7 +107,7 @@ export async function create(input) {
   emit(EVENTS.ACCOUNT_CREATED, row);
 
   if (await hasBackend()) {
-    const res = await post('/accounts', row);
+    const res = await post('/accounts', { ...row, account_number: input.account_number || null });
     // A validation failure from the server is authoritative and the local row
     // is rolled back — otherwise this device would hold an account the server
     // has never heard of and will reject again on every sync.
@@ -114,6 +115,9 @@ export async function create(input) {
       persist(rows.filter((a) => a.id !== row.id));
       return res;
     }
+    // The server's row wins: it derives the tail from the number and files
+    // an FDR or a DPS as held.
+    if (res.ok && res.data?.data) adopt(rows, row, res.data.data);
   }
   return { ok: true, data: row };
 }
@@ -148,13 +152,16 @@ export async function update(id, changes) {
     credit_limit_minor: merged.type === 'card' ? (Math.trunc(Number(merged.credit_limit_minor) || 0) || null) : null,
     opening_balance_minor: Math.trunc(Number(merged.opening_balance_minor) || 0),
     opening_on: merged.opening_on || row.opening_on,
+    ...detailFields(merged),
   });
+  if (changes.account_number !== undefined) row.number_tail = tail(changes.account_number) || row.number_tail;
 
   persist(rows);
   emit(EVENTS.ACCOUNT_UPDATED, row);
 
   if (await hasBackend()) {
     const res = await patch(`/accounts/${id}`, changes);
+    if (res.ok && res.data?.data) adopt(rows, row, res.data.data);
     if (!res.ok && res.reason !== 'offline') return res;
   }
   return { ok: true, data: row };
@@ -290,6 +297,49 @@ export async function financeArchive({ book = 'personal', currency = 'BDT' } = {
   if (!(await hasBackend())) return { ok: false, reason: 'offline' };
   const res = await get('/finance/archive', { book, currency });
   return res.ok ? { ok: true, data: res.data?.data } : res;
+}
+
+/* ---- Details ------------------------------------------------------------- */
+
+/** The detail fields an account carries, as they are kept on this device. */
+function detailFields(input) {
+  const text = (v) => (v == null || String(v).trim() === '' ? null : String(v).trim());
+  const day = Number(input.statement_day);
+  const statement = input.statement_balance_minor;
+  return {
+    branch: text(input.branch),
+    holder_name: text(input.holder_name),
+    bank_account_type: text(input.bank_account_type),
+    routing_number: text(input.routing_number),
+    card_network: input.type === 'card' ? text(input.card_network) : null,
+    statement_day: input.type === 'card' && day >= 1 && day <= 31 ? Math.trunc(day) : null,
+    colour: text(input.colour),
+    notes: text(input.notes),
+    statement_balance_minor: statement == null || statement === '' ? null : Math.trunc(Number(statement)),
+    statement_on: text(input.statement_on),
+  };
+}
+
+/** Take the server's copy of a row we just wrote, and tell the page. */
+function adopt(rows, row, server) {
+  const { account_number: _secret, ...safe } = server;
+  Object.assign(row, safe);
+  persist(rows);
+  emit(EVENTS.ACCOUNT_UPDATED, row);
+}
+
+/**
+ * One account with its full number, for the edit form only.
+ *
+ * Asked of the server every time and never cached: the number is served by
+ * GET /api/accounts/{id} alone, and keeping it in local storage would put
+ * every account number in plain text on the phone.
+ */
+export async function details(id) {
+  const local = await find(id);
+  if (!(await hasBackend())) return local;
+  const res = await get(`/accounts/${id}`);
+  return res.ok ? { ok: true, data: { ...(local.data || {}), ...res.data.data } } : local;
 }
 
 /* ---- Validation ---------------------------------------------------------- */

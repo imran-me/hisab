@@ -35,9 +35,7 @@ class AccountBook
         // income: the client sends one form for every type, and refusing the
         // request over a field the chosen type has no use for is an error the
         // person cannot see the cause of.
-        if ($account->type !== 'card') {
-            $account->credit_limit_minor = null;
-        }
+        $this->normalise($account, $data);
 
         $account->sort_order = $data['sort_order']
             ?? ((int) $this->owned($user)->where('book', $account->book)->max('sort_order') + 1);
@@ -59,9 +57,7 @@ class AccountBook
         // UpdateAccountRequest for why neither can change.
         $account->fill($data);
 
-        if ($account->type !== 'card') {
-            $account->credit_limit_minor = null;
-        }
+        $this->normalise($account, $data);
 
         if (array_key_exists('is_default', $data)) {
             $account = $this->withDefaulting($account->user, $account, (bool) $data['is_default']);
@@ -128,6 +124,50 @@ class AccountBook
         }
 
         $account->delete();
+    }
+
+    /**
+     * Keep the details consistent with the kind of account.
+     *
+     * One form serves every kind, so a field the chosen kind has no use for is
+     * nulled rather than refused - the same rule the credit limit has always
+     * had. And two things follow from the details rather than being trusted:
+     *
+     *   - the last four digits come from the account number whenever one is
+     *     given, so the masked number in the list can never disagree with it;
+     *   - a bank account that is an FDR or a DPS is HELD, so it is stored as
+     *     `savings`, and its money stays out of what is spendable today.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function normalise(Account $account, array $data): void
+    {
+        if (array_key_exists('account_number', $data)) {
+            $digits = preg_replace('/\D/', '', (string) $data['account_number']);
+            $account->number_tail = $digits === '' ? null : substr($digits, -4);
+        }
+
+        if ($account->type === 'bank' && in_array($account->bank_account_type, ['fdr', 'dps'], true)) {
+            $account->type = 'savings';
+        }
+
+        if ($account->type !== 'card') {
+            $account->credit_limit_minor = null;
+            $account->card_network = null;
+            $account->statement_day = null;
+        }
+
+        if (! in_array($account->type, ['bank', 'savings'], true)) {
+            $account->branch = null;
+            $account->bank_account_type = null;
+            $account->routing_number = null;
+        }
+
+        if ($account->type === 'cash') {
+            $account->holder_name = null;
+            $account->account_number = null;
+            $account->number_tail = null;
+        }
     }
 
     /**

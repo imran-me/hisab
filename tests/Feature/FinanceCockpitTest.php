@@ -550,6 +550,25 @@ class FinanceCockpitTest extends TestCase
         $this->assertSame([], $m['unconvertible']);
     }
 
+    public function test_a_dollar_month_agrees_with_the_ledger_summary(): void
+    {
+        $usd = $this->usdAccount();
+        $this->record('income', 100000, '2026-09-05');
+        $this->record('income', 45000, '2026-09-06', ['account_id' => $usd->id, 'currency' => 'USD']);
+        $this->record('expense', 1299, '2026-09-10', ['currency' => 'USD']);
+        $this->record('deposit', 20000, '2026-09-11');
+
+        $cockpit = $this->month('2026-09');
+        $summary = $this->actingAs($this->owner)
+            ->getJson('/api/ledger/summary?book=personal&period=2026-09')->assertOk()->json('data');
+
+        // The month that used to disagree: a dollar row in both directions.
+        foreach (['income_minor', 'expense_minor', 'deposit_minor'] as $field) {
+            $this->assertSame($summary[$field], $cockpit[$field], $field);
+        }
+        $this->assertSame($summary['spendable_minor'], $cockpit['net_minor']);
+    }
+
     public function test_a_dollar_charge_rounds_half_away_from_zero(): void
     {
         $this->record('expense', 1299, '2026-09-10', ['currency' => 'USD']);  // $12.99 on a taka account

@@ -52,6 +52,26 @@ The type is not decoration. It decides three behaviours:
 a business account that becomes personal is a real financial event
 (a drawing), and re-labelling it would rewrite the history of both books.
 
+### The details (2026-09-27)
+
+`branch`, `holder_name`, `bank_account_type` (`savings` · `current` ·
+`salary` · `fdr` · `dps`), `routing_number`, `card_network` (`visa` ·
+`mastercard` · `amex` · `unionpay` · `other`), `statement_day` (1–31),
+`colour` (a token name: `marigold` `green` `violet` `blue` `rose` `teal`
+`orange` `slate`), `notes`, and `statement_balance_minor` + `statement_on`.
+
+- **`account_number`** is accepted on create and update, stored encrypted
+  (the app key), and returned ONLY by `GET /api/accounts/{id}`. The list and
+  the create/update responses never carry it; `number_tail` is derived from
+  it on the server.
+- A bank account whose `bank_account_type` is `fdr` or `dps` is stored as
+  `type: savings`: it is held, not spendable.
+- Fields a type has no use for are nulled, not refused (a branch on cash, a
+  network on a wallet).
+- **The statement is not a balance.** It is what a statement said on a date.
+  The balance stays derived (`/api/ledger/balances`); the client shows the gap
+  and can post an ordinary adjustment entry to close it.
+
 ### `opening_balance_minor`
 
 What was in the account before the first recorded transaction. Without it, every

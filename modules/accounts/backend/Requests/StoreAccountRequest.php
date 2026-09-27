@@ -56,7 +56,7 @@ class StoreAccountRequest extends FormRequest
 
             'is_default' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
-        ];
+        ] + AccountDetailRules::rules();
     }
 
     protected function prepareForValidation(): void

@@ -218,3 +218,27 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
 - Verified at 360 both themes: 1854px, no OVERFLOW, no console errors; a
   synthetic tap on day 13 moved the crosshair and readout
   ("৳28,088 by 13 Sep · August: ৳30,715").
+
+### Owner override 1 — the full account form
+
+- Kind first (Cash · Bank · Mobile · Card · Other), then only that kind's
+  fields. Bank: a searchable bank picker with marks, branch, holder, account
+  number, account type (Savings/Current/Salary/FDR/DPS), routing number,
+  currency. Mobile: bKash/Nagad/Rocket/Upay tiles and the wallet number. Card:
+  issuing bank, network, last 4, credit limit, statement day. Other: online
+  wallet / savings / investment. Every kind: opening balance and date, one of
+  eight colours, notes.
+- **Closing balance** is a reconcile field (balances stay derived): on edit,
+  "Statement says ৳X on <date>" shows the gap to the ledger's balance and a
+  one-tap "Post a ৳Y adjustment" entry.
+- Backend: migration `2026_09_27_000100_add_details_to_accounts`, shared
+  `AccountDetailRules`, `AccountBook::normalise()` (tail from the number, FDR
+  and DPS filed as held, other kinds' fields nulled), the number encrypted and
+  served only by `GET /api/accounts/{id}`. 6 new tests (25 in AccountsTest),
+  plus a USD-row cockpit = ledger summary test Dev B asked for.
+- Bank marks come from `modules/accounts/data/institutions.json` +
+  `brand.js` (monograms in token colours) until A's `bankLogo()` lands.
+- Verified: form at 360 (bank with the picker open, card, mobile), a bank
+  account saved through the form (branch, tail 6789, number encrypted,
+  salary, blue, ৳50,000 opening), the edit form showing a ৳1,250 gap and the
+  adjustment button. Screens: scratchpad `c/f1d`, `c/f3d`, `c/f4l`, `c/f4d`.

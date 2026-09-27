@@ -299,4 +299,116 @@ class AccountsTest extends TestCase
             'name' => 'Visa', 'type' => 'card', 'opening_balance_minor' => -1250000,
         ]))->assertCreated()->assertJsonPath('data.opening_balance_minor', -1250000);
     }
+
+    // ------------------------------------------------------------ details
+
+    /** @return array<string, mixed> */
+    private function bank(array $overrides = []): array
+    {
+        return $this->payload(array_merge([
+            'name' => 'City Bank salary', 'type' => 'bank', 'institution' => 'City Bank',
+            'branch' => 'Gulshan Avenue', 'holder_name' => 'Md Imran Hossain',
+            'account_number' => '1502-0012-3456-789', 'bank_account_type' => 'salary',
+            'routing_number' => '225261725', 'colour' => 'blue', 'notes' => 'Payroll lands here.',
+        ], $overrides));
+    }
+
+    public function test_a_bank_account_keeps_its_details(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner)->postJson('/api/accounts', $this->bank())
+            ->assertCreated()
+            ->assertJsonPath('data.branch', 'Gulshan Avenue')
+            ->assertJsonPath('data.holder_name', 'Md Imran Hossain')
+            ->assertJsonPath('data.bank_account_type', 'salary')
+            ->assertJsonPath('data.routing_number', '225261725')
+            ->assertJsonPath('data.colour', 'blue')
+            // The tail is taken from the number, so the masked figure in the
+            // list can never disagree with it.
+            ->assertJsonPath('data.number_tail', '6789');
+    }
+
+    public function test_the_full_number_is_encrypted_and_never_in_the_list(): void
+    {
+        $owner = $this->owner();
+        $id = $this->actingAs($owner)->postJson('/api/accounts', $this->bank())->json('data.id');
+
+        // Not in the create response, not in the list - the list is cached on
+        // the device.
+        $this->assertArrayNotHasKey('account_number', $this->actingAs($owner)->getJson('/api/accounts')
+            ->json('data.' . collect($this->actingAs($owner)->getJson('/api/accounts')->json('data'))->search(fn ($a) => $a['id'] === $id)));
+
+        // Only the one-account read carries it, for the edit form.
+        $this->actingAs($owner)->getJson("/api/accounts/{$id}")
+            ->assertOk()->assertJsonPath('data.account_number', '1502-0012-3456-789');
+
+        // And at rest it is ciphertext.
+        $raw = \DB::table('accounts')->where('id', $id)->value('account_number');
+        $this->assertNotSame('1502-0012-3456-789', $raw);
+        $this->assertStringNotContainsString('3456', (string) $raw);
+    }
+
+    public function test_an_fdr_is_held_not_spendable(): void
+    {
+        $owner = $this->owner();
+
+        // A fixed deposit is yours but not money for today, so it is stored as
+        // savings and stays out of the spendable total.
+        $this->actingAs($owner)->postJson('/api/accounts', $this->bank(['name' => 'FDR 1y', 'bank_account_type' => 'fdr']))
+            ->assertCreated()->assertJsonPath('data.type', 'savings');
+    }
+
+    public function test_a_card_keeps_its_network_and_statement_day_and_others_drop_them(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner)->postJson('/api/accounts', $this->payload([
+            'name' => 'EBL Visa', 'type' => 'card', 'institution' => 'EBL', 'card_network' => 'visa',
+            'number_tail' => '4417', 'credit_limit_minor' => 20000000, 'statement_day' => 12,
+        ]))->assertCreated()
+            ->assertJsonPath('data.card_network', 'visa')
+            ->assertJsonPath('data.statement_day', 12)
+            ->assertJsonPath('data.credit_limit_minor', 20000000);
+
+        // The same fields on a wallet mean nothing and are dropped, not refused.
+        $this->actingAs($owner)->postJson('/api/accounts', $this->payload([
+            'card_network' => 'visa', 'statement_day' => 12, 'branch' => 'Nowhere',
+            'account_number' => '01712-345678',
+        ]))->assertCreated()
+            ->assertJsonPath('data.card_network', null)
+            ->assertJsonPath('data.statement_day', null)
+            ->assertJsonPath('data.branch', null)
+            ->assertJsonPath('data.number_tail', '5678');
+    }
+
+    public function test_bad_details_are_refused(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner)->postJson('/api/accounts', $this->bank([
+            'bank_account_type' => 'offshore', 'routing_number' => '22-52', 'colour' => '#ff0000',
+            'account_number' => '<script>',
+        ]))->assertStatus(422)->assertJsonValidationErrors(['bank_account_type', 'routing_number', 'colour', 'account_number']);
+
+        $this->actingAs($owner)->postJson('/api/accounts', $this->payload([
+            'type' => 'card', 'card_network' => 'diners-club-gold', 'statement_day' => 32,
+        ]))->assertStatus(422)->assertJsonValidationErrors(['card_network', 'statement_day']);
+    }
+
+    public function test_a_statement_is_recorded_but_never_becomes_the_balance(): void
+    {
+        $owner = $this->owner();
+        $id = $this->actingAs($owner)->postJson('/api/accounts', $this->bank())->json('data.id');
+
+        $row = $this->actingAs($owner)->patchJson("/api/accounts/{$id}", [
+            'statement_balance_minor' => 8581900, 'statement_on' => '2026-09-25',
+        ])->assertOk()->json('data');
+
+        $this->assertSame(8581900, $row['statement_balance_minor']);
+        $this->assertSame('2026-09-25', $row['statement_on']);
+        // Still no balance of any kind on an account: that is the ledger's.
+        $this->assertArrayNotHasKey('balance_minor', $row);
+        $this->assertArrayNotHasKey('balance', $row);
+    }
 }

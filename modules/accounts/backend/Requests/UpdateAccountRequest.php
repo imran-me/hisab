@@ -50,6 +50,6 @@ class UpdateAccountRequest extends FormRequest
             // decision with two directions. A separate /archive endpoint and a
             // /restore endpoint would be two routes that must not disagree.
             'archived' => ['sometimes', 'boolean'],
-        ];
+        ] + AccountDetailRules::rules();
     }
 }

@@ -15,10 +15,22 @@ import { mountShell } from '../../shared/js/components/shell.js';
 import * as accounts from './backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import { openEntrySheet, mountCompose } from '../ledger/entry-sheet.js';
+import { openAccountSheet } from './account-form.js';
 
 const id = new URLSearchParams(location.search).get('id');
 
-mountShell({ title: 'Account', back: 'modules/accounts/list.html' });
+mountShell({
+  title: 'Account',
+  back: 'modules/accounts/list.html',
+  actions: `<button type="button" class="btn btn--icon" data-edit-account aria-label="Edit this account">${icon('edit', { class: 'icon' })}</button>`,
+});
+
+/* What the Edit button opens the form with: the account, and its derived
+   balance so the form can show a statement's gap against it. */
+let shown_ = { account: null, balance: 0 };
+delegate(document.body, 'click', '[data-edit-account]', () => {
+  if (shown_.account) openAccountSheet(shown_.account, { balance: shown_.balance });
+});
 mountCompose({ onSaved: () => refresh() });
 
 for (const event of [
@@ -53,6 +65,7 @@ async function refresh() {
   ]);
 
   const balance = balanceRes.data[account.id] ?? 0;
+  shown_ = { account, balance };
   drawHero(account, balance);
   drawMonth(account, entryRes.data);
   drawEntries(account, entryRes.data, balance);

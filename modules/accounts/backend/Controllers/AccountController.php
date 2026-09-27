@@ -46,9 +46,19 @@ class AccountController extends Controller
         ]);
     }
 
+    /**
+     * One account WITH its full number - the only response that carries it,
+     * for the edit form. The list stays masked: it is cached on the device,
+     * and a cache of every account number is not something a phone should
+     * hold in plain local storage.
+     */
     public function show(Request $request, string $id): JsonResponse
     {
-        return response()->json(['data' => $this->shape($this->find($request, $id))]);
+        $account = $this->find($request, $id);
+
+        return response()->json(['data' => $this->shape($account) + [
+            'account_number' => $account->account_number,
+        ]]);
     }
 
     public function store(StoreAccountRequest $request): JsonResponse
@@ -121,6 +131,18 @@ class AccountController extends Controller
             'institution' => $account->institution,
             'number_tail' => $account->number_tail,
             'credit_limit_minor' => $account->credit_limit_minor,
+            'branch' => $account->branch,
+            'holder_name' => $account->holder_name,
+            'bank_account_type' => $account->bank_account_type,
+            'routing_number' => $account->routing_number,
+            'card_network' => $account->card_network,
+            'statement_day' => $account->statement_day,
+            'colour' => $account->colour,
+            'notes' => $account->notes,
+            // What the last statement said, and when. An input, not a balance:
+            // the gap to the derived balance is worked out from the ledger.
+            'statement_balance_minor' => $account->statement_balance_minor,
+            'statement_on' => $account->statement_on,
             'is_default' => $account->is_default,
             'sort_order' => $account->sort_order,
             'archived_at' => $account->archived_at?->toJSON(),
