@@ -75,56 +75,68 @@
     <nav class="app-rail" aria-label="Sections"></nav>
 
     <main class="app-main" id="main">
-      <div class="page stack stack--5 home">
+      <div class="page home">
+
+        <!-- ================= The month and the book =================
+             Which month and which book everything below is about, as the
+             first thing on the screen. The month opens a list of months;
+             the book pill switches between personal and business when there
+             is a business book to switch to. -->
+        <div class="home-top">
+          <button type="button" class="home-month" data-month-open aria-haspopup="dialog">
+            <span data-month-name>This month</span>
+            <svg class="icon icon--sm" aria-hidden="true"><use href="shared/icons/sprite.svg#i-chevron-down"/></svg>
+          </button>
+          <button type="button" class="home-book" data-book-toggle disabled>
+            <span data-book-name>Personal</span>
+          </button>
+        </div>
 
         <!-- ================= Left to spend =================
              The one question a phone user opens this screen with: how is the
              month going, and how much can I still spend? So the answer is the
              only large figure on the screen, straight on the canvas and not
-             in a box, with the pace under it and the three flows that make it
-             up in one labelled row. Net worth moved to Accounts, where it
-             answers that screen's question instead of crowding this one. -->
+             in a box, with the pace under it. Net worth is on Accounts, where
+             it answers that screen's question instead of crowding this one. -->
         <section class="home-hero" aria-labelledby="left-h">
-          <div class="home-hero__top">
-            <h2 class="label" id="left-h" data-left-label>Left to spend</h2>
-            <div data-period-slot></div>
-          </div>
-
+          <h2 class="home-hero__label" id="left-h" data-left-label>Left to spend this month</h2>
           <div class="home-hero__figure money" data-left>
             <span class="skeleton skeleton--fig home-hero__skeleton"></span>
           </div>
-          <p class="home-hero__pace" data-pace></p>
 
-          <div class="meter home-hero__meter" data-left-meter hidden>
-            <span class="meter__fill"></span>
-            <span class="home-hero__today" data-left-today hidden></span>
+          <div class="home-pace" data-pace-box>
+            <div class="home-pace__bar" data-left-meter hidden>
+              <span class="home-pace__fill" data-left-fill></span>
+              <span class="home-pace__now" data-left-today hidden></span>
+            </div>
+            <p class="home-pace__text">
+              <span data-pace></span>
+              <span class="home-pace__used" data-used></span>
+            </p>
           </div>
-          <p class="meta home-hero__basis" data-left-basis></p>
-
-          <dl class="home-flow" data-flow aria-label="How the month moved">
-            <div class="home-flow__item home-flow__item--in">
-              <dt>In</dt><dd class="money" data-flow-in>—</dd>
-            </div>
-            <div class="home-flow__item home-flow__item--hold">
-              <dt>Saved</dt><dd class="money" data-flow-hold>—</dd>
-            </div>
-            <div class="home-flow__item home-flow__item--out">
-              <dt>Out</dt><dd class="money" data-flow-out>—</dd>
-            </div>
-          </dl>
         </section>
+
+        <dl class="home-flow" aria-label="How the month moved">
+          <div class="home-flow__item home-flow__item--in">
+            <dt>In</dt><dd class="money" data-flow-in>—</dd>
+          </div>
+          <div class="home-flow__item home-flow__item--hold">
+            <dt>Saved</dt><dd class="money" data-flow-hold>—</dd>
+          </div>
+          <div class="home-flow__item home-flow__item--out">
+            <dt>Out</dt><dd class="money" data-flow-out>—</dd>
+          </div>
+        </dl>
 
         <!-- ================= Today =================
              What was spent today and on what. The entry you just added is the
              one you most want to see, so it is here, not three screens down. -->
-        <section class="stack stack--3" aria-labelledby="today-h">
-          <div class="section-head">
-            <div class="section-head__title">
-              <h2 class="h3" id="today-h">Today</h2>
-            </div>
-            <span class="section-head__action money home-today__total" data-today-total></span>
+        <section class="home-sec" aria-labelledby="today-h">
+          <div class="home-sec__head">
+            <h2 class="home-sec__title" id="today-h">Today</h2>
+            <span class="home-sec__aside" data-today-total></span>
           </div>
-          <div class="card card--flush">
+          <div class="card card--flush home-card">
             <ul class="list" data-today>
               <li><div class="row row--static"><div class="skeleton skeleton--glyph"></div><div class="row__main"><span class="skeleton skeleton--line"></span></div></div></li>
             </ul>
@@ -132,14 +144,12 @@
         </section>
 
         <!-- ================= Accounts strip =================
-             Spendable accounts only, as chips: "where can I pay from" is the
-             question here. Savings and investments are on Accounts. -->
-        <section class="stack stack--3" aria-labelledby="acc-h">
-          <div class="section-head">
-            <div class="section-head__title">
-              <h2 class="h3" id="acc-h">Accounts</h2>
-            </div>
-            <a class="btn btn--ghost btn--sm section-head__action" href="modules/accounts/list.html">All</a>
+             Spendable accounts only: "where can I pay from" is the question
+             here. Savings and investments are on Accounts. -->
+        <section class="home-sec" aria-labelledby="acc-h">
+          <div class="home-sec__head">
+            <h2 class="home-sec__title" id="acc-h">Accounts</h2>
+            <a class="home-sec__link" href="modules/accounts/list.html" data-accounts-all>All</a>
           </div>
           <ul class="home-accounts scroll-x" data-accounts>
             <li class="home-account home-account--loading"><span class="skeleton skeleton--line"></span></li>
@@ -148,23 +158,19 @@
         </section>
 
         <!-- ================= Where it went ================= -->
-        <section class="stack stack--3" data-breakdown hidden aria-labelledby="where-h">
-          <div class="section-head">
-            <div class="section-head__title">
-              <h2 class="h3" id="where-h">Where it went</h2>
-            </div>
-            <a class="btn btn--ghost btn--sm section-head__action" href="modules/reports/insights.html">Month</a>
+        <section class="home-sec" data-breakdown hidden aria-labelledby="where-h">
+          <div class="home-sec__head">
+            <h2 class="home-sec__title" id="where-h">Where it went</h2>
+            <a class="home-sec__link" href="modules/reports/insights.html">Month</a>
           </div>
-          <div class="card stack stack--3">
-            <div data-breakdown-bar></div>
-            <div class="legend" data-breakdown-legend></div>
-          </div>
+          <div class="home-bands" data-breakdown-bar></div>
+          <div class="home-legend" data-breakdown-legend></div>
         </section>
 
         <!-- ================= What the numbers say =================
              One line each, number first. Generated from the month's own
              figures; an observation that would say nothing is not shown. -->
-        <section class="stack stack--2" data-insights hidden aria-label="What the numbers say">
+        <section class="home-sec" data-insights hidden aria-label="What the numbers say">
           <ul class="home-notes" data-insight-list></ul>
         </section>
 

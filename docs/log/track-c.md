@@ -104,3 +104,22 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
 - Verified at 360×780, dark and light: 1233px tall (1.58 screens), hero and
   Today above the fold, no OVERFLOW, no console errors, nothing covered.
   `artisan test` 136, `test-money.mjs`, `check-pages.py` pass.
+
+### C2 follow-up — Home laid out to the v2 mock (DIRECTION.md §3.7)
+
+- Top row: the month name opens a sheet of the last twelve months (a stand-in
+  for A6's shared month grid), and a book pill switches personal / business
+  when a business book exists, otherwise it is a plain label.
+- Hero label "Left to spend this month"; ৳ and poisha set small and quiet;
+  a pace bar with an ink fill and an accent tick at today, captioned
+  "৳X a day for N days" and "N% used · day D". The basis sentence moved into
+  the label's title.
+- In / Saved / Out as full whole-taka figures in hairline thirds; Out in ink.
+  Row outflows in ink too (v2 item 2).
+- Lighter section heads local to Home; accounts strip with "All N" and a
+  danger ring on a spendable account below zero; Where it went as a stacked
+  bar of the top four plus the rest, then the top three as rows. The notes
+  lost the lines the screen already shows (saved, top category).
+- Tokens only (current names; A's v2 aliases carry them over).
+- Verified at 360×780 dark and light: 1123px (1.44 screens), hero, pace,
+  flows and Today above the fold, no OVERFLOW, no console errors.
