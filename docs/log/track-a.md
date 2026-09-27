@@ -241,3 +241,21 @@ off `--flow-*`, `--ink*`, `--surface*`); dark-by-default with a "follow the
 phone" option (A7, needs `state.js` to store 'night' on first run, since the
 pre-paint block is frozen); the flaky vault generator (a 24-character
 password has no digit about 8% of the time); qa-viewport at 390.
+
+## Vault — a generated password has every class it promises
+
+`generatePassword()` drew characters uniformly (with the existing rejection
+sampling over `crypto.getRandomValues`, so no modulo bias), which left a
+24-character password with no digit about 8% of the time. Now a draw that
+misses any class (lower, upper, digit, and a symbol when symbols are on) is
+discarded whole and drawn again, which keeps every valid password equally
+likely. A length shorter than the number of classes draws once.
+
+The harness assertion was one sample; it is now 500 eight-character
+passwords with symbols and 500 six-character ones without, each required to
+contain every class (and, without symbols, none). Checked in Node as well:
+20,000 eight-character draws, zero missing a class, zero ambiguous
+characters, all the right length.
+
+Verified: test-vault-browser 52 passed (was 50 plus 1 flaky failure),
+test-settings 13 passed; test-crypto passes.

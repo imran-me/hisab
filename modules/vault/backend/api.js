@@ -359,8 +359,29 @@ export async function destroy(id) {
  * 2. Ambiguous characters are excluded by default. This costs about two bits
  *    on a 20-character password and saves reading `l` as `1` off a screen
  *    while typing it into a terminal.
+ * 3. EVERY CLASS IS GUARANTEED: a lowercase letter, an uppercase letter, a
+ *    digit, and a symbol when symbols are on. Drawn uniformly, a 24-character
+ *    password had no digit about 8% of the time, and a site that demands one
+ *    then rejects the password the vault just offered. A draw that misses a
+ *    class is thrown away WHOLE and drawn again. That keeps every valid
+ *    password equally likely; forcing one character of each class into
+ *    fixed or chosen positions would not.
  */
 export function generatePassword({ length = 20, symbols = true, ambiguous = false } = {}) {
+  const classes = [/[a-z]/, /[A-Z]/, /[0-9]/];
+  if (symbols) classes.push(/[^A-Za-z0-9]/);
+
+  // Too short to hold one of each class: nothing to guarantee, draw once.
+  if (length < classes.length) return drawPassword(length, symbols, ambiguous);
+
+  for (;;) {
+    const candidate = drawPassword(length, symbols, ambiguous);
+    if (classes.every((re) => re.test(candidate))) return candidate;
+  }
+}
+
+/** One uniform draw over the alphabet; generatePassword() decides whether to keep it. */
+function drawPassword(length, symbols, ambiguous) {
   // Excludes exactly five characters: I, l, 1, O and 0. Those are the ones
   // actually confused with one another when a password is read off a screen and
   // typed into a terminal. i, o and L stay — a dotted i is distinguishable, and

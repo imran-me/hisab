@@ -209,7 +209,23 @@ try {
   // assertion also listed i, o and L, and failed against correct code — the
   // test was wrong, not the alphabet.
   is(/[Il1O0]/.test(pw), false, 'and excludes the five ambiguous characters by default');
-  ok(/[a-z]/.test(pw) && /[A-Z]/.test(pw) && /[2-9]/.test(pw), 'while still using every class');
+  // Every class, every time. One sample passed about 92% of the time before
+  // the generator guaranteed it, so this draws enough that a missing class
+  // cannot slip through by luck: 500 short passwords, where a miss is likely.
+  {
+    let missing = 0;
+    for (let i = 0; i < 500; i++) {
+      const p = vault.generatePassword({ length: 8 });
+      if (!(/[a-z]/.test(p) && /[A-Z]/.test(p) && /[2-9]/.test(p) && /[^A-Za-z0-9]/.test(p))) missing += 1;
+    }
+    is(missing, 0, 'while still using every class, in every one of 500 draws');
+    let noSymbolsMissing = 0;
+    for (let i = 0; i < 500; i++) {
+      const p = vault.generatePassword({ length: 6, symbols: false });
+      if (!(/[a-z]/.test(p) && /[A-Z]/.test(p) && /[2-9]/.test(p)) || /[^A-Za-z0-9]/.test(p)) noSymbolsMissing += 1;
+    }
+    is(noSymbolsMissing, 0, 'and with symbols off, letters and digits only, every class present');
+  }
   ok(/[Il1O0]/.test(vault.generatePassword({ length: 400, ambiguous: true })),
      'and includes them when asked');
   ok(new Set(Array.from({ length: 200 }, () => vault.generatePassword({ length: 12 }))).size === 200,
