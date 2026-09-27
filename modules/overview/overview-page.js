@@ -23,6 +23,7 @@ import * as accounts from '../accounts/backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import * as fx from '../fx/backend/api.js';
 import { mountPeriodTop, drawPeriodTop } from '../reports/period-top.js';
+import { applyStyleVars } from '../reports/style-vars.js';
 import { openEntrySheet, mountCompose } from '../ledger/entry-sheet.js';
 
 // Adding is the tab bar's + (A2), which emits EVENTS.COMPOSE; mountCompose()
@@ -329,10 +330,11 @@ function drawBreakdown(summary, display) {
   bar.setAttribute('role', 'img');
   bar.setAttribute('aria-label', bands.map((b) => `${b.name} ${Math.round(share(b.value))}%`).join(', '));
   bar.innerHTML = bands.map((b) => `
-    <i style="--seg-share:${share(b.value).toFixed(2)};--seg-color:${b.color}"></i>`).join('');
+    <i data-vars="seg-share:${share(b.value).toFixed(2)};seg-color:${b.color}"></i>`).join('');
+  applyStyleVars(bar);
 
   qs('[data-breakdown-legend]').innerHTML = bands.slice(0, 3).map((b) => `
-    <span class="home-legend__name" style="--seg-color:${b.color}">${esc(b.name)}</span>
+    <span class="home-legend__name" data-vars="seg-color:${b.color}">${esc(b.name)}</span>
     <span class="home-legend__value money">${listFigure(b.value, display)}</span>
     <span class="home-legend__pct">${Math.round(share(b.value))}%</span>`).join('');
 }

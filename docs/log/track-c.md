@@ -191,3 +191,30 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
   the dark: the grid opens over Home, September marked, the future disabled.
 - B's `spendable_minor` rename (`c0717ab`) needs nothing here: Home reads
   income, spent and held from the summary, never its kept figure.
+
+### C4 — the Month screen (modules/reports/insights.html)
+
+- Replaces the "not built yet" stub, and is listed in More (one line in
+  `shell.js` SECONDARY). Opens on the shared month/book line, then:
+  spent this month (hero) with in / saved / kept; **Day by day**, cumulative
+  spend against last month (two lines, told apart by lightness, a line-key
+  legend and a readout); **Six months**, income as a well with a green mark
+  and spending as the fill inside it (shape, not hue: green against pink
+  measured ΔE 3.1 for deuteranopia with the dataviz validator); **Against
+  your usual**, the top six categories with a tick at their average over the
+  earlier months that have data; **Was it worth it?**, the necessity bands,
+  not-judged, the spend-quality grade and "could have kept" (MonthCockpit's
+  leak); and the server's insight codes worded one line each.
+- Charts: `charts.js`, inline SVG drawn at the container's real width, redrawn
+  on resize, 2px lines, ≤24px columns with 4px rounded tops, ringed dots. A tap
+  or drag picks a day or month and the readout says the values; arrow keys do
+  the same; every chart has "As a table" underneath.
+- **Found: the CSP blocks inline `style=""`** (`style-src 'self'`), so every
+  `style="--w:…"` written into innerHTML renders as nothing on the real site;
+  shoot-mobile bypasses the CSP, which hid it. New `style-vars.js` sets such
+  values through the CSSOM from `data-vars`; Home's category bar and legend
+  use it too. **For Dev A:** `shared/js/components/spark.js` (`barStrip`,
+  `breakdownBar`) has the same `style=""` pattern.
+- Verified at 360 both themes: 1854px, no OVERFLOW, no console errors; a
+  synthetic tap on day 13 moved the crosshair and readout
+  ("৳28,088 by 13 Sep · August: ৳30,715").

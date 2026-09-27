@@ -41,8 +41,8 @@
     } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
   </script>
 
-  <title>Insights — Hisab</title>
-  <meta name="description" content="Reports over the ledger — trends, comparisons and category history.">
+  <title>Month — Hisab</title>
+  <meta name="description" content="One month: where the money went, day by day and by category, and what could have been kept.">
   <meta name="theme-color" content="#0C0F14">
   <meta name="color-scheme" content="dark light">
   <meta name="robots" content="noindex, nofollow">
@@ -50,46 +50,105 @@
   <link rel="manifest" href="../../site.webmanifest">
 
   <link rel="stylesheet" href="../../shared/css/hisab.css">
+  <link rel="stylesheet" href="period-top.css">
+  <link rel="stylesheet" href="reports.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <!--
-    THIS PAGE IS A DESTINATION WITHOUT A FEATURE, AND SAYS SO.
-
-    Insights is one of the five primary tabs, so the tab existed before the
-    screen did. A tab that 404s is the fastest way to make a working app feel
-    broken, and the styled 404 page is worse here than an honest one: it tells
-    someone the address is wrong when the address is right and the feature is
-    simply not written.
-
-    So this is a real page in the shell — the tab lights, the navigation works,
-    and the empty state names what is missing and where the numbers that DO
-    exist can be found today. It is replaced wholesale when the reports module
-    is built; nothing here is scaffolding to build on.
-  -->
   <div class="app">
     <header class="app-header"></header>
     <nav class="app-rail" aria-label="Sections"></nav>
 
     <main class="app-main" id="main">
-      <div class="page stack stack--4">
+      <div class="page month">
 
-        <div class="empty" style="min-height:70dvh; justify-content:center">
-          <span class="empty__glyph">
-            <svg class="icon icon--lg" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-chart"/></svg>
-          </span>
-          <span class="empty__title">Reports are not built yet</span>
-          <p class="empty__text">
-            Trends over time, month-against-month comparisons and category
-            history will live here. Until then the Overview carries this
-            month's totals and a breakdown of where the money went.
-          </p>
-          <a class="btn btn--ghost" href="../../index.html">
-            <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-grid"/></svg>
-            <span>Go to Overview</span>
-          </a>
+        <div class="period-top">
+          <button type="button" class="period-top__month" data-month-open aria-haspopup="dialog">
+            <span data-month-name>This month</span>
+            <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-chevron-down"/></svg>
+          </button>
+          <button type="button" class="period-top__book" data-book-toggle disabled>
+            <span data-book-name>Personal</span>
+          </button>
         </div>
+
+        <!-- The screen's question: where did it go, and what could I have
+             kept? The answer's first half is the one large figure. -->
+        <section class="month-hero" aria-labelledby="spent-h">
+          <h2 class="month-hero__label" id="spent-h" data-spent-label>Spent this month</h2>
+          <div class="month-hero__figure money" data-spent>
+            <span class="skeleton skeleton--fig"></span>
+          </div>
+          <p class="month-hero__sub" data-spent-sub></p>
+        </section>
+
+        <p class="month-offline" data-offline hidden>
+          The month's figures are worked out on the server, and it cannot be
+          reached right now. Home still shows this month's totals from this
+          device.
+        </p>
+
+        <!-- Day by day: this month's running total against last month's. -->
+        <section class="month-sec" data-days-sec hidden aria-labelledby="days-h">
+          <div class="month-sec__head">
+            <h2 class="month-sec__title" id="days-h">Day by day</h2>
+            <span class="month-legend" aria-hidden="true">
+              <span class="month-legend__key month-legend__key--now" data-days-now>This month</span>
+              <span class="month-legend__key month-legend__key--was" data-days-was>Last month</span>
+            </span>
+          </div>
+          <p class="month-readout" data-days-readout aria-live="polite"></p>
+          <div class="month-chart" data-days-chart></div>
+          <details class="month-table">
+            <summary>As a table</summary>
+            <div class="table-wrap"><table class="table" data-days-table></table></div>
+          </details>
+        </section>
+
+        <!-- Six months: in against out. -->
+        <section class="month-sec" data-six-sec hidden aria-labelledby="six-h">
+          <div class="month-sec__head">
+            <h2 class="month-sec__title" id="six-h">Six months</h2>
+            <span class="month-legend" aria-hidden="true">
+              <span class="month-legend__key month-legend__key--in">In</span>
+              <span class="month-legend__key month-legend__key--out">Out</span>
+            </span>
+          </div>
+          <p class="month-readout" data-six-readout aria-live="polite"></p>
+          <div class="month-chart" data-six-chart></div>
+          <details class="month-table">
+            <summary>As a table</summary>
+            <div class="table-wrap"><table class="table" data-six-table></table></div>
+          </details>
+        </section>
+
+        <!-- Each category against its own last three months. -->
+        <section class="month-sec" data-usual-sec hidden aria-labelledby="usual-h">
+          <div class="month-sec__head">
+            <h2 class="month-sec__title" id="usual-h">Against your usual</h2>
+            <span class="month-sec__aside">tick: 3-month average</span>
+          </div>
+          <ul class="month-cats" data-usual></ul>
+        </section>
+
+        <!-- Was it worth it: the necessity mix, and what could have been kept. -->
+        <section class="month-sec" data-need-sec hidden aria-labelledby="need-h">
+          <div class="month-sec__head">
+            <h2 class="month-sec__title" id="need-h">Was it worth it?</h2>
+            <span class="month-sec__aside" data-grade></span>
+          </div>
+          <ul class="month-cats" data-need></ul>
+          <div class="month-save" data-save hidden>
+            <span class="month-save__label">Could have kept</span>
+            <span class="month-save__figure money" data-save-figure></span>
+            <span class="month-save__why" data-save-why></span>
+          </div>
+        </section>
+
+        <section class="month-sec" data-notes-sec hidden aria-label="What the month says">
+          <ul class="month-notes" data-notes></ul>
+        </section>
 
       </div>
     </main>
@@ -98,6 +157,6 @@
   <nav class="tabbar" aria-label="Primary"></nav>
 
   <script type="module" src="../../shared/js/main.js"></script>
-  <script type="module" src="insights-page.js"></script>
+  <script type="module" src="month-page.js"></script>
 </body>
 </html>
