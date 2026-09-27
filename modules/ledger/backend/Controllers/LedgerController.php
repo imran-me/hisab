@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class LedgerController extends Controller
@@ -224,6 +225,9 @@ class LedgerController extends Controller
             'period' => ['sometimes', 'date_format:Y-m'],
             'from' => ['sometimes', 'date_format:Y-m-d'],
             'to' => ['sometimes', 'date_format:Y-m-d'],
+            // The currency every figure comes back in. Each row is converted
+            // into it before it is summed; see BalanceSheet::summary().
+            'currency' => ['sometimes', 'string', 'size:3', Rule::exists('currencies', 'code')],
         ]);
 
         [$from, $to] = $this->range($f);
@@ -235,6 +239,7 @@ class LedgerController extends Controller
                 (string) ($f['book'] ?? 'personal'),
                 $from ?? $month->copy()->startOfMonth()->toDateString(),
                 $to ?? $month->copy()->endOfMonth()->toDateString(),
+                strtoupper((string) ($f['currency'] ?? 'BDT')),
             ),
         ]);
     }

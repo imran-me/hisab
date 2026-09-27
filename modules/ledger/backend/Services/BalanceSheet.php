@@ -3,6 +3,7 @@
 namespace Hisab\Ledger\Services;
 
 use App\Models\User;
+use Hisab\Fx\Services\Converter;
 use Hisab\Ledger\Models\Transaction;
 use Illuminate\Support\Facades\DB;
 
@@ -71,15 +72,19 @@ class BalanceSheet
      *             including it inflates both sides by the same amount, which
      *             leaves the difference right and the savings rate meaningless.
      *
+     * Every figure is in ONE currency, `$currency`: each row is converted
+     * before it is added (see Hisab\Fx\Services\Converter). A row that cannot be converted is
+     * left out of the figures and named in `unconvertible`, never counted 1:1.
+     *
      * @return array<string, mixed>
      */
-    public function summary(User $user, string $book, string $from, string $to): array
+    public function summary(User $user, string $book, string $from, string $to, string $currency = 'BDT'): array
     {
         $rows = Transaction::query()
             ->where('user_id', $user->id)
             ->where('book', $book)
             ->whereBetween('occurred_on', [$from, $to])
-            ->get(['type', 'direction', 'amount_minor', 'currency', 'reverses_id', 'category_id', 'category_label', 'necessity', 'method']);
+            ->get(['id', 'type', 'direction', 'account_id', 'amount_minor', 'currency', 'fx_rate', 'occurred_on', 'reverses_id', 'category_id', 'category_label', 'necessity', 'method']);
 
         // A REVERSAL IS STILL type = expense.
         //
@@ -108,21 +113,56 @@ class BalanceSheet
                 : $t->direction === 'in';
         });
 
+        // Converted BEFORE anything is added. This used to sum amount_minor
+        // across currencies and leave the conversion to the client, which
+        // cannot be done after the fact: August's USD 450.00 payout arrived as
+        // "45000" added to taka poisha, reading as ৳450 instead of ~৳55,000.
+        //
+        // Through the fx module's Converter, the same one the month cockpit
+        // uses, so the two screens cannot pick different rates for one row.
+        $rates = new Converter((string) $user->id);
+        $accountCurrency = DB::table('accounts')
+            ->whereIn('id', $counted->pluck('account_id')->unique()->all())
+            ->pluck('currency', 'id');
+
+        $unconvertible = [];
+        $counted = $counted->filter(function (Transaction $t) use ($rates, $accountCurrency, $currency, &$unconvertible): bool {
+            $value = $rates->convert(
+                (int) $t->amount_minor,
+                (string) $t->currency,
+                $currency,
+                substr((string) $t->getRawOriginal('occurred_on'), 0, 10),
+                // The snapshot is the rate from the row's currency to its
+                // ACCOUNT's, so it only applies when that is the target.
+                ($accountCurrency[$t->account_id] ?? null) === $currency && $t->getRawOriginal('fx_rate') !== null
+                    ? (string) $t->getRawOriginal('fx_rate')
+                    : null,
+            );
+
+            if ($value === null) {
+                $unconvertible[] = (string) $t->currency;
+
+                return false;
+            }
+
+            $t->setAttribute('converted_minor', $value);
+
+            return true;
+        });
+
         $totals = ['income' => 0, 'expense' => 0, 'deposit' => 0];
 
         foreach ($counted as $row) {
-            // Totals are per currency in truth; this sums the minor units of
-            // whatever is present and the client converts using the snapshot.
-            // Stated rather than hidden: CONVENTIONS.md forbids summing two
-            // currencies, so `currencies` below names what went in.
             $sign = $row->reverses_id === null ? 1 : -1;
-            $totals[$row->type] = ($totals[$row->type] ?? 0) + ($sign * $row->amount_minor);
+            $totals[$row->type] = ($totals[$row->type] ?? 0) + ($sign * $row->converted_minor);
         }
 
         return [
             'from' => $from,
             'to' => $to,
             'book' => $book,
+            // The one currency every figure below is in.
+            'currency' => $currency,
             'income_minor' => $totals['income'],
             'expense_minor' => $totals['expense'],
             'deposit_minor' => $totals['deposit'],
@@ -130,7 +170,10 @@ class BalanceSheet
             // what was moved into savings. A deposit is not spending, but it is
             // not spendable either, and that is the whole point of the type.
             'spendable_minor' => $totals['income'] - $totals['expense'] - $totals['deposit'],
+            // What went in, before conversion - so a screen can say "includes
+            // a dollar payout" - and what could not be converted at all.
             'currencies' => $counted->pluck('currency')->unique()->values(),
+            'unconvertible' => array_values(array_unique($unconvertible)),
             'by_category' => $this->group($counted, 'category_label'),
             'by_method' => $this->group($counted, 'method'),
             'by_necessity' => $this->group($counted->where('type', 'expense'), 'necessity'),
@@ -151,7 +194,7 @@ class BalanceSheet
                 // to the same category as the entry it cancels, so adding it
                 // would double that category's share instead of clearing it.
                 'total_minor' => $group->sum(
-                    fn (Transaction $t): int => ($t->reverses_id === null ? 1 : -1) * $t->amount_minor,
+                    fn (Transaction $t): int => ($t->reverses_id === null ? 1 : -1) * (int) $t->converted_minor,
                 ),
                 // Entries that still stand, so a corrected entry counts once
                 // rather than three times.

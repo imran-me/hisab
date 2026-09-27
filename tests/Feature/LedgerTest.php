@@ -339,6 +339,65 @@ class LedgerTest extends TestCase
         $this->assertSame(0, $summary['deposit_minor']);
     }
 
+    public function test_a_dollar_row_is_converted_before_it_is_added_to_taka(): void
+    {
+        $bank = $this->account('Bank');
+        $payoneer = $this->account('Payoneer', ['currency' => 'USD']);
+
+        $this->entry(['type' => 'income', 'account_id' => $bank->id,
+            'amount_minor' => 1000000, 'currency' => 'BDT', 'occurred_on' => '2026-09-05']);
+        // USD 450.00 into a USD account: no snapshot (same currency as its
+        // account), so it converts at the rate as of its date - 122.50.
+        $this->entry(['type' => 'income', 'account_id' => $payoneer->id,
+            'amount_minor' => 45000, 'currency' => 'USD', 'occurred_on' => '2026-09-06']);
+
+        $summary = $this->actingAs($this->owner)
+            ->getJson('/api/ledger/summary?period=2026-09')->assertOk()->json('data');
+
+        // ৳10,000 + $450 × 122.50 = ৳65,125. The old sum said ৳10,450.
+        $this->assertSame('BDT', $summary['currency']);
+        $this->assertSame(1000000 + 5512500, $summary['income_minor']);
+        $this->assertSame([], $summary['unconvertible']);
+    }
+
+    public function test_a_snapshotted_rate_beats_the_rate_of_the_day(): void
+    {
+        $bank = $this->account('Bank');
+        $rateId = \Illuminate\Support\Facades\DB::table('fx_rates')
+            ->where('base', 'USD')->where('quote', 'BDT')->value('id');
+        // A later rate the owner entered. The snapshot must still win: the
+        // money moved at the rate it moved at.
+        \Hisab\Fx\Models\FxRate::query()->create([
+            'user_id' => $this->owner->id, 'base' => 'USD', 'quote' => 'BDT',
+            'rate' => '130.00', 'as_of' => '2026-09-03', 'source' => 'manual',
+        ]);
+
+        $this->entry(['type' => 'expense', 'account_id' => $bank->id, 'fx_rate_id' => $rateId,
+            'amount_minor' => 1299, 'currency' => 'USD', 'occurred_on' => '2026-09-10']);
+
+        $summary = $this->actingAs($this->owner)
+            ->getJson('/api/ledger/summary?period=2026-09')->json('data');
+
+        // $12.99 × 122.50 = ৳1,591.275 → 159128 poisha, not × 130.
+        $this->assertSame(159128, $summary['expense_minor']);
+        $this->assertSame(159128, $summary['by_category'][0]['total_minor']);
+    }
+
+    public function test_a_row_with_no_rate_is_named_rather_than_counted_one_to_one(): void
+    {
+        $wallet = $this->account('Yen wallet', ['currency' => 'JPY']);
+
+        $this->entry(['type' => 'expense', 'account_id' => $wallet->id,
+            'amount_minor' => 5000, 'currency' => 'JPY', 'occurred_on' => '2026-09-05']);
+
+        // There is no JPY/EUR pair either way round.
+        $summary = $this->actingAs($this->owner)
+            ->getJson('/api/ledger/summary?period=2026-09&currency=EUR')->assertOk()->json('data');
+
+        $this->assertSame(0, $summary['expense_minor']);
+        $this->assertSame(['JPY'], $summary['unconvertible']);
+    }
+
     // -------------------------------------------------------- editing, pairs
 
     public function test_correcting_an_entry_reverses_it_rather_than_editing_it(): void

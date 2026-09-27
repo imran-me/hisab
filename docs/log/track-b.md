@@ -49,3 +49,26 @@ At 360×780, signed in against a throwaway SQLite with demo data:
 (3 taps plus digits from +), the sheet top sits at y≈244 with nothing needed
 above the middle, focus is on the display with no keyboard. Looked at the
 sheet in both themes and with Details open. No overflow.
+
+## Review round 1, High — server totals no longer add dollars to taka
+
+`BalanceSheet::summary()` converts every row into one currency (`?currency=`,
+default BDT) BEFORE summing, through the fx module's `Converter` that C added
+in `18e1b3b` (one converter for both screens, not two): the row's own
+`fx_rate` snapshot when its account is in the target currency, else the rate
+as of the row's date, either direction.
+A row with no rate is left out and named in `unconvertible`, never counted 1:1.
+`by_category` / `by_method` / `by_necessity` use the converted amounts too.
+The response gains `currency` and `unconvertible`; nothing was removed, so
+`MonthCockpit::ledgerTotals()` picks the fix up unchanged.
+
+**Verified:** `php artisan test` 139 passed, on top of C's `18e1b3b` (3 new: a USD income converted at
+the as-of rate, a snapshot beating a later owner rate, a JPY row reported as
+unconvertible in EUR). On the demo data, August personal income is now
+14,044,300 poisha (৳140,443) instead of 8,796,300.
+
+**For C:** add the USD row to the "cockpit equals ledger" test, as the review
+asks. **Not done:** the client `summary()` in `ledger/backend/api.js` still
+converts at today's rate rather than the snapshot/as-of rate, so Home can
+differ from the server by the rate drift on foreign rows. The fix is for the
+client to read the server's figure when a backend is present; queued after B3.

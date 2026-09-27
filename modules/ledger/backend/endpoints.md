@@ -115,6 +115,27 @@ Cursor pagination on `id`, not offset — see `api-contract.md` §8.
 
 The **only** place a balance is computed. Accounts deliberately does not do it.
 
+### `GET /api/ledger/summary`
+
+Query: `book`, `period` or `from`/`to`, and `currency` (default `BDT`).
+
+**Every figure is in `currency`.** Each row is converted before it is added,
+never after: a sum that has mixed dollar cents with taka poisha cannot be
+converted, because nothing records how much of it was which. The rate used,
+in order: the row's own `fx_rate` snapshot when it converts into `currency`;
+otherwise the rate as of the row's `occurred_on` (the latest on or before it,
+or the nearest after if none is that old), read in either direction.
+
+A row with no rate at all is left out of the figures and its currency listed
+in `unconvertible` — never counted one to one. `currencies` lists what went
+in before conversion.
+
+```json
+{ "data": { "currency": "BDT", "income_minor": 14044300, "expense_minor": 4363400,
+  "deposit_minor": 500000, "spendable_minor": 9180900,
+  "currencies": ["BDT", "USD"], "unconvertible": [], "by_category": [ … ] } }
+```
+
 ### `POST /api/ledger`
 
 Does **not** accept: `direction`, `group_id`, `balance`, or any running total —
