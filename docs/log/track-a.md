@@ -390,3 +390,36 @@ until C passes `type: 'expense'` or adds `.money--out`.
 Verified: test-money 97 assertions (7 new). At 360 in both themes the
 Ledger's rows, day totals and the Out tile are red with −, and In is green
 with +; Home and Accounts are unchanged where no direction applies.
+
+## Institutions: `bankLogo()` and the data file (API first, logos next)
+
+- `shared/js/data/institutions.js` lists 40 entries: 27 banks, 6 mobile
+  wallets (bKash, Nagad, Rocket, Upay, Tap, SureCash), 3 card networks and
+  4 generic types (cash, bank, wallet, card). Each has an id, name, short
+  name, kind, brand colour, logo file (null for now) and extra spellings.
+- `shared/js/components/bank-logo.js` exports:
+  - `institutions`
+  - `institution(id)`
+  - `findInstitution(text)`: whole-word, longest spelling wins
+  - `accountInstitution(account)`: the institution field, then the name,
+    then the type
+  - `accountLogo(account, size)`
+  - `bankLogo(id | institution, size, { label })`
+- A tile is a logo on white when a file exists. Otherwise it is an SVG
+  monogram in the brand colour, with white or ink lettering picked for
+  4.5:1. With no institution it is the type's glyph in a tint. It is never
+  a grey placeholder.
+- NO `style=""` attributes: production's CSP is `style-src 'self'`, which
+  blocks inline style attributes parsed from markup, and shoot-mobile
+  bypasses CSP, so a screenshot would not have shown the breakage. Size is
+  set with width/height attributes and colour with SVG fill.
+- `tools/institutions.html` shows every tile at 24 and 40px.
+
+For B (account picker) and C (account form, rows):
+`import { accountLogo, institutions, bankLogo } from
+'shared/js/components/bank-logo.js'`.
+
+Verified: the Node check matches City Bank, Dutch-Bangla Bank Ltd, Bank
+Asia, bKash, Dhaka Bank, Prime, One Bank and "my visa card" correctly, and
+returns nothing for Payoneer and LankaBangla. `tools/institutions.html` at
+360 shows all 40 tiles legible at both sizes.

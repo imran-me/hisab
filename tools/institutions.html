@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hisab · institution tiles</title>
+<!--
+  Every bank, wallet and card tile bankLogo() can draw, at the three sizes the
+  app uses, in the app's own stylesheet. Open it (or shoot it) to see at a
+  glance which institutions have a real logo and which a monogram:
+
+    PAGES=tools/institutions.html node tools/shoot-mobile.mjs
+
+  ?theme=day shows the day palette.
+-->
+<link rel="stylesheet" href="../shared/css/hisab.css">
+<style>
+  body { padding: 16px; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 16px 8px; }
+  .tile { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 11.5px; color: var(--text-2); }
+  .sizes { display: flex; align-items: center; gap: 6px; }
+  h2 { font-size: 15px; margin: 20px 0 10px; }
+</style>
+</head>
+<body>
+  <h1 class="h4">Institution tiles</h1>
+  <p class="meta" data-count></p>
+  <div data-out></div>
+<script type="module">
+  const theme = new URLSearchParams(location.search).get('theme');
+  if (theme) document.documentElement.setAttribute('data-theme', theme);
+  window.HISAB_SPRITE = '../shared/icons/sprite.svg';
+  const { institutions, bankLogo } = await import('../shared/js/components/bank-logo.js');
+  const groups = [['bank', 'Banks'], ['mfs', 'Mobile wallets'], ['card', 'Cards'], ['generic', 'Generic']];
+  const out = document.querySelector('[data-out]');
+  out.innerHTML = groups.map(([kind, title]) => `
+    <h2>${title}</h2>
+    <div class="gallery">
+      ${institutions.filter((i) => i.kind === kind).map((i) => `
+        <div class="tile">
+          <div class="sizes">${bankLogo(i, 24)}${bankLogo(i, 40)}</div>
+          <span>${i.name}${i.logo ? '' : ' ·&nbsp;mono'}</span>
+        </div>`).join('')}
+    </div>`).join('');
+  const withLogo = institutions.filter((i) => i.logo).length;
+  document.querySelector('[data-count]').textContent =
+    `${institutions.length} institutions · ${withLogo} with a logo file · ${institutions.length - withLogo} drawn`;
+</script>
+</body>
+</html>

@@ -439,3 +439,46 @@
   .breakdown--bands .breakdown__name { display: none; }
   .breakdown--bands { min-height: 2.75rem; }
 }
+
+/* ---- Institution tiles (bank-logo.js) -----------------------------------
+   A square sized by its width/height attributes: a logo on white, a monogram
+   in the brand colour (an SVG, so the colour is a fill attribute and the CSP's
+   style-src 'self' has nothing to block), or the account type's glyph in a
+   tint. */
+.inst-logo { flex: none; display: block; }
+
+/* A logo file on its white ground, padded so the mark does not touch the
+   edge. White here is the logo's own ground, not a theme colour. */
+.inst-logo--img {
+  box-sizing: border-box;
+  padding: 12%;
+  border-radius: 26%;
+  background: #FFFFFF;
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+  object-fit: contain;
+}
+
+/* The monogram's lettering: the figures face, bold and slightly condensed so
+   "DBBL" fills a 40px tile as well as "N" does. */
+.inst-logo__text {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-stretch: var(--wd-fig);
+  letter-spacing: -0.01em;
+}
+
+/* No institution: the type's glyph in a tint, on the tint at 16%. */
+.inst-logo--generic .inst-logo__ground { fill: color-mix(in srgb, var(--inst-tint, var(--text-3)) 16%, transparent); }
+.inst-logo--generic .inst-logo__glyph {
+  color: var(--inst-tint, var(--text-2));
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.inst-tint--in     { --inst-tint: var(--money-in); }
+.inst-tint--biz    { --inst-tint: var(--biz); }
+.inst-tint--saved  { --inst-tint: var(--saved); }
+.inst-tint--accent { --inst-tint: var(--accent); }
