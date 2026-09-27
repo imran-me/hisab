@@ -502,12 +502,8 @@ class FinanceCockpitTest extends TestCase
 
                 $this->assertSame($book, $cockpit['book']);
 
-                // The ledger summary does not convert yet (Track B), so it is
-                // only a reference for a month held in one currency. A month
-                // with a dollar row is pinned by the conversion tests below.
-                if ($summary['currencies'] !== ['BDT']) {
-                    continue;
-                }
+                // Both engines convert now, so months holding a dollar row are
+                // compared too - that is where they used to disagree.
                 $compared++;
 
                 $this->assertSame($summary['income_minor'], $cockpit['income_minor'], "{$book} {$key} income");
@@ -522,7 +518,7 @@ class FinanceCockpitTest extends TestCase
             }
         }
 
-        $this->assertGreaterThanOrEqual(2, $compared, 'the business book is BDT-only and must be compared');
+        $this->assertSame(4, $compared);
     }
 
     // ------------------------------------------------------------ currencies
@@ -551,7 +547,7 @@ class FinanceCockpitTest extends TestCase
         // poisha would have said ৳1,450.00.
         $this->assertSame('BDT', $m['currency']);
         $this->assertSame(100000 + 5512500, $m['income_minor']);
-        $this->assertSame([], $m['unconverted']);
+        $this->assertSame([], $m['unconvertible']);
     }
 
     public function test_a_dollar_charge_rounds_half_away_from_zero(): void
@@ -581,7 +577,7 @@ class FinanceCockpitTest extends TestCase
         $m = $this->actingAs($this->owner)->getJson('/api/finance/2026-09?currency=AED')->assertOk()->json('data');
 
         $this->assertSame('AED', $m['currency']);
-        $this->assertSame(['EUR'], $m['unconverted']);
+        $this->assertSame(['EUR'], $m['unconvertible']);
         // ৳1,000 at the inverse of 33.35 is AED 29.99 (2998.5 fils, half up).
         $this->assertSame(2999, $m['income_minor']);
     }

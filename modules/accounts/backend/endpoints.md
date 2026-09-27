@@ -121,7 +121,7 @@ converted before it is added (`Hisab\Fx\Services\Converter`): its own rate
 snapshot when that is for exactly this pair, else the owner's rate for the
 pair, else the seeded one — the latest dated on or before the row's day, else
 the earliest after it — else the inverse pair. A currency with no rate is left
-out and listed in `unconverted`; it is never counted at a rate of 1.
+out and listed in `unconvertible`; it is never counted at a rate of 1.
 
 The names: `net_minor` is income − spent − deposited (what moved in your hand,
 the ledger's `spendable_minor`); `kept_minor` is income − spent (a deposit is

@@ -58,6 +58,25 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
   file; EUR with no AED rate is named in `unconverted`; the archive converts
   like the month; a two-leg deposit leaves the opening once; unknown book 422).
 
+### Review rounds 2 and 4 — Track C's Lows
+
+- The cockpit's flag is now `unconvertible`, the ledger summary's spelling.
+- `MonthCockpit::carry()` is private; it only ever ran inside `month()`,
+  which sets the converter up first.
+- `Converter::convert()` returns `null` for a code the currencies table does
+  not know, instead of assuming 2 decimal places.
+- Now that B's summary converts (`c47d5ab`), the "cockpit = ledger summary"
+  test compares all four book-months of the demo data, dollar months included.
+- **Decision, `kept`:** kept = income − spent (a deposit is kept), as the
+  cockpit and endpoints.md have it. What is left in hand after deposits is
+  `net_minor` on the cockpit and `spendable_minor` on the ledger summary.
+  **Needs Track B:** the client `ledger.summary()`'s `kept_minor` means
+  income − spent − held; rename it `spendable_minor` to match the server.
+  Home (C2) does not read it.
+- Already answered by C2: the clipped "This month" tile strip is gone, and the
+  insight lines use `moneyLabel()`.
+- Verified: `artisan test` 139 passed.
+
 ### C2 — Home, rebuilt
 
 - Order per DIRECTION.md §3.3: left to spend (the one large figure, display

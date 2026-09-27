@@ -83,7 +83,13 @@ class Converter
             return null;
         }
 
-        $shift = ($this->minor[$to] ?? 2) - ($this->minor[$from] ?? 2);
+        // The minor unit comes from the currencies table, never a constant: a
+        // code it does not know is not convertible, rather than a guess at 2.
+        if (! isset($this->minor[$to], $this->minor[$from])) {
+            return null;
+        }
+
+        $shift = $this->minor[$to] - $this->minor[$from];
         $scaled = bcmul((string) $minor, $rate, self::SCALE);
         $scaled = $shift >= 0
             ? bcmul($scaled, bcpow('10', (string) $shift), self::SCALE)

@@ -38,7 +38,7 @@ use Illuminate\Support\Collection;
  * Hisab\Fx\Services\Converter: the row's own rate snapshot when it has one for
  * that pair, else the rate on file for its date. A sum of amount_minor over
  * mixed currencies counts USD 450.00 as ৳450, and no later step can undo
- * that. A currency with no rate is left out and NAMED in `unconverted`,
+ * that. A currency with no rate is left out and NAMED in `unconvertible`,
  * never counted as 1.
  *
  * ONE ENGINE INSIDE THIS CLASS. Every sum here - the month's totals, the
@@ -67,7 +67,7 @@ class MonthCockpit
     private array $accountCurrency = [];
 
     /** @var array<string, true> currencies left out for want of a rate */
-    private array $unconverted = [];
+    private array $unconvertible = [];
 
     /**
      * Start one request's worth of arithmetic: the converter, the currency the
@@ -77,7 +77,7 @@ class MonthCockpit
     {
         $this->fx = new Converter((string) $user->id);
         $this->currency = $currency;
-        $this->unconverted = [];
+        $this->unconvertible = [];
         $this->accountCurrency = DB::table('accounts')
             ->where('user_id', $user->id)->pluck('currency', 'id')->all();
     }
@@ -107,7 +107,7 @@ class MonthCockpit
         );
 
         if ($converted === null) {
-            $this->unconverted[(string) $row->currency] = true;
+            $this->unconvertible[(string) $row->currency] = true;
 
             return 0;
         }
@@ -163,7 +163,7 @@ class MonthCockpit
             // Currencies with no rate on file, whose rows are NOT in the
             // figures. Named so the screen can say so rather than show a total
             // that is quietly short.
-            'unconverted' => array_keys($this->unconverted),
+            'unconvertible' => array_keys($this->unconvertible),
             'from' => $from,
             'to' => $to,
             'opening_minor' => $carry['opening'],
@@ -214,7 +214,7 @@ class MonthCockpit
      *
      * @return array{on: bool, opening: int, vault: int}
      */
-    public function carry(User $user, FinanceSetting $settings, string $monthKey, string $book = self::PERSONAL): array
+    private function carry(User $user, FinanceSetting $settings, string $monthKey, string $book): array
     {
         $on = (bool) $settings->carry_forward;
         $opening = $on ? (int) $settings->opening_balance_minor : 0;
@@ -640,7 +640,7 @@ class MonthCockpit
         // Newest first, the way an archive is read.
         return [
             'currency' => $this->currency,
-            'unconverted' => array_keys($this->unconverted),
+            'unconvertible' => array_keys($this->unconvertible),
             'months' => array_reverse($out),
             'lifetime' => $life,
         ];
