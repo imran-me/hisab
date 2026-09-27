@@ -105,3 +105,18 @@ Fix-up before push: the Ledger fallback is `?compose=<type>`, the form B's
 Verified: test-money (92), artisan test (139 passed), shoot-mobile of
 `modules/ledger/list.html?compose=income` writes
 `modules_ledger_list_compose_income-1.png`.
+
+## A3 — One design system
+
+Deleted `assets/vendor/` (Bootstrap, Bootstrap Icons, Inter, Plus Jakarta
+Sans, JetBrains Mono, `opptracker.css`) and `tools/check-vendor.html`, the
+only thing that loaded them. Nothing else referenced either (grep over html,
+js, css, py, sh, mjs, .htaccess, the manifest). `assets/` went from 1,336 KB
+to 160 KB; `deploy.sh` publishes `assets/` with `rsync --delete` (or a staged
+swap), so the server copy goes too.
+
+Verified: check-pages passes; shoot-mobile over all ten pages with a probe
+listing every resource that answered 400+ or came from a vendor path: none,
+except `/api/vault/header` 404 on the Vault, which is the known "no vault on
+the server yet" answer the module handles (context.md, 2026-09-08).
+
