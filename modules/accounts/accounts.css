@@ -1,6 +1,78 @@
 /* =========================================================================
    Accounts · module styles
+   The list (list.html) and one account (detail.html). Tokens only.
    ========================================================================= */
+
+/* ---- Net worth -----------------------------------------------------------
+   The screen's one large figure, on the canvas rather than in a box, with
+   spendable and held under it as a pair divided by a hairline. */
+.acc-net {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding-block: var(--s-2) var(--s-2);
+}
+
+.acc-net__label,
+.acc-hero__meta {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  color: var(--ink-2);
+}
+
+.acc-net__figure,
+.acc-hero__balance {
+  font-family: var(--font-display);
+  font-size: var(--fs-44);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-flush);
+  letter-spacing: -0.012em;
+}
+
+.acc-net__figure .money__sym,
+.acc-net__figure .money__code,
+.acc-hero__balance .money__sym,
+.acc-hero__balance .money__code {
+  font-size: 0.5em;
+  font-weight: var(--fw-medium);
+  color: var(--ink-3);
+  margin-inline-end: 0.1em;
+}
+
+.acc-net__figure .money__minor,
+.acc-hero__balance .money__minor { font-size: 0.42em; color: var(--ink-3); }
+
+.acc-net__split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: var(--s-3) 0 0;
+  border-block: 1px solid var(--line-soft);
+}
+
+.acc-net__part { display: flex; flex-direction: column; gap: var(--s-1); padding: var(--s-3) 0; min-width: 0; }
+.acc-net__part + .acc-net__part { border-inline-start: 1px solid var(--line-soft); padding-inline-start: var(--s-3); }
+.acc-net__part dt { font-size: var(--fs-12); color: var(--ink-3); }
+.acc-net__part dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-19);
+  font-weight: var(--fw-semibold);
+}
+.acc-net__part--hold dd { color: var(--flow-hold-ink); }
+
+/* ---- An account row ------------------------------------------------------
+   The row is a link to the account; the actions button sits beside it, not
+   inside it, so a tap on "⋯" never navigates. */
+.acc-item { display: flex; align-items: center; min-width: 0; }
+.acc-item + .acc-item { border-block-start: 1px solid var(--line-soft); }
+.acc-item__link { flex: 1 1 auto; min-width: 0; padding-inline-end: var(--s-2); }
+.acc-item__menu { flex: none; margin-inline-end: var(--s-2); }
+
+/* The badge is on the meta line and never shrinks; the meta text before it
+   is what gives way. */
+.acc-item__badge { flex: none; }
 
 /* An archived account is dimmed but NOT hidden or struck through. It is still
    a real account with real history behind it; struck-through text says
@@ -9,10 +81,6 @@
 .is-archived .money { opacity: 0.55; }
 .is-archived .row__glyph { opacity: 0.4; }
 
-/* The default badge sits inline with the name, so it reads as part of the
-   title rather than as a second line of metadata. */
-.row__title .chip { margin-inline-start: var(--s-2); vertical-align: 1px; }
-
 /* The account form's type picker wraps — seven types of very different label
    lengths, and no side-by-side comparison is being made between them. */
 .choices { row-gap: var(--s-2); }
@@ -20,3 +88,77 @@
 /* The "available" line under a credit card's balance. Right-aligned with the
    figure above it, and small enough not to compete with it. */
 .row__end .meta { font-size: var(--fs-11); }
+
+/* ---- One account ---------------------------------------------------------- */
+.acc-detail { display: flex; flex-direction: column; }
+
+.acc-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding-block: var(--s-3) var(--s-4);
+  min-width: 0;
+}
+
+.acc-hero__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  color: var(--ink-3);
+}
+
+.acc-hero__meta .icon { color: var(--ink-3); }
+
+.acc-hero__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-19);
+  font-weight: var(--fw-semibold);
+  /* A long account name wraps; it is the page's subject and is never cut. */
+  overflow-wrap: anywhere;
+}
+
+.acc-hero__balance { margin-block-start: var(--s-2); }
+.acc-hero__balance.is-negative { color: var(--danger); }
+
+.acc-hero__note { margin: var(--s-1) 0 0; font-size: var(--fs-13); color: var(--ink-2); }
+
+.acc-month {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-block: 1px solid var(--line-soft);
+}
+
+.acc-month__item { display: flex; flex-direction: column; gap: var(--s-1); padding: var(--s-3) 0; min-width: 0; }
+.acc-month__item + .acc-month__item { border-inline-start: 1px solid var(--line-soft); padding-inline-start: var(--s-3); }
+.acc-month__item dt { font-size: var(--fs-12); color: var(--ink-3); }
+.acc-month__item dd { margin: 0; font-family: var(--font-display); font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.acc-month__item--in dd { color: var(--flow-in-ink); }
+
+.acc-entries { margin-block-start: var(--s-6); }
+
+.acc-entries__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-block-end: var(--s-2);
+}
+
+.acc-entries__title { margin: 0; font-family: var(--font-display); font-size: var(--fs-16); font-weight: var(--fw-semibold); }
+.acc-entries__count { font-size: var(--fs-13); color: var(--ink-3); }
+.acc-entries__more { margin-block-start: var(--s-3); align-self: center; }
+
+.acc-card { border: 0; }
+
+/* Day headings: text only, no band, and not sticky - a short list of one
+   account does not need them to stack under the header. */
+.acc-day {
+  padding: var(--s-3) var(--s-4) var(--s-1);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-medium);
+  color: var(--ink-3);
+}
+
+.acc-row__after { font-size: var(--fs-12); color: var(--ink-3); }

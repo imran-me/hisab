@@ -8,7 +8,7 @@
  */
 
 import { qs, icon, esc, delegate } from '../../shared/js/core/dom.js';
-import { formatMoneyHTML, formatMoney, parseAmount, convertAndSum, CURRENCIES } from '../../shared/js/core/money.js';
+import { formatMoneyHTML, formatMoney, moneyLabel, parseAmount, convertAndSum, CURRENCIES } from '../../shared/js/core/money.js';
 import { on, EVENTS } from '../../shared/js/core/bus.js';
 import * as state from '../../shared/js/core/state.js';
 import { mountShell } from '../../shared/js/components/shell.js';
@@ -82,10 +82,13 @@ function drawTotals({ spendable, held, balances, rates, display }) {
   const s = convertAndSum(rows(spendable), display, rates);
   const h = convertAndSum(rows(held), display, rates);
 
+  // Net worth is the two parts added AFTER each was converted, so it can
+  // never disagree with the split printed directly under it.
+  qs('[data-total-net]').innerHTML = formatMoneyHTML(s.amountMinor + h.amountMinor, display);
   qs('[data-total-spendable]').innerHTML = formatMoneyHTML(s.amountMinor, display);
   qs('[data-total-held]').innerHTML = formatMoneyHTML(h.amountMinor, display);
-  qs('[data-count-spendable]').textContent = `${spendable.length} ${spendable.length === 1 ? 'account' : 'accounts'}`;
-  qs('[data-count-held]').textContent = `${held.length} ${held.length === 1 ? 'account' : 'accounts'}`;
+  qs('[data-count-spendable]').textContent = `· ${spendable.length}`;
+  qs('[data-count-held]').textContent = `· ${held.length}`;
 
   // The honesty line. A cross-currency total is an estimate and a currency with
   // no rate is genuinely excluded — saying both costs one line and prevents the
@@ -126,30 +129,32 @@ function drawGroup(host, rows, balances, { empty = null, archived = false } = {}
       ? account.credit_limit_minor - Math.abs(Math.min(0, balance))
       : null;
 
+    // The name has the title line to itself. The Default badge used to sit
+    // inside it, and at 360px it ellipsised "Cash in hand" and then itself;
+    // on the meta line it is a flex:none chip that costs the name nothing.
+    const meta = [type.label, account.institution, account.number_tail ? `••${account.number_tail}` : null]
+      .filter(Boolean).join(' · ');
+
     return `
-      <li${archived ? ' class="is-archived"' : ''}>
-        <div class="row row--static">
+      <li class="acc-item${archived ? ' is-archived' : ''}">
+        <a class="row acc-item__link" href="detail.html?id=${encodeURIComponent(account.id)}">
           <span class="row__glyph">${icon(type.icon, { class: 'icon' })}</span>
           <span class="row__main">
-            <span class="row__title">
-              ${esc(account.name)}
-              ${account.is_default ? '<span class="chip">Default</span>' : ''}
-            </span>
+            <span class="row__title">${esc(account.name)}</span>
             <span class="row__sub">
-              <span>${esc(type.label)}</span>
-              ${account.institution ? `<span aria-hidden="true">·</span><span>${esc(account.institution)}</span>` : ''}
-              ${account.number_tail ? `<span aria-hidden="true">·</span><span class="num">••${esc(account.number_tail)}</span>` : ''}
+              <span>${esc(meta)}</span>
+              ${account.is_default ? '<span class="chip acc-item__badge">Default</span>' : ''}
             </span>
           </span>
           <span class="row__end">
             <span class="money money--md ${tone}">${formatMoneyHTML(balance, account.currency)}</span>
-            ${available !== null ? `<span class="meta">${esc(formatMoney(available, account.currency))} available</span>` : ''}
+            ${available !== null ? `<span class="meta">${esc(moneyLabel(available, account.currency))} available</span>` : ''}
           </span>
-          <button type="button" class="btn btn--icon btn--sm" data-account-menu="${esc(account.id)}"
-                  aria-label="Actions for ${esc(account.name)}">
-            ${icon('more', { class: 'icon' })}
-          </button>
-        </div>
+        </a>
+        <button type="button" class="btn btn--icon btn--sm acc-item__menu" data-account-menu="${esc(account.id)}"
+                aria-label="Actions for ${esc(account.name)}">
+          ${icon('more', { class: 'icon' })}
+        </button>
       </li>`;
   }).join('');
 }

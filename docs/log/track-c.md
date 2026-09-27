@@ -123,3 +123,30 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
 - Tokens only (current names; A's v2 aliases carry them over).
 - Verified at 360×780 dark and light: 1123px (1.44 screens), hero, pace,
   flows and Today above the fold, no OVERFLOW, no console errors.
+
+### C3 — Accounts, and one account
+
+- Accounts opens on net worth (spendable + held, each converted first, so the
+  figure can never disagree with the pair under it), on the canvas; then the
+  spendable and held groups. A row is now a link to the account, with the
+  actions button beside it rather than inside it.
+- The Default badge moved off the title line onto the meta line as a
+  `flex: none` chip, so "Cash in hand" keeps its full width (review round 2).
+- New `modules/accounts/detail.html`: type, institution and ••tail; the name
+  (wraps, never cut); the balance in the account's own currency; a note for a
+  card's available credit, a spendable account below zero, or a held account;
+  in and out of this account this month (transfers included); every entry,
+  both legs of a transfer, newest first by day, 40 at a time, each with the
+  balance after it, worked backwards from the ledger's derived balance so it
+  cannot disagree with the figure at the top. Tapping an entry opens it in
+  the entry sheet. Home's account chips now open it.
+- Row markup is local until B exports the ledger's row renderer (B5); marked
+  TODO(B5) in `detail-page.js`.
+- **Seen, Track B's:** `BalanceSheet::balances()` and the client `balances()`
+  add a row's `amount_minor` to its account whatever the row's currency, so a
+  USD 12.99 charge on a taka account moves it by ৳12.99. The account detail
+  mirrors that so its running balance agrees with the ledger; it should use
+  the snapshotted converted amount once the ledger does.
+- Verified at 360×780: list 946px, "Cash in hand" + Default in full, no
+  OVERFLOW; detail opens from a row and from Home, back returns to the list,
+  running balances check by hand (৳14,253 after ৳485 → ৳14,738 before).

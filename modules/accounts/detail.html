@@ -41,8 +41,8 @@
     } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
   </script>
 
-  <title>Accounts — Hisab</title>
-  <meta name="description" content="Cash, bank, mobile money, cards, savings and investments — every account in one place.">
+  <title>Account — Hisab</title>
+  <meta name="description" content="One account: its balance, and every entry that moved it.">
   <meta name="theme-color" content="#06080B">
   <meta name="color-scheme" content="dark light">
   <meta name="robots" content="noindex, nofollow">
@@ -60,69 +60,37 @@
     <nav class="app-rail" aria-label="Sections"></nav>
 
     <main class="app-main" id="main">
-      <div class="page stack stack--5">
+      <div class="page acc-detail">
 
-        <!-- The answer first: where is my money right now? Net worth is the
-             one large figure here (it moved off Home, where it crowded the
-             month), with the split that matters under it: what you can spend
-             today, and what is yours but held. -->
-        <section class="acc-net" aria-labelledby="totals-h">
-          <h2 class="acc-net__label" id="totals-h">Net worth</h2>
-          <div class="acc-net__figure money" data-total-net>
-            <span class="skeleton skeleton--fig"></span>
-          </div>
-          <dl class="acc-net__split">
-            <div class="acc-net__part">
-              <dt>Spendable <span data-count-spendable></span></dt>
-              <dd class="money" data-total-spendable>—</dd>
-            </div>
-            <div class="acc-net__part acc-net__part--hold">
-              <dt>Held <span data-count-held></span></dt>
-              <dd class="money" data-total-held>—</dd>
-            </div>
-          </dl>
-          <p class="meta" data-totals-note hidden></p>
+        <!-- The answer first: what is in this account now. In the account's
+             own currency, never converted - this is the one screen where the
+             figure should match the bank's app to the poisha. -->
+        <section class="acc-hero" aria-labelledby="acc-name">
+          <p class="acc-hero__meta" data-meta></p>
+          <h2 class="acc-hero__name" id="acc-name" data-name>
+            <span class="skeleton skeleton--line"></span>
+          </h2>
+          <div class="acc-hero__balance money" data-balance></div>
+          <p class="acc-hero__note" data-note hidden></p>
         </section>
 
-        <!-- Grouped by whether the money is spendable today. The grouping IS
-             the point of this screen: a DPS listed between a cash wallet and a
-             bKash balance invites it to be counted as available. -->
-        <section class="stack stack--3" aria-labelledby="spend-h">
-          <div class="section-head">
-            <div class="section-head__title">
-              <h2 class="h3" id="spend-h">Spendable</h2>
-            </div>
-            <button type="button" class="btn btn--secondary btn--sm section-head__action" data-new-account>
-              <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-plus"/></svg>
-              New
-            </button>
-          </div>
-          <div class="card card--flush">
-            <ul class="list" data-spendable></ul>
-          </div>
-        </section>
+        <!-- This month through this account: what came in and what went out. -->
+        <dl class="acc-month" data-month hidden aria-label="This month in this account">
+          <div class="acc-month__item acc-month__item--in"><dt>In this month</dt><dd class="money" data-month-in>—</dd></div>
+          <div class="acc-month__item"><dt>Out this month</dt><dd class="money" data-month-out>—</dd></div>
+        </dl>
 
-        <section class="stack stack--3" data-held-section hidden aria-labelledby="held-h">
-          <div class="section-head">
-            <div class="section-head__title">
-              <h2 class="h3" id="held-h">Savings &amp; investment</h2>
-            </div>
+        <section class="acc-entries" aria-labelledby="entries-h">
+          <div class="acc-entries__head">
+            <h2 class="acc-entries__title" id="entries-h">Entries</h2>
+            <span class="acc-entries__count" data-count></span>
           </div>
-          <div class="card card--flush">
-            <ul class="list" data-held></ul>
+          <div class="card card--flush acc-card">
+            <ul class="list" data-entries>
+              <li><div class="row row--static"><div class="skeleton skeleton--glyph"></div><div class="row__main"><span class="skeleton skeleton--line"></span></div></div></li>
+            </ul>
           </div>
-        </section>
-
-        <section class="stack stack--3" data-archived-section hidden aria-labelledby="arch-h">
-          <div class="section-head">
-            <div class="section-head__title">
-              <h2 class="h3" id="arch-h">Archived</h2>
-            </div>
-          </div>
-          <p class="meta">Hidden from pickers. Every past entry that used them still resolves.</p>
-          <div class="card card--flush">
-            <ul class="list" data-archived></ul>
-          </div>
+          <button type="button" class="btn btn--ghost btn--sm acc-entries__more" data-more hidden>Show older entries</button>
         </section>
 
       </div>
@@ -132,6 +100,6 @@
   <nav class="tabbar" aria-label="Primary"></nav>
 
   <script type="module" src="../../shared/js/main.js"></script>
-  <script type="module" src="list-page.js"></script>
+  <script type="module" src="detail-page.js"></script>
 </body>
 </html>

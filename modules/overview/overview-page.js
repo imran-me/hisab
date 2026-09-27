@@ -337,7 +337,7 @@ function drawAccounts(accountRows, balances) {
 
     return `
       <li class="home-account${flagged ? ' is-negative' : ''}">
-        <a href="modules/accounts/list.html#${encodeURIComponent(account.id)}">
+        <a href="modules/accounts/detail.html?id=${encodeURIComponent(account.id)}">
           <span class="home-account__name">
             ${icon(type.icon, { class: 'icon icon--sm' })}
             <span>${esc(account.name)}</span>
