@@ -14,62 +14,6 @@
   flex-direction: column;
 }
 
-/* ---- The month and the book -------------------------------------------- */
-.home-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  min-height: var(--tap);
-}
-
-.home-month {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  min-height: var(--tap);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text-1);
-  font-family: var(--font-display);
-  font-size: var(--t-head);
-  font-weight: var(--fw-semibold);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.home-month .icon { color: var(--text-3); }
-.home-month:active { opacity: 0.7; }
-
-.home-book {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  min-height: 34px;
-  padding-inline: var(--s-3);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background: none;
-  color: var(--text-2);
-  font-size: var(--fs-13);
-  font-weight: var(--fw-medium);
-  cursor: pointer;
-}
-
-.home-book::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-pill);
-  background: var(--text-3);
-}
-
-.home-book.is-business::before { background: var(--biz); }
-
-/* One book only: the pill is a label, not a control. */
-.home-book:disabled { cursor: default; opacity: 1; }
-
 /* ---- Left to spend ------------------------------------------------------ */
 .home-hero {
   display: flex;
@@ -395,7 +339,3 @@
 .home-note--hold { --note-tone: var(--saved); }
 .home-note--warn { --note-tone: var(--warn); }
 .home-note--info { --note-tone: var(--biz); }
-
-/* ---- The month sheet ---------------------------------------------------- */
-.home-months [aria-current='true'] .row__title { color: var(--accent-text); font-weight: var(--fw-semibold); }
-.home-months .icon { color: var(--accent-text); }

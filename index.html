@@ -62,6 +62,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <link rel="stylesheet" href="shared/css/hisab.css">
+  <link rel="stylesheet" href="modules/reports/period-top.css">
   <link rel="stylesheet" href="modules/overview/overview.css">
 </head>
 <body>
@@ -82,12 +83,12 @@
              first thing on the screen. The month opens a list of months;
              the book pill switches between personal and business when there
              is a business book to switch to. -->
-        <div class="home-top">
-          <button type="button" class="home-month" data-month-open aria-haspopup="dialog">
+        <div class="period-top">
+          <button type="button" class="period-top__month" data-month-open aria-haspopup="dialog">
             <span data-month-name>This month</span>
             <svg class="icon icon--sm" aria-hidden="true"><use href="shared/icons/sprite.svg#i-chevron-down"/></svg>
           </button>
-          <button type="button" class="home-book" data-book-toggle disabled>
+          <button type="button" class="period-top__book" data-book-toggle disabled>
             <span data-book-name>Personal</span>
           </button>
         </div>

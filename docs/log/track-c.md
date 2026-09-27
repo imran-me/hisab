@@ -179,3 +179,15 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
   Month colour a category by what it is rather than by its rank.
 - Verified at 360×780 in both themes: Home 1073px, Accounts 891px, no
   OVERFLOW, figures in Anek, nothing cut.
+
+### C4 prep — one month-and-book line for Home and Month
+
+- The month picker and book pill moved out of `overview-page.js` into
+  `modules/reports/period-top.js` + `period-top.css`, so the Month screen can
+  open on the same line without a second copy. Home renders unchanged.
+- `financeMonth()` / `financeArchive()` pass `?currency=`.
+- A6's shared year grid landed (`8626c09`), so the month name now opens
+  `openMonthGrid()` and the stand-in list sheet is deleted. Checked at 360 in
+  the dark: the grid opens over Home, September marked, the future disabled.
+- B's `spendable_minor` rename (`c0717ab`) needs nothing here: Home reads
+  income, spent and held from the summary, never its kept figure.

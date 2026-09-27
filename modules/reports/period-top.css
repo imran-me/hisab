@@ -1,0 +1,59 @@
+/* =========================================================================
+   Reports · the month and the book (period-top.js)
+   Loaded by Home and Month, which open on the same line. Tokens only.
+   ========================================================================= */
+
+.period-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: var(--tap);
+}
+
+.period-top__month {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: var(--t-head);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.period-top__month .icon { color: var(--text-3); }
+.period-top__month:active { opacity: 0.7; }
+
+.period-top__book {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 34px;
+  padding-inline: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.period-top__book::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--text-3);
+}
+
+.period-top__book.is-business::before { background: var(--biz); }
+
+/* One book only: the pill is a label, not a control. */
+.period-top__book:disabled { cursor: default; opacity: 1; }

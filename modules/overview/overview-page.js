@@ -14,15 +14,15 @@
 
 import { qs, icon, esc, delegate } from '../../shared/js/core/dom.js';
 import { formatMoneyHTML, moneyLabel, convertAndSum, minorFactor } from '../../shared/js/core/money.js';
-import { formatPeriod, currentPeriod, daysInPeriod, periodProgress, today, lastPeriods } from '../../shared/js/core/dates.js';
+import { formatPeriod, currentPeriod, daysInPeriod, periodProgress, today } from '../../shared/js/core/dates.js';
 import { on, EVENTS } from '../../shared/js/core/bus.js';
 import * as state from '../../shared/js/core/state.js';
 import { mountShell } from '../../shared/js/components/shell.js';
-import { openSheet } from '../../shared/js/components/sheet.js';
 import { segmentColor } from '../../shared/js/components/spark.js';
 import * as accounts from '../accounts/backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import * as fx from '../fx/backend/api.js';
+import { mountPeriodTop, drawPeriodTop } from '../reports/period-top.js';
 import { openEntrySheet, mountCompose } from '../ledger/entry-sheet.js';
 
 // Adding is the tab bar's + (A2), which emits EVENTS.COMPOSE; mountCompose()
@@ -30,10 +30,7 @@ import { openEntrySheet, mountCompose } from '../ledger/entry-sheet.js';
 mountShell({ title: 'Home' });
 mountCompose({ onSaved: () => refresh() });
 
-delegate(document.body, 'click', '[data-month-open]', () => openMonthSheet());
-delegate(document.body, 'click', '[data-book-toggle]', () => {
-  state.setBook(state.book() === 'personal' ? 'business' : 'personal');
-});
+mountPeriodTop();
 
 for (const event of [
   EVENTS.TRANSACTION_CREATED, EVENTS.TRANSACTION_UPDATED, EVENTS.TRANSACTION_DELETED,
@@ -66,7 +63,7 @@ async function refresh() {
   // endpoints.md); a business book has no household spending limit.
   const budget = book === 'personal' ? (settingsRes.data?.monthly_budget_minor || 0) : 0;
 
-  await drawTop();
+  await drawPeriodTop();
   drawHero(summary, budget, display);
   await drawToday(todayRes.data, accountRes.data, display);
   drawAccounts(accountRes.data, balanceRes.data);
@@ -85,56 +82,6 @@ const listFigure = (minor, code, opts = {}) => formatMoneyHTML(minor, code, { mi
 
 /** A figure inside a sentence: the marker, whole units. */
 const inline = (minor, code) => moneyLabel(minor, code, { minor: 'never' });
-
-/* =========================================================================
-   The month and the book
-   ========================================================================= */
-
-/**
- * The month name at the top, and the book pill beside it.
- *
- * The pill only switches when there is a second book to switch to: a toggle
- * that flips to an empty business book is a way to make Home look broken.
- */
-async function drawTop() {
-  const period = state.period();
-  qs('[data-month-name]').textContent = period === currentPeriod()
-    ? formatPeriod(period).split(' ')[0]
-    : formatPeriod(period);
-
-  const all = (await accounts.list({ includeArchived: false })).data;
-  const hasBusiness = all.some((a) => a.book !== 'personal');
-  const pill = qs('[data-book-toggle]');
-  pill.disabled = !hasBusiness;
-  pill.setAttribute('aria-label', hasBusiness
-    ? `Book: ${state.book() === 'personal' ? 'Personal' : 'Business'}. Switch book`
-    : 'Book: Personal');
-  qs('[data-book-name]').textContent = state.book() === 'personal' ? 'Personal' : 'Business';
-  pill.classList.toggle('is-business', state.book() !== 'personal');
-}
-
-/**
- * Twelve months to pick from, newest first, in a sheet.
- *
- * A stand-in for the header's month grid (A6, shared). When that lands this
- * sheet goes and the month name opens the shared one.
- */
-function openMonthSheet() {
-  const months = lastPeriods(12, currentPeriod()).slice().reverse();
-  const list = document.createElement('ul');
-  list.className = 'list home-months';
-  list.innerHTML = months.map((p) => `
-    <li><button type="button" class="row" data-pick-month="${esc(p)}"${p === state.period() ? ' aria-current="true"' : ''}>
-      <span class="row__main"><span class="row__title">${esc(formatPeriod(p))}</span></span>
-      ${p === state.period() ? icon('check', { class: 'icon icon--sm' }) : ''}
-    </button></li>`).join('');
-
-  const sheet = openSheet({ title: 'Month', body: list });
-  delegate(list, 'click', '[data-pick-month]', (_event, button) => {
-    state.setPeriod(button.dataset.pickMonth);
-    sheet.close('picked');
-  });
-}
 
 /* =========================================================================
    Left to spend

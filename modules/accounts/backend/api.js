@@ -279,16 +279,16 @@ export async function updateFinanceSettings(changes) {
  * second implementation CONVENTIONS.md warns about. Offline, the caller shows
  * what it can from the ledger's own summary instead.
  */
-export async function financeMonth(key, { book = 'personal' } = {}) {
+export async function financeMonth(key, { book = 'personal', currency = 'BDT' } = {}) {
   if (!(await hasBackend())) return { ok: false, reason: 'offline' };
-  const res = await get(`/finance/${key}`, { book });
+  const res = await get(`/finance/${key}`, { book, currency });
   return res.ok ? { ok: true, data: res.data?.data } : res;
 }
 
 /** Every month on file, newest first, with a lifetime roll-up. */
-export async function financeArchive({ book = 'personal' } = {}) {
+export async function financeArchive({ book = 'personal', currency = 'BDT' } = {}) {
   if (!(await hasBackend())) return { ok: false, reason: 'offline' };
-  const res = await get('/finance/archive', { book });
+  const res = await get('/finance/archive', { book, currency });
   return res.ok ? { ok: true, data: res.data?.data } : res;
 }
 
