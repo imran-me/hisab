@@ -151,7 +151,7 @@
      scales it. Each role pairs with a weight and a width (--wd-*).
      NB: these are sizes — the motion tokens are the --t-* in §10 with a
      duration for a value (--t-fast, --t-base…); none of the names overlap. */
-  --t-hero:    3.5rem;      /* 56 — the one hero figure per screen          */
+  --t-hero:    2.25rem;     /* 36 — the one hero figure per screen          */
   --t-entry:   3.75rem;     /* 60 — the amount in the entry sheet           */
   --t-title:   1.25rem;     /* 20 — page title                              */
   --t-head:    1.0625rem;   /* 17 — header month, sheet title               */
@@ -198,17 +198,20 @@
   /* ---------------------------------------------------------------------
      7 · SPACE — a 4px base. --s-4 (16) is the page gutter, always.
      --------------------------------------------------------------------- */
-  --s-1:  0.25rem;   /*  4 */
-  --s-2:  0.5rem;    /*  8 */
-  --s-3:  0.75rem;   /* 12 */
-  --s-4:  1rem;      /* 16 — the page gutter                        */
-  --s-5:  1.25rem;   /* 20 */
-  --s-6:  1.5rem;    /* 24 — between sections                       */
-  --s-7:  2.5rem;    /* 40 — v1 name, kept for its few readers; = --s-10 */
-  --s-8:  2rem;      /* 32 */
-  --s-10: 2.5rem;    /* 40 */
+  /* Tightened app-wide on the owner's instruction (2026-09-27): the old
+     scale left every screen airy on a phone. Vertical rhythm is now roughly
+     half; the page gutter stays at 16px, set on its own below. */
+  --s-1:  0.1875rem; /*  3 */
+  --s-2:  0.375rem;  /*  6 */
+  --s-3:  0.5rem;    /*  8 */
+  --s-4:  0.625rem;  /* 10 */
+  --s-5:  0.75rem;   /* 12 */
+  --s-6:  0.875rem;  /* 14 — between sections                       */
+  --s-7:  1.25rem;   /* 20 — v1 name, kept for its few readers; = --s-10 */
+  --s-8:  1rem;      /* 16 */
+  --s-10: 1.25rem;   /* 20 */
 
-  --gutter:      var(--s-4);
+  --gutter:      1rem;       /* 16 — the page gutter, always      */
   --page-max:    78rem;
   --reading-max: 44rem;
 
@@ -279,7 +282,7 @@
   --safe-right:  env(safe-area-inset-right, 0px);
 
   --tap-min: 44px;   /* the floor */
-  --tap:     48px;   /* the target */
+  --tap:     44px;   /* the target: the floor, so rows sit closer */
 
   /* ---------------------------------------------------------------------
      V1 ALIASES — remove once no module reads them (DIRECTION §3.7.7)

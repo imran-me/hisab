@@ -79,7 +79,7 @@
   flex-direction: column;
   justify-content: space-between;
   gap: var(--s-3);
-  min-height: 176px;
+  min-height: 112px;
   padding: var(--s-4);
   overflow: hidden;
   border-radius: var(--r-lg);
@@ -186,7 +186,7 @@ a.acc-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px
 .acc-card__figure .money__code,
 .acc-card__figure .money__minor { color: inherit; opacity: 0.75; }
 
-.acc-card--hero { min-height: 204px; }
+.acc-card--hero { min-height: 132px; }
 .acc-card--hero .acc-card__figure { font-size: var(--fs-34); }
 
 /* Archived: still a real account with history, so dimmed, never struck out. */

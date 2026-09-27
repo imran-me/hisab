@@ -40,7 +40,7 @@
   font-family: var(--font-display);
   /* 60% of the shared hero size: large enough to lead, small enough that
      the rest of the month fits beside it on a phone. */
-  font-size: calc(var(--t-hero) * 0.6);
+  font-size: var(--t-hero);
   font-weight: var(--fw-semibold);
   font-stretch: var(--wd-hero);
   line-height: var(--lh-flush);
