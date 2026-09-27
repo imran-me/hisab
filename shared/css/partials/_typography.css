@@ -206,7 +206,9 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
    they map one-to-one onto the four transaction types, so a colour on a
    figure always means the same thing on every screen. */
 .money--in    { color: var(--flow-in-ink); }
-.money--out   { color: var(--flow-out-ink); }
+/* An outflow is plain ink (v2): most rows are spending, and a list coloured
+   red is an alarm that never stops. The minus sign says it is money out. */
+.money--out   { color: var(--text-1); }
 .money--hold  { color: var(--flow-hold-ink); }
 .money--move  { color: var(--flow-move); }
 .money--flat  { color: var(--ink); }

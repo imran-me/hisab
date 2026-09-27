@@ -65,7 +65,7 @@
   gap: 1px;
 }
 
-.wordmark__b { color: var(--accent); }
+.wordmark__b { color: var(--accent-text); }   /* marigold is never text on paper */
 
 /* A thin scroll-progress rule along the bottom edge of the header. Width is
    set by shared/js/components/header.js. On a long transaction list it is the

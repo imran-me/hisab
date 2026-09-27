@@ -120,3 +120,37 @@ listing every resource that answered 400+ or came from a vendor path: none,
 except `/api/vault/header` 404 on the Vault, which is the known "no vault on
 the server yet" answer the module handles (context.md, 2026-09-08).
 
+## A4.1 — v2 tokens (DIRECTION §3.7)
+
+`_variables.css` rewritten to the v2 names and values, both palettes:
+`--bg-0…3`, `--line`, `--line-soft`, `--text-1…4`, marigold `--accent`,
+`--accent-text`, `--on-accent`, `--plus-bg/--plus-ink` (the day + is ink
+with a marigold plus), `--in/--out/--saved/--move/--warn/--danger` with
+washes, eight `--cat-*` tints per theme, the v2 type scale (`--t-hero` …
+`--t-key`, in rem) with `--wd-*` widths, the 4px space scale (`--s-5` 20,
+`--s-6` 24, `--s-8` 32, `--s-10` 40), radii `--r-xs…--r-plus/--r-pill`,
+`--shadow-sheet`, `--shadow-plus`, and the v2 motion (`--t-press` 90,
+`--t-fast` 140, `--t-base` 220, `--t-leave` 160, `--t-tick` 420).
+`--tabbar-h` is 64px per §3.7.6.
+
+Every v1 name (`--void`, `--surface*`, `--ink*`, `--flow-*`, `--r-1…4`,
+`--e-*`, `--hero*`, `--need-*`) is kept as an ALIAS of its v2 token, so B's
+and C's CSS switched palette with no edit. Delete the aliases once no module
+reads them (grep `--flow-\|--ink\|--surface` in modules/).
+
+Decisions taken here, flag if wrong:
+- **Vault colour.** v1 gold would be read as marigold ("tap here"). The
+  vault now takes the steel cyan the app used to wear (`--vault` #5CC8D6
+  night, #0B6E7C day), which nothing else uses.
+- **Business book** keeps its own `--biz` (the transport-blue tint), since
+  §3.7 does not name one and it must differ from the personal book.
+- `.money--out` is now `--text-1` (outflows are plain ink). The wordmark's
+  "b" uses `--accent-text`, since marigold is never text on paper.
+- The page `<meta name="theme-color">` in each page's head still says the
+  v1 `#06080B`; `applyTheme()` overwrites it at runtime with `--bg-0`, and
+  the manifest is updated. Each page owner can change their meta line.
+
+Verified: shoot-mobile of Home, Ledger, Accounts and Settings at 360 in both
+themes: the new palettes apply through the aliases, no overflow;
+check-pages passes.
+

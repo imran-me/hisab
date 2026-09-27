@@ -141,6 +141,6 @@ export function applyTheme() {
   if (meta) {
     const isDay = state.theme === 'day'
       || (!state.theme && window.matchMedia('(prefers-color-scheme: light)').matches);
-    meta.setAttribute('content', isDay ? '#F2F5F8' : '#06080B');
+    meta.setAttribute('content', isDay ? '#F5F3EF' : '#0C0F14');   // --bg-0, per theme
   }
 }
