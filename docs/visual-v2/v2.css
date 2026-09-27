@@ -4,7 +4,6 @@
 @font-face { font-family: 'Anek Bangla'; src: url(f/anek-bengali.woff2) format('woff2'); font-weight: 400 700; font-stretch: 80% 100%; font-display: swap; unicode-range: U+0980-09FF, U+200C-200D, U+25CC; }
 @font-face { font-family: 'Hisab Taka'; src: url(f/hisab-taka.woff2) format('woff2'); font-weight: 400 700; font-stretch: 80% 100%; font-display: block; unicode-range: U+09F3; }
 @font-face { font-family: 'IBM Plex Sans'; src: url(../../assets/fonts/ibm-plex-sans-var.woff2) format('woff2'); font-weight: 100 700; font-display: swap; }
-@font-face { font-family: 'Noto Sans Bengali'; src: url(f/noto-sans-bengali-var.woff2) format('woff2'); font-weight: 100 900; font-stretch: 62% 100%; font-display: swap; unicode-range: U+0980-09FF, U+200C-200D, U+25CC; }
 
 :root {
   /* ---- night (default) ---- */
@@ -28,8 +27,8 @@
   --cat-cup:   #E58F7A; --cat-bag:  #7ACFC2; --cat-wifi: #93A7F0; --cat-heart: #E48FB6;
 
   /* type */
-  --font-display: 'Hisab Taka', 'Anek Bangla', 'Noto Sans Bengali', system-ui, sans-serif;
-  --font-body: 'Hisab Taka', 'IBM Plex Sans', 'Noto Sans Bengali', system-ui, sans-serif;
+  --font-display: 'Hisab Taka', 'Anek Bangla', system-ui, sans-serif;
+  --font-body: 'Hisab Taka', 'IBM Plex Sans', 'Anek Bangla', system-ui, sans-serif;
 
   /* space (4-based) + radius */
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px;

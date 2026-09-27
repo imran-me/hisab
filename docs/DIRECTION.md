@@ -340,10 +340,10 @@ three things:
    spending, so colouring them red turns the whole list into an alarm. Out
    is `−৳250` in `--text-1`. Only money arriving (green), money saved
    (violet) and warnings carry colour. Colour now means *not the usual*.
-3. **One figure face.** Anek Bangla has Latin and Bengali in one family,
-   with weight and width axes and real `tnum`. It sets every figure and
-   heading, and draws the ৳. IBM Plex Sans sets the body. Space Grotesk and
-   Plex Mono go.
+3. **Two families, not five.** Anek Bangla has Latin and Bengali in one
+   family, with weight and width axes and real `tnum`. It sets every figure
+   and heading, all Bengali text, and the ৳. IBM Plex Sans sets the Latin
+   body. Space Grotesk, Plex Mono and Noto Sans Bengali all go.
 
 #### 3.7.1 Palette — night (default)
 
@@ -424,7 +424,7 @@ without an assigned tint use `--text-3`.
 |---|---|---|
 | Figures, headings, ৳ | **Anek Bangla** (Ek Type, OFL), variable `wght 400–700`, `wdth 80–100` | Latin + Bengali in one family. The width axis lets a hero figure condense at 360px. `tnum` is verified present. |
 | Body and UI | **IBM Plex Sans** (OFL), variable, already shipped | Its digits are tabular by default (every digit is 600 units wide), so list amounts align with no mono face |
-| Bengali body | **Noto Sans Bengali** (OFL), variable `wght`, replacing the single 400 file | Weights match Plex, so a 500 Bangla payee sits right beside a 500 Latin one |
+| Bengali body | **Anek Bangla** again, placed after Plex in the body stack | A Bangla payee gets real weights (500 beside a 500 Latin name) without a third family |
 | ৳ everywhere | **"Hisab Taka"**: Anek's U+09F3 alone, 1.4 KB, first in *both* stacks | Fixes "৳ reads as b". The symbol is drawn by one face at the figure's own weight, in lists and heroes alike |
 
 **Files, subset and self-hosted:**
@@ -434,15 +434,28 @@ without an assigned tint use `--text-3`.
 | `anek-latin.woff2` | 65 KB |
 | `anek-bengali.woff2` (`unicode-range` U+0980–09FF, so it loads only when Bengali appears in the display face) | 265 KB |
 | `hisab-taka.woff2` | 1.4 KB |
-| `noto-sans-bengali-var.woff2` | 219 KB |
 | `ibm-plex-sans-var.woff2` (kept) | 46 KB |
 
 - **Remove:** `space-grotesk-var`, both `ibm-plex-mono` files, and
-  `noto-sans-bengali-400`.
+  `noto-sans-bengali-400`. That leaves two families, and a Latin-only
+  screen downloads about 112 KB of fonts.
 - **Build:** subset with `fonttools varLib.instancer wght=400:700 wdth=80:100`,
   then `pyftsubset --flavor=woff2`.
-- **Bengali alignment:** set `size-adjust` on the Bengali faces if a Bangla
-  word shifts a row's line height.
+- **Bengali alignment:** Anek's Bengali sets a little larger than Plex at
+  the same size. Give the Bengali `@font-face` `size-adjust: 94%` if a
+  Bangla row looks heavier than its Latin neighbours.
+- **Why this differs from RESEARCH.md's font study.** The study proposes
+  Space Grotesk for figures, Plex Mono for lists, Plex Sans for body, Anek
+  for Bengali and ৳, and Noto as a fallback: five families. The mock shows
+  that two are enough, and fewer is better on a phone:
+  - Anek's Latin figures have real `tnum` and a width axis, so they do
+    Space Grotesk's job and condense better at 360.
+  - Plex Sans digits are already fixed-width, so lists align without a mono
+    face.
+  - Anek's Bengali covers body text, so Noto adds nothing but bytes.
+- **Checked at both sizes:** the ৳ reads as taka, not "b", at the 56px hero
+  (0.5em, `--text-3`) and at the 15px list amount (0.9em, the figure's own
+  colour and weight). The proof is in `shots/` in §3.7.8.
 
 **Scale at 360px** (px; line-height as a ratio; `font-stretch` as %):
 
@@ -599,7 +612,7 @@ becomes a 120ms opacity change, and the entry sheet's caret stops blinking.
   sprite at its 1.5 stroke.
 - **Accept at 360 in both themes** with shoot-mobile:
   - no figure uses a face other than Anek or Plex;
-  - no ৳ is rendered by Noto;
+  - no ৳ is rendered by any face but Hisab Taka;
   - `check-pages.py` and qa-viewport pass.
 
 #### 3.7.8 The proof
