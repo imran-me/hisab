@@ -15,6 +15,83 @@ and `tools/shoot-mobile.mjs` at 360×780.
 
 ---
 
+## Round 4 — `18e1b3b` (Track C: convert each row in the cockpit), `c47d5ab` (Track B: convert each row in the ledger summary)
+
+Both commits answer round 1's High. Authors and emails are correct, with no AI
+attribution. Each track kept to its own files: B *uses* C's
+`Hisab\Fx\Services\Converter` and does not edit it. `php artisan test` shows
+**136 passed, 504 assertions**.
+
+The fix was checked against the API on the demo data:
+
+| | `/api/ledger/summary` | `/api/finance/{month}` | by hand |
+|---|---|---|---|
+| Aug income | 14,263,800 | 14,263,800 | ৳87,513 + USD 450 × 122.5 = ৳1,42,638 ✓ |
+| Sep expense | 4,377,983 | 4,377,983 | includes USD 12.99 at the row's snapshot 122.5, matching the Ledger's own OUT tile ✓ |
+| Aug, `?currency=USD` | — | deposit 24,490 | ৳30,000 / 122.5 = $244.90 ✓ |
+| `?book=persnal` | — | **422 "No such book."** ✓ | |
+
+The round 1 High is **closed**. The round 1 Medium "second engine inside the
+cockpit" is **closed** as well: carry, archive, insights, leak and quality now
+all go through `amount()`/`signed()`. As a bonus, C found and fixed the carry
+replay subtracting both legs of a two-leg deposit.
+
+### Medium: the snapshot is trusted without checking its pair. Owner: B
+
+- `modules/ledger/backend/Services/LedgerWriter.php:325-352` `snapshotRate()`
+  copies the rate of **any** `fx_rate_id` the client sends, as long as it is
+  the owner's or a seed row. It never checks that the rate's `base` is the
+  row's currency and its `quote` is the account's.
+- Both converters now treat the snapshot as "exactly this pair"
+  (`Converter::convert()` with `$snapshot`). So a client that sends the
+  BDT/USD row, or an AED/BDT row for a USD charge, gets a rate stored that
+  converts by the wrong factor forever. Nothing downstream can detect it.
+- **Fix:** in `snapshotRate()`, require `base = transaction.currency` and
+  `quote = account currency` (or store the inverse when only the other
+  direction matches), and refuse with a 422 otherwise. Add a test that posts a
+  mismatched `fx_rate_id`.
+
+### Low: two names for "left out for want of a rate". Owners: B and C
+
+- The ledger summary returns `unconvertible` (`BalanceSheet.php`). The cockpit
+  returns `unconverted` (`MonthCockpit.php`). The client `summary()` in
+  `ledger/backend/api.js` uses `unconvertible`.
+- The same flag has two spellings on the two endpoints that are meant to agree.
+  Settle on one before a screen reads either.
+
+### Low: `MonthCockpit` is now stateful, and `carry()` is public. Owner: C
+
+- `begin()` sets `$this->fx` and `$this->currency`, and `amount()` depends on
+  them. A caller that uses the public `carry()` without going through `month()`
+  or `archive()` gets `$this->fx === null`. Every foreign-currency row then
+  converts to `null`, counts as 0, and is flagged unconverted, with no error.
+- Make `carry()` private, or have it call `begin()` itself.
+
+### Low: a hard-coded minor-unit fallback. Owner: C
+
+- `Converter::convert()` uses `$this->minor[$to] ?? 2`. The currency foreign
+  key makes an unknown code unlikely, but CONVENTIONS.md says the minor unit
+  "comes from `currencies.minor_unit`, never from a constant".
+- Return `null` (not convertible) when the code is missing.
+
+### Still open from earlier rounds
+
+- **Round 1 Medium, `kept_minor`:** it is still `income − expense` in the
+  cockpit and `income − expense − held` in the client summary. C2 builds on
+  this next.
+- **Round 1 Low, `tests/Unit`:** it is still missing from git, so
+  `artisan test` fails in a clean checkout (A).
+- **Round 2 Medium, minus zero:** A has not fixed it.
+- **Round 3 High, today's row hidden:** B has not fixed it.
+
+### Screens
+
+Both commits are server-only and change no screen. Home and the Ledger read
+the client-side summary, which already converted, so their figures do not
+move. The server now agrees with them.
+
+---
+
 ## Round 3 — `5b8c310` (Track B: type the amount on a pad in the sheet)
 
 Author and email are correct, with no AI attribution, and every file touched

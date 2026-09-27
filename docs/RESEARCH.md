@@ -503,6 +503,19 @@ obvious at a glance.
 
 **How hard.** Trivial once C6's book switch exists. Until then, a static label.
 
+### R4. Amount memory on the pad — S — `ledger/numpad.js`, entry sheet
+
+**What.** Once a recent entry or a category is chosen, show that payee's last
+two or three distinct amounts as small chips just above the pad ("৳250 ·
+৳294 · ৳301" for CNG). One tap fills the amount.
+
+**Why.** The round 3 pad makes typing fast. For the same trip at slightly
+different fares, not typing at all is faster still. The data is already in the
+loaded list.
+
+**How hard.** Small. It is a client-side group-by over the rows B3 already
+reads.
+
 ### R3. Fonts for a Latin + Bengali finance app — S–M — `shared/css/partials/_typography.css`, `assets/fonts`
 
 **The problem, from the round 2 screenshots.** The app already self-hosts IBM
