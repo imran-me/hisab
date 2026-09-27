@@ -1,158 +1,214 @@
 /* =========================================================================
-   Overview · module styles
+   Home · module styles
    Only what is unique to the home screen. Anything that appears on a second
    screen has already been promoted to a shared partial.
+
+   "Calm top, dense lists" (DIRECTION.md §3.5): the hero sits straight on the
+   canvas, sized rather than boxed, and cards are kept for the lists below it.
    ========================================================================= */
 
-/* ---- The net worth panel -----------------------------------------------
-   The one place in the product with a hero figure. It is deliberately NOT a
-   card: no border, no background. The number is the panel, and putting a box
-   round it would make it one tile among several instead of the thing the
-   screen is about.
-   ------------------------------------------------------------------------ */
-.net {
+/* ---- Left to spend ------------------------------------------------------ */
+.home-hero {
   display: flex;
   flex-direction: column;
-  gap: var(--s-4);
+  gap: var(--s-2);
   padding-block: var(--s-2) 0;
 }
 
-/* ---- The hero card -------------------------------------------------------
-   A DARK panel in both themes, and the only one in the product.
-
-   The comment above says the net figure is deliberately not a card, and that
-   was right while it stood alone on a dark page. It stops being right on the
-   day theme: on white, an unboxed figure and four boxed ones read as five
-   tiles of equal weight, and the one that matters loses. Inverting it restores
-   the hierarchy the dark theme got for free — the balance is the only dark
-   thing on the screen, so it is the first thing seen.
-
-   --hero and --hero-ink are defined per theme in _variables.css: near-black on
-   white, and a raised dark on black rather than an inversion that would shout.
-   ------------------------------------------------------------------------ */
-.net--hero {
-  background: var(--hero);
-  color: var(--hero-ink);
-  border-radius: var(--r-4);
-  padding: var(--s-5);
-  gap: var(--s-3);
-  /* The figure sits on a dark ground in a light page, so it needs the
-     elevation that separates it from the page rather than from a card. */
-  box-shadow: var(--e-2);
-}
-
-/* Labels and notes inside the hero are on the inverted ground, so the ordinary
-   --ink-2 and --ink-3 (tuned for the page) are the wrong side of the contrast.
-   color-mix keeps them derived from the inverted ink rather than introducing a
-   second set of greys that would need maintaining alongside the first. */
-.net--hero .label,
-.net--hero .meta {
-  color: color-mix(in srgb, var(--hero-ink) 62%, transparent);
-}
-
-.net--hero .money--hero { color: var(--hero-ink); }
-
-.net--hero .net__split { border-top-color: color-mix(in srgb, var(--hero-ink) 16%, transparent); }
-.net--hero .net__slice + .net__slice { border-inline-start-color: color-mix(in srgb, var(--hero-ink) 12%, transparent); }
-.net--hero .net__slice .money { color: var(--hero-ink); }
-
-/* ---- The flow row --------------------------------------------------------
-   What came in, what was put out of reach, what was spent — the three numbers
-   that explain the figure above them.
-   ------------------------------------------------------------------------ */
-.net__flow {
+.home-hero__top {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
   align-items: center;
-}
-
-.flow-chip {
-  font: var(--fw-medium) var(--fs-12) / 1 var(--font-mono);
-  padding: var(--s-1) var(--s-2);
-  border-radius: var(--r-1);
-  white-space: nowrap;
-  /* The wash tokens are tuned to sit on the PAGE, and this chip sits on the
-     inverted surface. Lifting the opacity keeps them legible there without a
-     second palette. */
-  background: color-mix(in srgb, currentColor 18%, transparent);
-}
-
-.flow-chip--in   { color: var(--flow-in); }
-.flow-chip--hold { color: var(--flow-hold); }
-.flow-chip--out  { color: var(--flow-out); }
-
-/* ---- Kept, as a proportion ----------------------------------------------- */
-.net__bar {
-  height: 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--hero-ink) 14%, transparent);
-  overflow: hidden;
-}
-
-.net__bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  /* Animated so a month that changes under you is visibly re-drawn rather than
-     silently different. Respects the motion preference via the token. */
-  transition: width var(--t-slow) var(--ease-out);
-}
-
-.net__kept {
-  margin: 0;
-  font-size: var(--fs-12);
-  color: color-mix(in srgb, var(--hero-ink) 70%, transparent);
-}
-
-.net__kept strong { color: var(--hero-ink); font-weight: var(--fw-semibold); }
-
-.net__spark {
-  flex: none;
-  width: 10rem;
-  max-width: 45%;
-  /* Aligned to the bottom of the figure beside it rather than to the top of
-     the block, so the line ends level with the number's baseline. */
-  align-self: flex-end;
-  opacity: 0.85;
-  color: var(--accent);
-}
-
-.net__spark:empty { display: none; }
-
-@media (max-width: 400px) {
-  /* At 360px the sparkline and a ten-digit figure cannot share a row without
-     one of them truncating, and truncating a balance is not an option. */
-  .net__spark { display: none; }
-}
-
-/* The spendable / held pair. A hard two-up that never stacks: the comparison
-   between the two IS the content, and stacking them destroys it. */
-.net__split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-4);
-  padding-top: var(--s-3);
-  border-top: 1px solid var(--line);
-}
-
-.net__slice {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
+  justify-content: space-between;
+  gap: var(--s-3);
   min-width: 0;
 }
 
-.net__slice + .net__slice {
-  border-inline-start: 1px solid var(--line-soft);
-  padding-inline-start: var(--s-4);
+.home-hero__top .label { min-width: 0; }
+
+/* The one large figure on the screen. The display face with tabular figures
+   rather than the mono: at 44px the mono is too wide for a six-digit balance
+   at 360px, and a hero is read as a number, not compared down a column. */
+.home-hero__figure {
+  font-family: var(--font-display);
+  font-size: var(--fs-44);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-flush);
+  letter-spacing: -0.02em;
+  margin-block-start: var(--s-1);
 }
 
+.home-hero__skeleton { width: 10rem; }
+
+.home-hero__pace {
+  margin: 0;
+  font-size: var(--fs-14);
+  color: var(--ink-2);
+}
+
+.home-hero__pace strong { color: var(--ink); font-weight: var(--fw-semibold); }
+.home-hero__pace .is-over { color: var(--flow-out-ink); }
+
+.home-hero__meter { margin-block-start: var(--s-2); overflow: visible; }
+.home-hero__meter .meter__fill { display: block; }
+
+/* Today's position in the month, as a tick on the meter. A fill that runs
+   past it is spending ahead of the calendar. */
+.home-hero__today {
+  position: absolute;
+  inset-block: -3px;
+  inset-inline-start: var(--at, 0%);
+  width: 2px;
+  border-radius: var(--r-full);
+  background: var(--ink-2);
+}
+
+.home-hero__basis { margin: 0; }
+.home-hero__basis:empty { display: none; }
+
+/* In / Saved / Out: three labelled figures on one row that fits 360px. A grid
+   of equal thirds, so the three are compared by position and never wrap. */
+.home-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+  margin: var(--s-3) 0 0;
+  padding-block-start: var(--s-3);
+  border-block-start: 1px solid var(--line-soft);
+}
+
+.home-flow__item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.home-flow__item dt {
+  font-size: var(--fs-12);
+  color: var(--ink-3);
+}
+
+.home-flow__item dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-19);
+  font-weight: var(--fw-medium);
+}
+
+.home-flow__item--in dd   { color: var(--flow-in-ink); }
+.home-flow__item--hold dd { color: var(--flow-hold-ink); }
+.home-flow__item--out dd  { color: var(--flow-out-ink); }
+
+/* ---- Today -------------------------------------------------------------- */
+.home-today__total { font-size: var(--fs-14); }
+
+.home-today__empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: var(--tap);
+  padding: var(--s-3) var(--s-4);
+  color: var(--ink-2);
+  font-size: var(--fs-14);
+}
+
+.home-today__more .row__title { color: var(--ink-2); font-weight: var(--fw-regular); }
+
+/* ---- Accounts strip ----------------------------------------------------- */
+.home-accounts {
+  display: flex;
+  gap: var(--s-2);
+  list-style: none;
+  margin-block: 0;
+  padding-block: 0 var(--s-1);
+}
+
+.home-account {
+  flex: none;
+  min-width: 8.5rem;
+  max-width: 13rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface);
+}
+
+.home-account > a {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-height: var(--tap);
+  padding: var(--s-3);
+  color: inherit;
+  text-decoration: none;
+  border-radius: inherit;
+  transition: background-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-account > a:active { background: var(--wash-press); transform: scale(0.97); }
+
+.home-account__name {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+}
+
+.home-account__name .icon { flex: none; color: var(--ink-3); }
+.home-account__name > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.home-account__balance { font-size: var(--fs-16); }
+
+.home-account.is-negative { border-color: var(--flow-out); }
+
+.home-account__flag {
+  font-size: var(--fs-11);
+  color: var(--flow-out-ink);
+  white-space: normal;
+}
+
+.home-account--loading { padding: var(--s-4) var(--s-3); min-width: 8.5rem; }
+.home-account--add > a { flex-direction: row; align-items: center; color: var(--accent-ink); }
+
+/* ---- Where it went -------------------------------------------------------
+   A thin bar over a four-row legend. The bar's in-segment labels are for the
+   tall banded variant; in a thin bar they are clipped to half a word, and the
+   legend directly below already names every segment. */
+.home [data-breakdown-bar] .breakdown__name,
+.home [data-breakdown-bar] .breakdown__value { display: none; }
+
+/* ---- What the numbers say ----------------------------------------------- */
+.home-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.home-note {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-2);
+  border-inline-start: 3px solid var(--note-tone, var(--ink-4));
+  background: var(--surface);
+  font-size: var(--fs-14);
+}
+
+.home-note__lead { font-weight: var(--fw-semibold); color: var(--ink); }
+.home-note__text { color: var(--ink-3); font-size: var(--fs-13); }
+
+.home-note--in   { --note-tone: var(--flow-in); }
+.home-note--out  { --note-tone: var(--flow-out); }
+.home-note--hold { --note-tone: var(--flow-hold); }
+.home-note--warn { --note-tone: var(--warn); }
+.home-note--info { --note-tone: var(--flow-biz); }
+
 /* ---- The month stepper -------------------------------------------------
-   Lives in the section header, so it is beside the figures it controls rather
-   than in a toolbar at the top of the page where the relationship is implied
-   rather than shown.
+   Lives beside the figure it controls. Its long-term home is the header
+   (A6, shared); until then it is styled here.
    ------------------------------------------------------------------------ */
 .period-stepper {
   display: inline-flex;
@@ -182,13 +238,4 @@
 
 @media (max-width: 420px) {
   .period-stepper__label { min-width: 6.5rem; font-size: var(--fs-12); }
-}
-
-/* ---- Stat strip on this screen -----------------------------------------
-   Four tiles that must stay comparable, so they scroll horizontally on a phone
-   rather than wrapping to a 2×2 grid — a wrapped grid puts "Out" under "In"
-   and the reader compares the wrong pairs.
-   ------------------------------------------------------------------------ */
-@media (max-width: 599px) {
-  .stat-strip { grid-auto-columns: minmax(8.5rem, 1fr); }
 }

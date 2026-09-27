@@ -44,7 +44,7 @@
     } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
   </script>
 
-  <title>Overview — Hisab</title>
+  <title>Home — Hisab</title>
   <meta name="description" content="Personal and business accounts, cash flow, investments and a sealed vault for sensitive information.">
   <meta name="theme-color" content="#06080B">
   <meta name="color-scheme" content="dark light">
@@ -75,128 +75,105 @@
     <nav class="app-rail" aria-label="Sections"></nav>
 
     <main class="app-main" id="main">
-      <div class="page stack stack--6">
+      <div class="page stack stack--5 home">
 
-        <!-- ================= The headline figure =================
-             One hero number per screen. This is net worth: everything held,
-             across every account and every currency, converted to the display
-             currency. It is marked as converted and carries the rate date,
-             because a roll-up across currencies is an estimate and presenting
-             it as an exact balance is a lie of formatting. -->
-        <section class="net net--hero" aria-labelledby="net-h">
-          <div class="split split--top">
-            <div class="stack stack--1">
-              <h2 class="label" id="net-h">Net worth</h2>
-              <div class="money money--hero" data-net>
-                <span class="skeleton skeleton--fig" style="width:9rem"></span>
-              </div>
-              <p class="meta" data-net-note></p>
-            </div>
-            <div class="net__spark" data-net-spark aria-hidden="true"></div>
+        <!-- ================= Left to spend =================
+             The one question a phone user opens this screen with: how is the
+             month going, and how much can I still spend? So the answer is the
+             only large figure on the screen, straight on the canvas and not
+             in a box, with the pace under it and the three flows that make it
+             up in one labelled row. Net worth moved to Accounts, where it
+             answers that screen's question instead of crowding this one. -->
+        <section class="home-hero" aria-labelledby="left-h">
+          <div class="home-hero__top">
+            <h2 class="label" id="left-h" data-left-label>Left to spend</h2>
+            <div data-period-slot></div>
           </div>
 
-          <!--
-            THE FLOW ROW. Where the figure above came from, in one line.
-
-            A balance on its own answers "how much" and not "why that much",
-            which is the question anyone actually opens this screen with. Three
-            chips - what came in, what was moved out of reach, what was spent -
-            turn a number into an account of the month.
-          -->
-          <div class="net__flow" data-net-flow hidden aria-label="How the month moved"></div>
-
-          <div class="net__bar" data-net-bar hidden aria-hidden="true">
-            <span class="net__bar-fill" data-net-bar-fill></span>
+          <div class="home-hero__figure money" data-left>
+            <span class="skeleton skeleton--fig home-hero__skeleton"></span>
           </div>
+          <p class="home-hero__pace" data-pace></p>
 
-          <p class="net__kept" data-net-kept hidden></p>
-
-          <div class="net__split" data-net-split>
-            <div class="net__slice">
-              <span class="label">Spendable</span>
-              <span class="money money--md" data-net-spendable>—</span>
-            </div>
-            <div class="net__slice">
-              <span class="label">Held</span>
-              <span class="money money--md money--hold" data-net-held>—</span>
-            </div>
+          <div class="meter home-hero__meter" data-left-meter hidden>
+            <span class="meter__fill"></span>
+            <span class="home-hero__today" data-left-today hidden></span>
           </div>
+          <p class="meta home-hero__basis" data-left-basis></p>
+
+          <dl class="home-flow" data-flow aria-label="How the month moved">
+            <div class="home-flow__item home-flow__item--in">
+              <dt>In</dt><dd class="money" data-flow-in>—</dd>
+            </div>
+            <div class="home-flow__item home-flow__item--hold">
+              <dt>Saved</dt><dd class="money" data-flow-hold>—</dd>
+            </div>
+            <div class="home-flow__item home-flow__item--out">
+              <dt>Out</dt><dd class="money" data-flow-out>—</dd>
+            </div>
+          </dl>
         </section>
 
-        <!-- ================= This month ================= -->
-        <section class="stack stack--3" aria-labelledby="month-h">
+        <!-- ================= Today =================
+             What was spent today and on what. The entry you just added is the
+             one you most want to see, so it is here, not three screens down. -->
+        <section class="stack stack--3" aria-labelledby="today-h">
           <div class="section-head">
             <div class="section-head__title">
-              <h2 class="h3" id="month-h">This month</h2>
+              <h2 class="h3" id="today-h">Today</h2>
             </div>
-            <div class="section-head__action" data-period-slot></div>
-          </div>
-
-          <div class="stat-strip scroll-x" data-month-stats>
-            <div class="stat"><span class="stat__label">In</span><span class="skeleton skeleton--fig"></span></div>
-            <div class="stat"><span class="stat__label">Out</span><span class="skeleton skeleton--fig"></span></div>
-            <div class="stat"><span class="stat__label">Held</span><span class="skeleton skeleton--fig"></span></div>
-            <div class="stat"><span class="stat__label">Kept</span><span class="skeleton skeleton--fig"></span></div>
-          </div>
-
-          <div class="card stack stack--3" data-breakdown hidden>
-            <div class="split split--base">
-              <span class="label">Where it went</span>
-              <a class="meta" href="modules/reports/insights.html">Full report</a>
-            </div>
-            <div data-breakdown-bar></div>
-            <div class="legend" data-breakdown-legend></div>
-          </div>
-        </section>
-
-        <!-- ================= Insights =================
-             Generated from the month's own figures, never from a template.
-             An insight that says nothing is not shown at all. -->
-        <section class="stack stack--3" data-insights hidden aria-labelledby="insight-h">
-          <h2 class="label" id="insight-h">What the numbers say</h2>
-          <div class="stack stack--2" data-insight-list></div>
-        </section>
-
-        <!-- ================= Accounts ================= -->
-        <section class="stack stack--3" aria-labelledby="acc-h">
-          <div class="section-head">
-            <div class="section-head__title">
-              <h2 class="h3" id="acc-h">Accounts</h2>
-              <span class="section-head__count" data-account-count></span>
-            </div>
-            <a class="btn btn--ghost btn--sm section-head__action" href="modules/accounts/list.html">Manage</a>
+            <span class="section-head__action money home-today__total" data-today-total></span>
           </div>
           <div class="card card--flush">
-            <ul class="list" data-accounts>
-              <li><div class="row row--static"><div class="skeleton skeleton--glyph"></div><div class="row__main"><span class="skeleton skeleton--line"></span></div></div></li>
+            <ul class="list" data-today>
               <li><div class="row row--static"><div class="skeleton skeleton--glyph"></div><div class="row__main"><span class="skeleton skeleton--line"></span></div></div></li>
             </ul>
           </div>
         </section>
 
-        <!-- ================= Recent ================= -->
-        <section class="stack stack--3" aria-labelledby="recent-h">
+        <!-- ================= Accounts strip =================
+             Spendable accounts only, as chips: "where can I pay from" is the
+             question here. Savings and investments are on Accounts. -->
+        <section class="stack stack--3" aria-labelledby="acc-h">
           <div class="section-head">
             <div class="section-head__title">
-              <h2 class="h3" id="recent-h">Recent</h2>
+              <h2 class="h3" id="acc-h">Accounts</h2>
             </div>
-            <a class="btn btn--ghost btn--sm section-head__action" href="modules/ledger/list.html">All entries</a>
+            <a class="btn btn--ghost btn--sm section-head__action" href="modules/accounts/list.html">All</a>
           </div>
-          <div class="card card--flush">
-            <ul class="list" data-recent></ul>
+          <ul class="home-accounts scroll-x" data-accounts>
+            <li class="home-account home-account--loading"><span class="skeleton skeleton--line"></span></li>
+            <li class="home-account home-account--loading"><span class="skeleton skeleton--line"></span></li>
+          </ul>
+        </section>
+
+        <!-- ================= Where it went ================= -->
+        <section class="stack stack--3" data-breakdown hidden aria-labelledby="where-h">
+          <div class="section-head">
+            <div class="section-head__title">
+              <h2 class="h3" id="where-h">Where it went</h2>
+            </div>
+            <a class="btn btn--ghost btn--sm section-head__action" href="modules/reports/insights.html">Month</a>
           </div>
+          <div class="card stack stack--3">
+            <div data-breakdown-bar></div>
+            <div class="legend" data-breakdown-legend></div>
+          </div>
+        </section>
+
+        <!-- ================= What the numbers say =================
+             One line each, number first. Generated from the month's own
+             figures; an observation that would say nothing is not shown. -->
+        <section class="stack stack--2" data-insights hidden aria-label="What the numbers say">
+          <ul class="home-notes" data-insight-list></ul>
         </section>
 
       </div>
     </main>
   </div>
 
-  <!-- The compose action. A real button in the document rather than a
-       script-created one, so it exists in the tab order from the first paint. -->
-  <button type="button" class="fab" data-compose>
-    <svg class="icon icon--lg" aria-hidden="true"><use href="shared/icons/sprite.svg#i-plus"/></svg>
-    <span>Add</span>
-  </button>
+  <!-- No floating Add button: on a phone it sat on top of the category bar.
+       Adding is the header's job until the bar's centre + arrives (A2). -->
 
   <nav class="tabbar" aria-label="Primary"></nav>
 

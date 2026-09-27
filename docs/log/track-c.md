@@ -57,3 +57,31 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
   $12.99 rounds to 159,128 poisha; a row before every rate uses the first on
   file; EUR with no AED rate is named in `unconverted`; the archive converts
   like the month; a two-leg deposit leaves the opening once; unknown book 422).
+
+### C2 — Home, rebuilt
+
+- Order per DIRECTION.md §3.3: left to spend (the one large figure, display
+  face, on the canvas), the pace line, a meter with today's mark, In / Saved /
+  Out as three labelled short figures on one row; then Today (spent today and
+  up to two entries, or "Nothing yet today"); a strip of spendable accounts
+  with a below-zero flag; where it went (top three plus the rest); up to three
+  one-line notes, number first. Net worth, the tile strip that scrolled
+  sideways, the sparkline and Recent are gone from Home (net worth moves to
+  Accounts in C3).
+- **Default until the owner answers §6 q1:** "left to spend" is the monthly
+  budget minus spending when a budget is set (`/api/finance/settings`,
+  personal book only), otherwise this month's income minus spent minus saved.
+  The pace is that, floored to a whole taka, over the days left including
+  today. A past month shows what it ended with instead of a pace.
+- Money goes through `formatMoneyHTML()` / `moneyLabel()` with A1's defaults;
+  the insight lines no longer build their own "BDT 5,000.00" (review round 2).
+- Compose: `mountCompose()` (B1) is mounted; the FAB is gone. The header's Out
+  / In stay until A2's tab-bar + lands, or Home would have no way to add.
+- Home still reads the client `ledger.summary()`, which converts at the
+  current rate; the cockpit converts at the rate for the row's date. They
+  agree on the demo (one seeded rate) and can differ once dated rates exist.
+- `accounts/backend/api.js` gained `financeSettings()`, `financeMonth()`,
+  `financeArchive()` (the one door to `/api/finance`).
+- Verified at 360×780, dark and light: 1233px tall (1.58 screens), hero and
+  Today above the fold, no OVERFLOW, no console errors, nothing covered.
+  `artisan test` 136, `test-money.mjs`, `check-pages.py` pass.

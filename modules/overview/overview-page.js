@@ -1,39 +1,46 @@
 /**
- * Overview · page script
+ * Home · page script
  *
  * The composition root for the home screen. It is the one file allowed to
  * import several modules' api.js at once — that is what a page IS — and it
  * holds no data logic of its own: every figure on this screen is computed in
- * the module that owns it.
+ * the module that owns it. What is here is the arithmetic of PRESENTING them:
+ * which figure is the hero, how much of the month is left, a day's pace.
+ *
+ * The order is the order of the question a phone user opens it with
+ * (DIRECTION.md §3.3): what is left to spend, today, where I can pay from,
+ * where it went.
  */
 
-import { qs, qsa, render, html, raw, esc, icon, delegate } from '../../shared/js/core/dom.js';
-import { formatMoneyHTML, formatMoney, convertAndSum } from '../../shared/js/core/money.js';
-import { formatDayLabel, formatPeriod, lastPeriods, currentPeriod } from '../../shared/js/core/dates.js';
+import { qs, icon, esc, delegate } from '../../shared/js/core/dom.js';
+import { formatMoneyHTML, moneyLabel, convertAndSum, minorFactor } from '../../shared/js/core/money.js';
+import { formatPeriod, currentPeriod, daysInPeriod, periodProgress, today } from '../../shared/js/core/dates.js';
 import { on, EVENTS } from '../../shared/js/core/bus.js';
 import * as state from '../../shared/js/core/state.js';
 import { mountShell, periodStepper } from '../../shared/js/components/shell.js';
-import { sparkline, breakdownBar, segmentColor } from '../../shared/js/components/spark.js';
+import { breakdownBar, segmentColor } from '../../shared/js/components/spark.js';
 import * as accounts from '../accounts/backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import * as fx from '../fx/backend/api.js';
-import { openEntrySheet, entryActions } from '../ledger/entry-sheet.js';
+import { openEntrySheet, mountCompose, entryActions } from '../ledger/entry-sheet.js';
 
-mountShell({ title: 'Overview', actions: entryActions() });
+// The header's Out / In stay only until the tab bar's centre + lands (A2).
+// Removing them first would leave Home with no way to add anything; the
+// buttons already go through mountCompose(), so the switch is one line.
+mountShell({ title: 'Home', actions: entryActions() });
+mountCompose({ onSaved: () => refresh() });
 
 qs('[data-period-slot]')?.append(periodStepper());
 
-/** Redraw on anything that changes what this screen shows. */
 for (const event of [
   EVENTS.TRANSACTION_CREATED, EVENTS.TRANSACTION_UPDATED, EVENTS.TRANSACTION_DELETED,
   EVENTS.ACCOUNT_CREATED, EVENTS.ACCOUNT_UPDATED, EVENTS.ACCOUNT_ARCHIVED,
   EVENTS.PERIOD_CHANGED, EVENTS.BOOK_CHANGED, EVENTS.CURRENCY_CHANGED,
 ]) on(event, () => refresh());
 
-/* One handler for three buttons. The FAB carries a bare data-compose and so
-   asks for no particular type; the header's Out and In name one. */
-delegate(document.body, 'click', '[data-compose]', (_event, button) => {
-  openEntrySheet({ type: button.dataset.compose || undefined, onSaved: refresh });
+delegate(document.body, 'click', '[data-edit]', async (_event, button) => {
+  const res = await ledger.find(button.dataset.edit);
+  if (res.ok) openEntrySheet({ transaction: res.data, onSaved: refresh });
 });
 
 refresh();
@@ -41,392 +48,328 @@ refresh();
 async function refresh() {
   const book = state.book();
   const display = state.currency();
+  const day = today();
 
-  const [accountRes, balanceRes, summaryRes, recentRes, rates] = await Promise.all([
+  const [accountRes, balanceRes, summaryRes, todayRes, settingsRes] = await Promise.all([
     accounts.list({ book }),
     ledger.balances({ book }),
     ledger.summary({ book, period: state.period(), currency: display }),
-    ledger.list({ book, limit: 6 }),
-    fx.rates(),
+    ledger.list({ book, from: day, to: day }),
+    accounts.financeSettings(),
   ]);
 
-  drawNetWorth(accountRes.data, balanceRes.data, rates, display);
-  drawMonth(summaryRes.data, display);
-  await drawTrend(book, display);
+  const summary = summaryRes.data;
+  // The budget belongs to the personal book (modules/accounts/backend/
+  // endpoints.md); a business book has no household spending limit.
+  const budget = book === 'personal' ? (settingsRes.data?.monthly_budget_minor || 0) : 0;
+
+  drawHero(summary, budget, display);
+  await drawToday(todayRes.data, accountRes.data, display);
   drawAccounts(accountRes.data, balanceRes.data);
-  drawRecent(recentRes.data, accountRes.data);
-  drawInsights(summaryRes.data, display);
+  drawBreakdown(summary, display);
+  drawNotes(summary, budget, display);
 }
 
+/* ---- Formatting helpers --------------------------------------------------
+   All three go through money.js; nothing here builds a figure by hand. */
+
+/** A figure that stands on its own: the full amount, marked up. */
+const figure = (minor, code) => formatMoneyHTML(minor, code);
+
+/** A figure inside a sentence: the marker, whole units. */
+const inline = (minor, code) => moneyLabel(minor, code, { minor: 'never' });
+
+/** A figure that has to fit a third of a phone's width: ৳85k, ৳2.7L. */
+const short = (minor, code) => moneyLabel(minor, code, { compact: true });
+
 /* =========================================================================
-   Net worth
+   Left to spend
    ========================================================================= */
 
-function drawNetWorth(accountRows, balances, rates, display) {
-  // Spendable and held are kept apart rather than summed into one figure.
-  // Money in a DPS is yours, but it is not money you can spend today, and one
-  // combined number is how a savings balance gets accidentally budgeted.
-  const spendableRows = [];
-  const heldRows = [];
+/**
+ * The hero, and the arithmetic behind it.
+ *
+ * LEFT TO SPEND, until the owner decides otherwise (DIRECTION.md §6 q1):
+ *
+ *   a monthly budget is set   budget − spent
+ *   no budget                 income so far − spent − saved
+ *
+ * A deposit is not spending, which is why it is not in the budget line: the
+ * budget limits what you consume, and moving money into a DPS consumes
+ * nothing. It IS in the no-budget line, because money moved into savings is
+ * no longer money you can spend this month.
+ */
+function drawHero(summary, budget, display) {
+  const period = state.period();
+  const isNow = period === currentPeriod();
+  const income = summary.income_minor || 0;
+  const spent = summary.expense_minor || 0;
+  const held = summary.held_minor || 0;
 
-  for (const account of accountRows) {
-    const row = { amount_minor: balances[account.id] ?? 0, currency: account.currency };
-    (accounts.isSpendable(account) ? spendableRows : heldRows).push(row);
+  const basis = budget > 0 ? budget : income;
+  const used = budget > 0 ? spent : spent + held;
+  const left = basis - used;
+
+  const monthName = formatPeriod(period).split(' ')[0];
+  qs('[data-left-label]').textContent = isNow ? 'Left to spend' : `Left at the end of ${monthName}`;
+
+  const node = qs('[data-left]');
+  node.innerHTML = figure(left, display);
+  node.classList.toggle('money--out', left < 0);
+
+  qs('[data-pace]').innerHTML = paceLine(left, isNow, period, display, summary.count);
+
+  // The meter: how much of the basis is used, against how much of the month
+  // has gone. The mark is today; a fill past it is spending ahead of time.
+  const meter = qs('[data-left-meter]');
+  meter.hidden = basis <= 0;
+  if (basis > 0) {
+    const ratio = used / basis;
+    const progress = periodProgress(period);
+    meter.style.setProperty('--meter-fill', `${(Math.max(0, Math.min(1, ratio)) * 100).toFixed(1)}%`);
+    meter.classList.toggle('is-over', ratio > 1);
+    // Five points of slack: a month a day ahead of an even pace is not a
+    // warning, and an app that warns about everything is ignored.
+    meter.classList.toggle('meter--warn', ratio <= 1 && isNow && ratio > progress + 0.05);
+
+    const mark = qs('[data-left-today]');
+    mark.hidden = !isNow;
+    mark.style.setProperty('--at', `${(progress * 100).toFixed(1)}%`);
   }
 
-  const spendable = convertAndSum(spendableRows, display, rates);
-  const held = convertAndSum(heldRows, display, rates);
-  const net = spendable.amountMinor + held.amountMinor;
+  qs('[data-left-basis]').textContent = budget > 0
+    ? `Your ${inline(budget, display)} budget, less what you spent`
+    : income > 0 ? 'What came in, less what you spent and saved' : '';
 
-  const missing = [...new Set([...spendable.missing, ...held.missing])];
-
-  const netNode = qs('[data-net]');
-  netNode.innerHTML = formatMoneyHTML(net, display);
-  netNode.classList.toggle('money--converted', accountRows.some((a) => a.currency !== display));
-
-  // The note is where the honesty lives. A cross-currency roll-up is an
-  // estimate; saying so costs one line and stops the figure being read as an
-  // exact balance.
-  const note = qs('[data-net-note]');
-  const parts = [];
-  if (accountRows.some((a) => a.currency !== display)) parts.push(`converted to ${display}`);
-  if (missing.length) parts.push(`${missing.join(', ')} not included — no rate set`);
-  note.textContent = parts.join(' · ');
-  note.hidden = parts.length === 0;
-
-  qs('[data-net-spendable]').innerHTML = formatMoneyHTML(spendable.amountMinor, display);
-  qs('[data-net-held]').innerHTML = formatMoneyHTML(held.amountMinor, display);
+  qs('[data-flow-in]').textContent = short(income, display);
+  qs('[data-flow-hold]').textContent = short(held, display);
+  qs('[data-flow-out]').textContent = short(spent, display);
 }
 
 /**
- * The hero's flow row: what came in, what was put out of reach, what was spent.
+ * "৳1,450 a day for the next 4 days", or what to say when that is not true.
  *
- * Deliberately signed and abbreviated rather than exact. This line is read at a
- * glance and compared against itself - the exact figures are in the cards
- * directly below it, and repeating them here to the poisha would make four
- * long numbers competing for the same attention.
+ * Integer division, floored: a pace rounded UP tells someone they can spend a
+ * taka more a day than they have, and over a month that is the overdraft.
  */
-function drawFlow(summary, display) {
-  const row = qs('[data-net-flow]');
-  const bar = qs('[data-net-bar]');
-  const kept = qs('[data-net-kept]');
+function paceLine(left, isNow, period, display, count) {
+  if (!count) return isNow ? 'Nothing recorded this month yet.' : 'Nothing was recorded this month.';
 
-  const income = summary.income_minor || 0;
-  const held = summary.held_minor || 0;
-  const spent = summary.expense_minor || 0;
+  if (!isNow) {
+    return left >= 0
+      ? `${esc(formatPeriod(period).split(' ')[0])} ended with <strong>${esc(inline(left, display))}</strong> unspent.`
+      : `${esc(formatPeriod(period).split(' ')[0])} ended <strong class="is-over">${esc(inline(-left, display))}</strong> over.`;
+  }
 
-  if (!income && !held && !spent) {
-    row.hidden = bar.hidden = kept.hidden = true;
+  const daysLeft = daysInPeriod(period) - new Date().getDate() + 1;
+
+  if (left <= 0) {
+    return `<strong class="is-over">${esc(inline(-left, display))} over</strong> with ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} to go.`;
+  }
+
+  // Floored to a whole unit before it is shown, so the rounding in the label
+  // can never add the taka back.
+  const unit = minorFactor(display);
+  const perDay = Math.floor(left / daysLeft / unit) * unit;
+  return daysLeft === 1
+    ? `<strong>${esc(inline(left, display))}</strong> for the rest of today, the last day of the month.`
+    : `<strong>${esc(inline(perDay, display))}</strong> a day for the next ${daysLeft} days.`;
+}
+
+/* =========================================================================
+   Today
+   ========================================================================= */
+
+async function drawToday(rows, accountRows, display) {
+  const host = qs('[data-today]');
+  const total = qs('[data-today-total]');
+
+  // Spent today: expenses only, converted, the same rule as the month's
+  // "spent". A deposit made today is not spending.
+  const rates = await fx.rates();
+  const spent = convertAndSum(rows.filter((r) => r.type === 'expense'), display, rates).amountMinor;
+  total.innerHTML = spent > 0 ? `${figure(spent, display)} <span class="meta">spent</span>` : '';
+
+  if (!rows.length) {
+    host.innerHTML = `
+      <li class="home-today__empty">
+        <span>Nothing yet today.</span>
+        <a class="meta" href="modules/ledger/list.html">All entries</a>
+      </li>`;
     return;
   }
 
-  const chips = [
-    { tone: 'in',   sign: '+', value: income },
-    { tone: 'hold', sign: '−', value: held },
-    { tone: 'out',  sign: '−', value: spent },
-  ].filter((c) => c.value > 0);
+  // Two at most, or all three when that is all there is (a "1 more" row
+  // costs as much height as the entry it hides). Today is a glance, not the
+  // ledger; the rest is one tap on.
+  const SHOWN = rows.length === 3 ? 3 : 2;
+  const byId = new Map(accountRows.map((a) => [a.id, a]));
+  const more = rows.length - SHOWN;
 
-  row.innerHTML = chips.map((c) => `
-    <span class="flow-chip flow-chip--${c.tone}">${esc(c.sign)}${formatCompact(c.value, display)}</span>
-  `).join('');
-  row.hidden = false;
-
-  // WHAT IS STILL YOURS, which is not the same as what is still spendable.
-  //
-  // The first version of this subtracted `held` as well, and reported 1% on a
-  // month that kept 16%. A deposit is money moved into savings - it leaves what
-  // you can spend WITHOUT LEAVING YOU, and that distinction is the one the
-  // whole app is built around. Subtracting it here reproduced exactly the bug
-  // CONVENTIONS.md warns about: it made saving look like spending.
-  //
-  // So kept = held + kept: everything that came in and did not go out. It
-  // agrees with the net worth figure directly above it, which is the check that
-  // this is the right sum.
-  const stillYours = held + (summary.kept_minor || 0);
-  const ratio = income > 0 ? Math.max(0, Math.min(1, stillYours / income)) : 0;
-
-  qs('[data-net-bar-fill]').style.width = `${(ratio * 100).toFixed(1)}%`;
-  bar.hidden = income <= 0;
-
-  kept.innerHTML = income > 0
-    ? `Kept <strong>${formatMoneyHTML(stillYours, display)}</strong> · ${(ratio * 100).toFixed(0)}% of income`
-    : '';
-  kept.hidden = income <= 0;
+  host.innerHTML = rows.slice(0, SHOWN).map((row) => entryRow(row, byId.get(row.account_id))).join('')
+    + (more > 0 ? `
+      <li><a class="row home-today__more" href="modules/ledger/list.html">
+        <span class="row__main"><span class="row__title">${more} more today</span></span>
+        ${icon('chevron-right', { class: 'icon icon--sm row__chev' })}
+      </a></li>` : '');
 }
 
 /**
- * 48,600 -> 48.6k. Only for the flow chips, never for a figure anyone might
- * act on: a rounded balance is a balance that disagrees with the ledger.
+ * One entry as a row.
+ *
+ * Kept local until the ledger exports its own row renderer (B5), at which
+ * point this goes and Home uses that one, so a row looks the same everywhere.
  */
-function formatCompact(minor, currency) {
-  const symbol = currency === 'BDT' ? '৳' : '';
-  const major = Math.abs(minor) / 100;
+function entryRow(row, account) {
+  const type = ledger.typeOf(row.type);
+  const sign = row.direction === 'in' ? 'always' : 'auto';
+  const amount = row.direction === 'in' ? row.amount_minor : -row.amount_minor;
 
-  if (major < 1000) return `${symbol}${Math.round(major)}`;
-
-  // One decimal, and the trailing .0 removed. Rounding 48,600 to "49k" loses
-  // the digit that distinguishes it from 48,900 - and these three chips are
-  // meant to be compared against each other, so the shared magnitude is the
-  // uninformative part and the first decimal is the informative one.
-  const thousands = (major / 1000).toFixed(major >= 100000 ? 0 : 1).replace(/\.0$/, '');
-
-  return `${symbol}${thousands}k`;
+  return `
+    <li>
+      <button type="button" class="row" data-edit="${esc(row.id)}">
+        <span class="row__glyph row__glyph--${type.tone}">${icon(type.icon, { class: 'icon' })}</span>
+        <span class="row__main">
+          <span class="row__title">${esc(row.payee || row.category_label || type.label)}</span>
+          <span class="row__sub">
+            ${row.payee && row.category_label ? `<span>${esc(row.category_label)}</span><span aria-hidden="true">·</span>` : ''}
+            <span>${esc(account?.name || 'Unknown account')}</span>
+          </span>
+        </span>
+        <span class="row__end">
+          <span class="money money--md money--${type.tone}">${formatMoneyHTML(amount, row.currency, { sign })}</span>
+        </span>
+      </button>
+    </li>`;
 }
 
 /* =========================================================================
-   This month
+   Accounts strip
    ========================================================================= */
 
-function drawMonth(summary, display) {
-  const tiles = [
-    // The icon is not decoration. Four figures in four identical boxes are
-    // read by position, which means re-reading the labels every time; a glyph
-    // and a colour make each one recognisable before the label is read at all.
-    { label: 'Income',    value: summary.income_minor,  tone: 'in',   icon: 'arrow-in' },
-    { label: 'Deposited', value: summary.held_minor,    tone: 'hold', icon: 'arrow-hold' },
-    { label: 'Spent',     value: summary.expense_minor, tone: 'out',  icon: 'arrow-out' },
-    {
-      label: 'Could save',
-      value: summary.kept_minor,
-      icon: 'target',
-      // Kept is the one figure whose sign is meaningful: a negative month means
-      // more went out than came in, and it should read as bad rather than
-      // simply as a smaller number.
-      tone: summary.kept_minor < 0 ? 'out' : 'flat',
-      note: summary.income_minor > 0 ? `${summary.savings_rate.toFixed(0)}% of income` : null,
-    },
-  ];
+/**
+ * Where you can pay from, as chips.
+ *
+ * Spendable accounts only. A DPS balance on this strip reads as money
+ * available for lunch, which is the confusion the spendable / held split
+ * exists to prevent. A negative balance on anything but a credit card is
+ * flagged: a bKash wallet cannot really be below zero, so a negative one is a
+ * missing entry, and saying so is the useful thing.
+ */
+function drawAccounts(accountRows, balances) {
+  const host = qs('[data-accounts]');
+  const spendable = accountRows.filter(accounts.isSpendable);
 
-  render(qs('[data-month-stats]'), html`${raw(tiles.map((t) => `
-    <div class="stat stat--${t.tone}">
-      <span class="stat__glyph">${icon(t.icon, { class: 'icon icon--sm' })}</span>
-      <span class="money money--lg money--${t.tone}">${formatMoneyHTML(t.value, display)}</span>
-      <span class="stat__label">${esc(t.label)}</span>
-      ${t.note ? `<span class="stat__delta">${esc(t.note)}</span>` : ''}
-    </div>`).join(''))}`);
+  if (!spendable.length) {
+    host.innerHTML = `
+      <li class="home-account home-account--add">
+        <a href="modules/accounts/list.html?new=1">${icon('plus', { class: 'icon icon--sm' })} Add an account</a>
+      </li>`;
+    return;
+  }
 
-  drawFlow(summary, display);
+  host.innerHTML = spendable.map((account) => {
+    const balance = balances[account.id] ?? 0;
+    const type = accounts.typeOf(account.type);
+    const flagged = balance < 0 && !type.credit;
 
-  // The breakdown only earns its space once there is something to break down.
+    return `
+      <li class="home-account${flagged ? ' is-negative' : ''}">
+        <a href="modules/accounts/list.html#${encodeURIComponent(account.id)}">
+          <span class="home-account__name">
+            ${icon(type.icon, { class: 'icon icon--sm' })}
+            <span>${esc(account.name)}</span>
+          </span>
+          <span class="money home-account__balance${flagged ? ' money--out' : ''}">${figure(balance, account.currency)}</span>
+          ${flagged ? '<span class="home-account__flag">Below zero — an entry missing?</span>' : ''}
+        </a>
+      </li>`;
+  }).join('');
+}
+
+/* =========================================================================
+   Where it went
+   ========================================================================= */
+
+/**
+ * The top four categories and everything else as one.
+ *
+ * Three, and the rest as one: Home has to fit about one and a half screens at
+ * 360px (DIRECTION.md §3.3), and the Month screen has the full list.
+ */
+function drawBreakdown(summary, display) {
   const panel = qs('[data-breakdown]');
-  const categories = summary.by_category.slice(0, 6);
-  panel.hidden = categories.length === 0;
+  const all = summary.by_category.filter((c) => c.value > 0);
+  panel.hidden = all.length === 0;
   if (panel.hidden) return;
 
-  const parts = categories.map((c, i) => ({
-    ...c,
-    color: segmentColor(i),
-    // Compact, because it sits inside the segment beside the name. The exact
-    // figure is one row below in the legend.
-    label: formatCompact(c.value, display),
-  }));
-  qs('[data-breakdown-bar]').innerHTML = breakdownBar(parts, { bands: true });
+  const TOP = 3;
+  const parts = all.slice(0, TOP).map((c, i) => ({ ...c, color: segmentColor(i) }));
+  const rest = all.slice(TOP).reduce((sum, c) => sum + c.value, 0);
+  if (rest > 0) parts.push({ name: 'Everything else', value: rest, color: 'var(--ink-4)' });
+
+  qs('[data-breakdown-bar]').innerHTML = breakdownBar(parts, { minShare: 0 });
 
   const total = summary.expense_minor || 1;
   qs('[data-breakdown-legend]').innerHTML = parts.map((p) => `
     <div class="legend__item" style="--seg-color:${p.color}">
       <span class="legend__swatch"></span>
       <span class="legend__name">${esc(p.name)}</span>
-      <span class="legend__value money">${formatMoneyHTML(p.value, display, { code: false })}</span>
-      <span class="legend__pct">${((p.value / total) * 100).toFixed(0)}%</span>
+      <span class="legend__value money">${figure(p.value, display)}</span>
+      <span class="legend__pct">${Math.round((p.value / total) * 100)}%</span>
     </div>`).join('');
 }
 
+/* =========================================================================
+   What the numbers say
+   ========================================================================= */
+
 /**
- * Twelve months of net movement, as a sparkline beside the headline figure.
+ * One line each, the number first.
  *
- * Net rather than spending: a line of expense totals says nothing about whether
- * the months were good ones.
+ * The old version was three paragraphs; between two errands nobody reads a
+ * paragraph. The figure leads so the line can be read by its first word.
  */
-async function drawTrend(book, display) {
-  const periods = lastPeriods(12, currentPeriod());
-  const [income, expense, held] = await Promise.all([
-    ledger.series(periods, { book, type: 'income', currency: display }),
-    ledger.series(periods, { book, type: 'expense', currency: display }),
-    ledger.series(periods, { book, type: 'deposit', currency: display }),
-  ]);
+function drawNotes(summary, budget, display) {
+  const notes = [];
+  const income = summary.income_minor || 0;
+  const spent = summary.expense_minor || 0;
 
-  const net = periods.map((_, i) => income[i].value - expense[i].value - held[i].value);
-  const any = net.some((v) => v !== 0);
-
-  const host = qs('[data-net-spark]');
-  host.innerHTML = any
-    ? sparkline(net, { label: `Net movement over ${periods.length} months`, width: 160, height: 44 })
-    : '';
-}
-
-/* =========================================================================
-   Accounts and recent entries
-   ========================================================================= */
-
-function drawAccounts(accountRows, balances) {
-  qs('[data-account-count]').textContent = accountRows.length ? `${accountRows.length}` : '';
-
-  if (!accountRows.length) {
-    render(qs('[data-accounts]'), html`
-      <li>${raw(emptyState({
-        glyph: 'wallet',
-        title: 'No accounts yet',
-        text: 'An account is anywhere money sits — cash, bKash, a bank, a card, a DPS.',
-        action: '<a class="btn btn--primary btn--sm" href="modules/accounts/list.html?new=1">Add an account</a>',
-      }))}</li>`);
-    return;
+  if (summary.count && income > 0) {
+    const rate = Math.round(summary.savings_rate);
+    notes.push(rate >= 20
+      ? { tone: 'in', lead: `${rate}% kept`, text: 'above the 20% mark' }
+      : rate >= 0
+        ? { tone: 'warn', lead: `${rate}% kept`, text: 'the usual target is 20%' }
+        : { tone: 'out', lead: `${inline(spent - income, display)} more out than in`, text: 'something is being drawn down' });
   }
 
-  const rows = accountRows.map((account) => {
-    const balance = balances[account.id] ?? 0;
-    const type = accounts.typeOf(account.type);
-    // A credit card's balance is normally negative and that is not a warning —
-    // it is what a card is. It is coloured only when it exceeds its limit.
-    const overLimit = type.credit && account.credit_limit_minor && Math.abs(balance) > account.credit_limit_minor;
-
-    return `
-      <li>
-        <a class="row" href="modules/accounts/detail.html?id=${encodeURIComponent(account.id)}">
-          <span class="row__glyph">${icon(type.icon, { class: 'icon' })}</span>
-          <span class="row__main">
-            <span class="row__title">${esc(account.name)}</span>
-            <span class="row__sub">
-              <span>${esc(type.label)}</span>
-              ${account.number_tail ? `<span>·</span><span class="num">••${esc(account.number_tail)}</span>` : ''}
-            </span>
-          </span>
-          <span class="row__end">
-            <span class="money money--md ${balance < 0 && !type.credit ? 'money--out' : overLimit ? 'money--out' : 'money--flat'}">
-              ${formatMoneyHTML(balance, account.currency)}
-            </span>
-          </span>
-          ${icon('chevron-right', { class: 'icon icon--sm row__chev' })}
-        </a>
-      </li>`;
-  }).join('');
-
-  qs('[data-accounts]').innerHTML = rows;
-}
-
-function drawRecent(rows, accountRows) {
-  const host = qs('[data-recent]');
-
-  if (!rows.length) {
-    host.innerHTML = `<li>${emptyState({
-      glyph: 'inbox',
-      title: 'Nothing recorded yet',
-      text: 'Add the first entry and the figures above start meaning something.',
-      action: '<button type="button" class="btn btn--primary btn--sm" data-compose>Add an entry</button>',
-    })}</li>`;
-    return;
-  }
-
-  const byId = new Map(accountRows.map((a) => [a.id, a]));
-  let lastDay = null;
-
-  host.innerHTML = rows.map((row) => {
-    const type = ledger.typeOf(row.type);
-    const account = byId.get(row.account_id);
-    const dayHead = row.occurred_on !== lastDay
-      ? `<li class="list-group-head"><span>${esc(formatDayLabel(row.occurred_on))}</span></li>` : '';
-    lastDay = row.occurred_on;
-
-    const sign = row.direction === 'in' ? 'always' : 'auto';
-    const amount = row.direction === 'in' ? row.amount_minor : -row.amount_minor;
-
-    return `${dayHead}
-      <li>
-        <button type="button" class="row" data-edit="${esc(row.id)}">
-          <span class="row__glyph row__glyph--${type.tone}">${icon(type.icon, { class: 'icon' })}</span>
-          <span class="row__main">
-            <span class="row__title">${esc(row.payee || row.category_label || type.label)}</span>
-            <span class="row__sub">
-              ${row.category_label ? `<span>${esc(row.category_label)}</span><span>·</span>` : ''}
-              <span>${esc(account?.name || 'Unknown account')}</span>
-            </span>
-          </span>
-          <span class="row__end">
-            <span class="money money--md money--${type.tone}">${formatMoneyHTML(amount, row.currency, { sign })}</span>
-          </span>
-        </button>
-      </li>`;
-  }).join('');
-}
-
-delegate(document.body, 'click', '[data-edit]', async (_event, button) => {
-  const res = await ledger.find(button.dataset.edit);
-  if (res.ok) openEntrySheet({ transaction: res.data, onSaved: refresh });
-});
-
-/* =========================================================================
-   Insights
-   ========================================================================= */
-
-/**
- * Insights are generated FROM the month's figures, never from a template with
- * numbers dropped in. The difference matters: an insight that would say nothing
- * is not shown at all, rather than padded out to fill the panel.
- */
-function drawInsights(summary, display) {
-  const out = [];
-  const money = (v) => formatMoney(v, display, { code: true });
-
-  if (summary.count === 0) {
-    qs('[data-insights]').hidden = true;
-    return;
-  }
-
-  if (summary.income_minor > 0) {
-    const rate = summary.savings_rate;
-    if (rate >= 20) {
-      out.push({ tone: 'good', icon: 'target', text: `You kept <strong>${rate.toFixed(0)}%</strong> of what came in this month — above the 20% mark that is usually called healthy.` });
-    } else if (rate < 0) {
-      out.push({ tone: 'bad', icon: 'alert', text: `You spent <strong>${money(Math.abs(summary.kept_minor))}</strong> more than you received. Something is being drawn down to cover it.` });
-    } else {
-      out.push({ tone: 'warn', icon: 'trend-down', text: `You kept <strong>${rate.toFixed(0)}%</strong> of what came in. Twenty per cent is the usual target.` });
-    }
-  }
-
-  if (summary.held_minor > 0) {
-    const share = summary.income_minor > 0 ? ` — ${((summary.held_minor / summary.income_minor) * 100).toFixed(0)}% of what came in` : '';
-    out.push({ tone: 'hold', icon: 'arrow-hold', text: `<strong>${money(summary.held_minor)}</strong> moved into savings and investment${share}. That is taken out of spendable income, not counted as spending.` });
-  }
+  // No "saved" line: Saved is already a labelled figure in the hero, and
+  // repeating it here cost a row of the page's height for no new fact.
 
   const top = summary.by_category[0];
-  if (top && summary.expense_minor > 0) {
-    const share = (top.value / summary.expense_minor) * 100;
-    // Only interesting when it is genuinely dominant. "Your biggest category
-    // was 12% of spending" is a sentence that tells nobody anything.
-    if (share >= 25) {
-      out.push({ tone: 'info', icon: 'pie', text: `<strong>${esc(top.name)}</strong> took <strong>${share.toFixed(0)}%</strong> of everything you spent — ${money(top.value)} across ${top.count} ${top.count === 1 ? 'entry' : 'entries'}.` });
-    }
+  if (top && spent > 0 && top.value / spent >= 0.25) {
+    notes.push({ tone: 'info', lead: `${Math.round((top.value / spent) * 100)}% on ${top.name}`, text: `${top.count} ${top.count === 1 ? 'entry' : 'entries'}` });
   }
 
   const avoidable = summary.by_necessity.find((n) => String(n.name) === '4');
-  if (avoidable && avoidable.value > 0 && summary.expense_minor > 0) {
-    const share = (avoidable.value / summary.expense_minor) * 100;
-    out.push({ tone: 'bad', icon: 'alert', text: `<strong>${money(avoidable.value)}</strong> went on things you marked avoidable — ${share.toFixed(0)}% of the month's spending.` });
+  if (avoidable && avoidable.value > 0) {
+    notes.push({ tone: 'out', lead: `${inline(avoidable.value, display)} avoidable`, text: 'by your own marking' });
+  }
+
+  if (budget > 0 && spent > budget) {
+    notes.push({ tone: 'out', lead: `${inline(spent - budget, display)} over budget`, text: `of ${inline(budget, display)}` });
   }
 
   if (summary.unconvertible.length) {
-    out.push({ tone: 'warn', icon: 'globe', text: `No exchange rate for ${esc(summary.unconvertible.join(', '))}, so those amounts are left out of the totals above. Set a rate in Settings.` });
+    notes.push({ tone: 'warn', lead: summary.unconvertible.join(', '), text: 'left out: no exchange rate set' });
   }
 
   const panel = qs('[data-insights]');
-  panel.hidden = out.length === 0;
-  if (panel.hidden) return;
-
-  qs('[data-insight-list]').innerHTML = out.map((i) => `
-    <div class="callout callout--${i.tone}">
-      ${icon(i.icon, { class: 'icon callout__glyph' })}
-      <div class="callout__body">${i.text}</div>
-    </div>`).join('');
-}
-
-/* ---- Shared empty state ------------------------------------------------- */
-
-function emptyState({ glyph, title, text, action = '' }) {
-  return `
-    <div class="empty">
-      <span class="empty__glyph">${icon(glyph, { class: 'icon icon--lg' })}</span>
-      <span class="empty__title">${esc(title)}</span>
-      <p class="empty__text">${esc(text)}</p>
-      ${action}
-    </div>`;
+  panel.hidden = notes.length === 0;
+  qs('[data-insight-list]').innerHTML = notes.slice(0, 4).map((n) => `
+    <li class="home-note home-note--${n.tone}">
+      <strong class="home-note__lead">${esc(n.lead)}</strong>
+      <span class="home-note__text">${esc(n.text)}</span>
+    </li>`).join('');
 }

@@ -246,6 +246,52 @@ export async function reorder(orderedIds) {
   return { ok: true, data: null };
 }
 
+/* ---- The month (/api/finance) ------------------------------------------- */
+
+/** What the finance settings are before anyone has set any. */
+const NO_SETTINGS = { opening_balance_minor: 0, carry_forward: true, monthly_budget_minor: 0, savings_goal_minor: 0 };
+
+/**
+ * The owner's finance settings: opening balance, carry-forward, budget, goal.
+ *
+ * With no backend there is nowhere they could have been set, so the answer is
+ * "none set" rather than a failure. Home reads the budget from here, and a
+ * static preview with no server still has a Home.
+ */
+export async function financeSettings() {
+  if (!(await hasBackend())) return { ok: true, data: { ...NO_SETTINGS } };
+  const res = await get('/finance/settings');
+  if (!res.ok) return res.reason === 'auth' ? res : { ok: true, data: { ...NO_SETTINGS } };
+  return { ok: true, data: { ...NO_SETTINGS, ...(res.data?.data || {}) } };
+}
+
+export async function updateFinanceSettings(changes) {
+  if (!(await hasBackend())) return { ok: false, reason: 'offline' };
+  const res = await patch('/finance/settings', changes);
+  return res.ok ? { ok: true, data: res.data?.data } : res;
+}
+
+/**
+ * One month, as MonthCockpit computes it, for one book.
+ *
+ * Server-only: carry-over, the necessity mix and the review are computed in
+ * one place (MonthCockpit), and a browser copy of those rules would be the
+ * second implementation CONVENTIONS.md warns about. Offline, the caller shows
+ * what it can from the ledger's own summary instead.
+ */
+export async function financeMonth(key, { book = 'personal' } = {}) {
+  if (!(await hasBackend())) return { ok: false, reason: 'offline' };
+  const res = await get(`/finance/${key}`, { book });
+  return res.ok ? { ok: true, data: res.data?.data } : res;
+}
+
+/** Every month on file, newest first, with a lifetime roll-up. */
+export async function financeArchive({ book = 'personal' } = {}) {
+  if (!(await hasBackend())) return { ok: false, reason: 'offline' };
+  const res = await get('/finance/archive', { book });
+  return res.ok ? { ok: true, data: res.data?.data } : res;
+}
+
 /* ---- Validation ---------------------------------------------------------- */
 
 function validate(input, { existing = null } = {}) {
