@@ -294,6 +294,10 @@ refines §4 rather than replacing it.
 Day theme stays a full equal, not an afterthought. Both themes get checked at
 every increment.
 
+**Superseded in part on 2026-09-27:** §3.7 replaces item 1 (the figure face is
+now Anek Bangla, and there is no mono face) and item 3 (the accent is now
+marigold, not cyan). Everything else in this section stands.
+
 ### 3.6 Motion and touch
 
 - **Sheets track the finger**: drag the handle down to dismiss, with a spring
@@ -312,6 +316,310 @@ every increment.
   the chip grid and the numpad's `⌫` side.
 - Everything is behind `prefers-reduced-motion`: movement becomes an opacity
   change, and nothing loops.
+
+### 3.7 Visual identity v2 — the spec Dev A turns into tokens
+
+> **2026-09-27 — Visual identity v2.** *(Director, at the owner's request for
+> real work on colour, type and design. Supersedes items 1 and 3 of §3.5:
+> the figure face and the accent colour. Everything else in §3.5 stands.)*
+>
+> Proven in a static mock at 360 × 780 in both themes before being written
+> down (§3.7.8). The values below are the ones in the screenshots. Contrast
+> is WCAG 2 relative luminance, and every text colour clears 4.5:1 against
+> every surface it can sit on.
+
+**What changes, and why.** The old look was cyan on blue-black, with three
+number faces. The owner's dislike comes down to three things: it looks like
+every dark dashboard, the colours compete, and ৳ reads as "b". v2 changes
+three things:
+
+1. **Marigold is the one accent** (`#F5B53F`). It is warm, local (the
+   garland flower) and unlike any flow colour. It marks what you can do: `+`,
+   Save, the current tab, links, the "today" tick. Nothing else is marigold.
+2. **Outflows are plain ink, not red.** Most rows in a ledger are
+   spending, so colouring them red turns the whole list into an alarm. Out
+   is `−৳250` in `--text-1`. Only money arriving (green), money saved
+   (violet) and warnings carry colour. Colour now means *not the usual*.
+3. **One figure face.** Anek Bangla has Latin and Bengali in one family,
+   with weight and width axes and real `tnum`. It sets every figure and
+   heading, and draws the ৳. IBM Plex Sans sets the body. Space Grotesk and
+   Plex Mono go.
+
+#### 3.7.1 Palette — night (default)
+
+| Token | Hex | Use | Contrast (text) |
+|---|---|---|---|
+| `--bg-0` | `#0C0F14` | page canvas | — |
+| `--bg-1` | `#13171E` | cards, list groups, tab bar | — |
+| `--bg-2` | `#1A1F28` | sheets, menus | — |
+| `--bg-3` | `#232A35` | wells: inputs, keypad keys, segmented track, bar track | — |
+| `--line` | `#262D39` | real divisions, chip borders | — |
+| `--line-soft` | `#1C212A` | row separators inside a group | — |
+| `--text-1` | `#F2F4F7` | figures, names, headings, outflow amounts | 13.1–17.4 |
+| `--text-2` | `#B4BBC7` | labels, supporting copy | 7.5–9.9 |
+| `--text-3` | `#8A93A1` | meta, timestamps, inactive tabs | 4.7–6.2 |
+| `--text-4` | `#555E6C` | sheet handle, decorative only (never text) | — |
+| `--accent` | `#F5B53F` | `+`, Save, current-tab mark, today tick | 8.0–10.6 |
+| `--accent-text` | `#F7C360` | links, "All 6" | 8.9–11.8 |
+| `--on-accent` | `#1C1405` | text or icon on an accent fill | 10.0 on accent |
+| `--in` | `#5AD7A0` | money arriving | 8.0–10.7 |
+| `--out` | `#F58BA0` | Out in the entry sheet, out bars in charts | 6.3–8.3 |
+| `--saved` | `#A899FF` | deposits: savings, DPS, FDR, shares | 6.0–7.9 |
+| `--move` | `#94A5BC` | transfers | 5.8–7.7 |
+| `--warn` | `#FF9A52` | warnings, with an icon | 6.9–9.1 |
+| `--danger` | `#FF6B5F` | negative balances, destructive actions | 5.2–6.9 |
+
+Each semantic colour also gets a `-wash`, the same hue at 13–14% alpha, for
+glyph tiles and badges. `--scrim` is `rgba(5,7,10,.66)`.
+
+#### 3.7.2 Palette — day
+
+A warm paper, not a grey inversion.
+
+| Token | Hex | | Token | Hex |
+|---|---|---|---|---|
+| `--bg-0` | `#F5F3EF` | | `--text-1` | `#16181D` (14.5–17.8) |
+| `--bg-1` | `#FFFFFF` | | `--text-2` | `#474D59` (6.9–8.5) |
+| `--bg-2` | `#FFFFFF` + shadow | | `--text-3` | `#5C6270` (5.0–6.1) |
+| `--bg-3` | `#EBE8E2` | | `--text-4` | `#A3A6AD` (decorative) |
+| `--line` | `#E0DCD4` | | `--accent-text` | `#8A5A00` (4.9–5.9) |
+| `--line-soft` | `#ECE9E3` | | `--in` | `#07754C` (4.7–5.7) |
+| `--accent` | `#F5B53F` (fills only) | | `--out` | `#B8335A` (4.7–5.7) |
+| `--on-accent` | `#1C1405` | | `--saved` | `#5641CF` (5.6–6.9) |
+| `--move` | `#50607A` (5.2–6.4) | | `--warn` | `#A94E07` (4.5–5.6) |
+| `--danger` | `#BF2F1F` (4.7–5.8) | | `--scrim` | `rgba(22,24,29,.38)` |
+
+- **Marigold is never text on paper**: it measures 1.6:1, so text uses
+  `--accent-text`.
+- The day `+` is **ink with a marigold plus** (`#16181D` fill, `#F5B53F`
+  icon). A marigold square on paper disappears.
+- Cards on paper get a 1px `--line-soft` ring instead of a shadow.
+
+**Category tints** belong to categories, never to flows. Night:
+- food `#E3A76B`
+- transport `#7FB2E5`
+- home `#C79BE0`
+- utilities `#E5CF6E`
+- dining `#E58F7A`
+- shopping `#7ACFC2`
+- mobile `#93A7F0`
+- health `#E48FB6`
+
+Day uses darker equivalents:
+- food `#B26A22`
+- transport `#2F6FAE`
+- home `#8A4FAE`
+- utilities `#9A7B0C`
+- dining `#B5503A`
+- shopping `#1F8577`
+- mobile `#4A5FC0`
+- health `#B04A7A`
+
+A glyph tile is the tint's icon on the tint at 15% (`color-mix`). Categories
+without an assigned tint use `--text-3`.
+
+#### 3.7.3 Typography
+
+| Role | Family | Why |
+|---|---|---|
+| Figures, headings, ৳ | **Anek Bangla** (Ek Type, OFL), variable `wght 400–700`, `wdth 80–100` | Latin + Bengali in one family. The width axis lets a hero figure condense at 360px. `tnum` is verified present. |
+| Body and UI | **IBM Plex Sans** (OFL), variable, already shipped | Its digits are tabular by default (every digit is 600 units wide), so list amounts align with no mono face |
+| Bengali body | **Noto Sans Bengali** (OFL), variable `wght`, replacing the single 400 file | Weights match Plex, so a 500 Bangla payee sits right beside a 500 Latin one |
+| ৳ everywhere | **"Hisab Taka"**: Anek's U+09F3 alone, 1.4 KB, first in *both* stacks | Fixes "৳ reads as b". The symbol is drawn by one face at the figure's own weight, in lists and heroes alike |
+
+**Files, subset and self-hosted:**
+
+| File | Size |
+|---|---|
+| `anek-latin.woff2` | 65 KB |
+| `anek-bengali.woff2` (`unicode-range` U+0980–09FF, so it loads only when Bengali appears in the display face) | 265 KB |
+| `hisab-taka.woff2` | 1.4 KB |
+| `noto-sans-bengali-var.woff2` | 219 KB |
+| `ibm-plex-sans-var.woff2` (kept) | 46 KB |
+
+- **Remove:** `space-grotesk-var`, both `ibm-plex-mono` files, and
+  `noto-sans-bengali-400`.
+- **Build:** subset with `fonttools varLib.instancer wght=400:700 wdth=80:100`,
+  then `pyftsubset --flavor=woff2`.
+- **Bengali alignment:** set `size-adjust` on the Bengali faces if a Bangla
+  word shifts a row's line height.
+
+**Scale at 360px** (px; line-height as a ratio; `font-stretch` as %):
+
+| Token | Size / LH | Face, weight, width | Use |
+|---|---|---|---|
+| `--t-hero` | 56 / 1.0, tracking −1.2% | Anek 600, 86% | the one hero figure per screen |
+| `--t-entry` | 60 / 1.0 | Anek 600, 86% | amount in the entry sheet |
+| `--t-title` | 20 / 1.2 | Anek 600, 96% | page title (Ledger) |
+| `--t-head` | 17 / 1.0 | Anek 600 | header month, sheet title |
+| `--t-fig` | 17 / 1.1 | Anek 600, 92% | secondary figures: In/Saved/Out, day sums |
+| `--t-fig-sm` | 16 / 1.2 | Anek 600, 92% | account strip balances |
+| `--t-section` | 15 / 1.2 | Anek 600, 96% | section titles |
+| `--t-body` | 15 / 1.45 | Plex 400 | body; row names at 500; row amounts at 500 |
+| `--t-ui` | 13.5 / 1.0 | Plex 500 | segmented controls, chips (13) |
+| `--t-meta` | 12.5 / 1.35 | Plex 400 | meta lines, day headers (500) |
+| `--t-micro` | 11 / 1.0 | Plex 500 | tab labels, category labels (11.5). Nothing smaller |
+| `--t-key` | 23 / 1.0 | Anek 500, 92% | keypad digits |
+
+Form inputs stay at 16px so iOS does not zoom.
+
+**The hero figure:** "Left to spend this month" sits above it in `--t-meta`
+at 13px, `--text-2`. Then the figure: `৳37,445` in Anek 600 at 56px, width
+86%. The ৳ is at 0.5em on the baseline in `--text-3`. Any minor part is at
+0.42em in `--text-3`. There is no card behind it: it sits on the canvas.
+Under it is the pace bar:
+- a 6px `--bg-3` track;
+- a `--text-1` fill for the share of income spent;
+- a 2 × 14px **marigold tick** at today's share of the month;
+- a caption: "**৳9,360** a day for 4 days" on the left, "52% used · day 26"
+  on the right.
+
+When the fill passes the tick, you are spending ahead of the month. No
+colour change is needed to say so.
+
+**Money in lists:**
+- Right-aligned, Plex 500 15px, tabular.
+- The ৳ is at 0.9em in the figure's own colour, not dimmed.
+- The U+2212 minus is used for outflows.
+- A foreign row shows its own currency and the converted figure under it in
+  11.5px `--text-3`.
+
+#### 3.7.4 Space, radius, elevation
+
+- **Space**, on a 4px base:
+  - `--s-1` 4
+  - `--s-2` 8
+  - `--s-3` 12
+  - `--s-4` 16 (the page gutter, always)
+  - `--s-5` 20
+  - `--s-6` 24 (gap between sections)
+  - `--s-8` 32
+  - `--s-10` 40
+- **Radius:**
+  - `--r-xs` 4 (badges)
+  - `--r-sm` 6
+  - `--r-md` 10 (glyph tiles, keys, account chips)
+  - `--r-lg` 14 (cards, sheet top corners)
+  - `--r-plus` 18 (the `+` only)
+  - `--r-pill` (chips only)
+
+  This extends §4's "4–10px": 14 and 18 are the only additions, and each
+  has one job.
+- **Elevation** is luminance first:
+  - `bg-0` → `bg-1` → `bg-2` → `bg-3`
+  - Only two shadows exist: `--shadow-sheet` (`0 -1px 0 var(--line), 0
+    -24px 48px rgba(0,0,0,.45)` at night; `0 -1px 0 var(--line), 0 -16px
+    40px rgba(22,24,29,.12)` by day) and `--shadow-plus` (a 5px ring in
+    `--bg-0` that notches the `+` out of the bar, plus `0 8px 18px
+    rgba(0,0,0,.45)`).
+  - The tab bar is `--bg-1` at 94% with a 12px backdrop blur and a
+    `--line-soft` top rule.
+
+#### 3.7.5 Motion
+
+| Token | Value | Use |
+|---|---|---|
+| `--ease-out` | `cubic-bezier(.16,1,.3,1)` | things arriving: sheet open, row slide-in |
+| `--ease-in` | `cubic-bezier(.55,0,1,.45)` | things leaving: sheet close, row collapse |
+| `--ease-snap` | `cubic-bezier(.34,1.56,.64,1)` | a figure ticking to a new value, `+` press release |
+| `--t-press` | 90ms | press: scale .97 and a surface step, on pointerdown |
+| `--t-fast` | 140ms | chip or segment selection, tab change |
+| `--t-base` | 220ms | sheet open, row insert |
+| `--t-leave` | 160ms | sheet close |
+| `--t-tick` | 420ms | value tick, digits roll per column |
+
+A dragged sheet follows the finger 1:1, then settles with `--ease-out` over
+the remaining distance. Under `prefers-reduced-motion`, every transform
+becomes a 120ms opacity change, and the entry sheet's caret stops blinking.
+
+#### 3.7.6 Components
+
+- **Bottom bar.** 64px plus the safe area, in five columns:
+  `1fr 1fr 76px 1fr 1fr`.
+  - Tabs have a 22px icon and an 11px label, `--text-3`.
+  - The current tab is `--text-1` with a 20 × 2px marigold mark on the
+    bar's top edge.
+  - **`+`** is a 54px square at `--r-plus`, raised 20px above the bar, with
+    a 26px plus at a 2.2 stroke. It is marigold with an ink icon at night
+    and ink with a marigold icon by day. The 5px `--bg-0` ring makes it read
+    as notched into the bar rather than floating.
+- **Cards.** `--bg-1`, `--r-lg`, 4px vertical and 16px horizontal padding, no
+  border at night, and a `--line-soft` ring by day. Use them for groups of
+  rows only. Heroes and section heads never sit in a card.
+- **List rows.**
+  - Minimum height 60px.
+  - A 40px glyph tile at `--r-md`: the category tint at 15%, with the icon
+    in the tint.
+  - The name in Plex 500 15px, ellipsized *before* the amount ever is.
+  - The meta line in 12.5px `--text-3`: category · account · time.
+  - The amount on the right.
+  - Separators are `--line-soft`, indented to the text (52px), never full
+    width.
+  - Day headers are text only: the day on the left and the net in 12.5px on
+    the right, with no band.
+- **Number pad.**
+  - A 4 × 4 grid with 6px gaps and 52px keys at `--r-md`.
+  - Digits are Anek 500 23px on `--bg-3` (`#F1EEE8` by day).
+  - `+`, `−` and `⌫` are outlined keys (a 1px `--line` inset), not filled.
+  - **Save** is marigold, spans two rows, and reads "Save" in Plex 600 15px.
+  - The entered amount's caret is a 2px marigold bar.
+  - A running sum ("250 + 120") shows in 12.5px `--text-3` under the amount.
+- **Chips.** 34px tall with pill radius and 12px padding.
+  - Default chips have a `--line` border (account, date, Details).
+  - Recent-entry chips have a `--bg-3` fill and no border, with the payee in
+    `--text-1` and the amount in `--text-2`.
+  - Category choices are not chips. They are a 4 × 2 grid of 44px glyph
+    tiles with an 11.5px label. The selected one gets a 1.5px inset ring in
+    its tint.
+- **Segmented control** (the type toggle, the Ledger filter).
+  - A `--bg-3` track with 3px padding, `--r-md`.
+  - Segments are 34px tall.
+  - The selected segment lifts to `--bg-1` with a 1px shadow. When the
+    selected segment is Out, its label turns `--out`.
+- **Sheets.**
+  - `--bg-2`, with `--r-lg` on the top corners only and `--shadow-sheet`.
+  - A 36 × 4px handle in `--text-4`.
+  - A 16px gutter and 12px at the bottom plus the safe area.
+  - The scrim sits behind.
+  - The entry sheet is ordered: type toggle → amount → account / date /
+    Details chips → recent chips → category grid → pad. At 360 × 780 that
+    fits in about 650px with nothing scrolling.
+- **Account strip.** Tiles at least 116px wide on `--bg-1`, with a 12.5px
+  name and icon and a `--t-fig-sm` balance. A negative balance is
+  `--danger`, with a 1px danger ring at 40%.
+
+#### 3.7.7 What Dev A does with this
+
+- **A4 is now "tokens per §3.7".** Rename the tokens in `_variables.css` to
+  these values. Keep the old names as aliases for one increment, so that B's
+  and C's files keep working until they move, then delete the aliases.
+- **Ship the fonts** as listed in §3.7.3.
+- **Add the category tint tokens and category glyphs.** B5 needs them.
+  The mock's glyphs are in `docs/visual-v2/cat.svg`; redraw them into the
+  sprite at its 1.5 stroke.
+- **Accept at 360 in both themes** with shoot-mobile:
+  - no figure uses a face other than Anek or Plex;
+  - no ৳ is rendered by Noto;
+  - `check-pages.py` and qa-viewport pass.
+
+#### 3.7.8 The proof
+
+`docs/visual-v2/` holds the static mock:
+- `v2.css` has every token above;
+- `home.html`, `add.html` and `ledger.html` are the three screens, each
+  marked standalone so `check-pages.py` does not treat it as an app page;
+- `cat.svg` has the category glyphs;
+- `f/` has the subset fonts, ready to move into `assets/fonts/`.
+
+Screenshots at 360 × 780 are in `docs/visual-v2/shots/`: `home`, `add` and
+`ledger`, each as `-night.png` and `-day.png`. View the mock with `python -m
+http.server` from the repository root, then `/docs/visual-v2/home.html`
+(add `?theme=light` for day).
+
+It is a reference only. It is not deployed (`docs/` never is), and the real
+implementation goes through the tokens and the shared partials, not by
+copying the mock's CSS. Dev A deletes `docs/visual-v2/f/` once the fonts are
+in `assets/fonts/`.
 
 ---
 
@@ -360,8 +668,9 @@ checks its hash against the CSP in `.htaccess`.
    runs it.
    *Accept:* `check-pages.py` passes, no 404 in any page's network log, and
    the deploy payload is 1.2 MB smaller.
-4. **A4 — Visual tokens per §3.5**: display-face figures, category tint
-   tokens, the single accent for action, fewer card borders, press states.
+4. **A4 — Visual tokens per §3.7** (visual identity v2): palettes, fonts,
+   type scale, radii, elevation, motion, category tints and glyphs, and
+   press states, as §3.7.7 lists.
    *Accept:* shoot-mobile of all screens in both themes attached to the
    commit message description; qa-viewport 360/390 pass.
 5. **A5 — The sheet tracks the finger**: drag to dismiss, snap back, keyboard

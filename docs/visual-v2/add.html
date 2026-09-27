@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="hisab:standalone" content="design reference for DIRECTION.md 3.7, not an app page"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Quick add — v2 mock</title>
+<script>if (new URLSearchParams(location.search).get('theme') === 'light') document.documentElement.dataset.theme = 'light';</script>
+<link rel="stylesheet" href="v2.css"></head>
+<body>
+<header class="top"><button class="month">September</button><span class="book">Personal</span></header>
+<div class="scrim"></div>
+
+<section class="sheet" aria-label="New entry">
+  <div class="handle"></div>
+  <div class="seg" role="group" aria-label="Type">
+    <button aria-pressed="true" class="is-out">Out</button><button aria-pressed="false">In</button><button aria-pressed="false">Save</button><button aria-pressed="false">Move</button>
+  </div>
+
+  <div class="amount m"><span class="cur">৳</span><span class="num">370</span><span class="caret"></span></div>
+  <div class="calc">250 + 120</div>
+
+  <div class="chips">
+    <button class="chip"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-cash"/></svg>Cash in hand<svg class="ico" style="width:14px;height:14px"><use href="../../shared/icons/sprite.svg#i-chevron-down"/></svg></button>
+    <button class="chip"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-calendar"/></svg>Today</button>
+    <button class="chip chip--quiet"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-sliders"/></svg>Details</button>
+  </div>
+
+  <div class="chips" style="margin-top:8px">
+    <button class="chip chip--recent"><b>CNG</b>৳250</button>
+    <button class="chip chip--recent"><b>Uber</b>৳319</button>
+    <button class="chip chip--recent"><b>Meena Bazar</b>৳3,513</button>
+    <button class="chip chip--recent"><b>Tea</b>৳60</button>
+  </div>
+
+  <div class="cats">
+    <button class="cat" aria-pressed="true"><span class="glyph" style="--tint:var(--cat-ride)"><svg class="ico"><use href="cat.svg#c-ride"/></svg></span>Transport</button>
+    <button class="cat"><span class="glyph" style="--tint:var(--cat-food)"><svg class="ico"><use href="cat.svg#c-food"/></svg></span>Groceries</button>
+    <button class="cat"><span class="glyph" style="--tint:var(--cat-cup)"><svg class="ico"><use href="cat.svg#c-cup"/></svg></span>Dining</button>
+    <button class="cat"><span class="glyph" style="--tint:var(--cat-bolt)"><svg class="ico"><use href="cat.svg#c-bolt"/></svg></span>Utilities</button>
+    <button class="cat"><span class="glyph" style="--tint:var(--cat-wifi)"><svg class="ico"><use href="cat.svg#c-wifi"/></svg></span>Mobile</button>
+    <button class="cat"><span class="glyph" style="--tint:var(--cat-bag)"><svg class="ico"><use href="cat.svg#c-bag"/></svg></span>Shopping</button>
+    <button class="cat"><span class="glyph" style="--tint:var(--cat-heart)"><svg class="ico"><use href="cat.svg#c-heart"/></svg></span>Health</button>
+    <button class="cat"><span class="glyph" style="--tint:var(--text-3)"><svg class="ico"><use href="cat.svg#c-grid"/></svg></span>More</button>
+  </div>
+
+  <div class="pad">
+    <button class="key">1</button><button class="key">2</button><button class="key">3</button><button class="key key--op">+</button>
+    <button class="key">4</button><button class="key">5</button><button class="key">6</button><button class="key key--op">−</button>
+    <button class="key">7</button><button class="key">8</button><button class="key">9</button><button class="key key--save">Save</button>
+    <button class="key">00</button><button class="key">0</button><button class="key key--op" aria-label="Delete"><svg class="ico"><use href="cat.svg#c-del"/></svg></button>
+  </div>
+</section>
+</body></html>

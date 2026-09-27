@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="hisab:standalone" content="design reference for DIRECTION.md 3.7, not an app page"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Home — v2 mock</title>
+<script>if (new URLSearchParams(location.search).get('theme') === 'light') document.documentElement.dataset.theme = 'light';</script>
+<link rel="stylesheet" href="v2.css"></head>
+<body>
+<header class="top">
+  <button class="month">September <svg class="ico"><use href="../../shared/icons/sprite.svg#i-chevron-down"/></svg></button>
+  <span class="book">Personal</span>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <div class="hero__label">Left to spend this month</div>
+    <div class="hero__fig m"><span class="cur">৳</span>37,445</div>
+    <div class="pace">
+      <div class="pace__bar"><span class="pace__fill" style="width:52%"></span><span class="pace__now" style="left:86%"></span></div>
+      <div class="pace__text"><span><b>৳9,360</b> a day for 4 days</span><span>52% used · day 26</span></div>
+    </div>
+  </section>
+
+  <dl class="trio">
+    <div style="--dot:var(--in)"><dt>In</dt><dd class="m m--in">৳88,611</dd></div>
+    <div style="--dot:var(--saved)"><dt>Saved</dt><dd class="m m--saved">৳5,000</dd></div>
+    <div style="--dot:var(--text-2)"><dt>Out</dt><dd class="m">৳46,166</dd></div>
+  </dl>
+
+  <section class="sec">
+    <div class="sec__head"><h2 class="sec__title">Today</h2><span class="sec__aside">৳427 spent</span></div>
+    <ul class="rows card">
+      <li class="row"><span class="glyph" style="--tint:var(--cat-ride)"><svg class="ico"><use href="cat.svg#c-ride"/></svg></span>
+        <div class="row__main"><div class="row__name">CNG to Motijheel</div><div class="row__meta">Transport · Cash in hand</div></div>
+        <div class="row__amt m">−৳250</div></li>
+      <li class="row"><span class="glyph" style="--tint:var(--cat-cup)"><svg class="ico"><use href="cat.svg#c-cup"/></svg></span>
+        <div class="row__main"><div class="row__name">Tea &amp; singara</div><div class="row__meta">Dining out · bKash</div></div>
+        <div class="row__amt m">−৳177</div></li>
+    </ul>
+  </section>
+
+  <section class="sec">
+    <div class="sec__head"><h2 class="sec__title">Accounts</h2><span class="sec__aside"><a href="#">All 6</a></span></div>
+    <div class="strip">
+      <div class="acct"><div class="acct__name"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-cash"/></svg>Cash in hand</div><div class="acct__bal m">৳10,756</div></div>
+      <div class="acct acct--neg"><div class="acct__name"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-mobile"/></svg>bKash</div><div class="acct__bal m">−৳3,173</div></div>
+      <div class="acct"><div class="acct__name"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-bank"/></svg>City Bank</div><div class="acct__bal m">৳85,819</div></div>
+      <div class="acct"><div class="acct__name"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-wallet"/></svg>Payoneer</div><div class="acct__bal m">$1,070</div></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec__head"><h2 class="sec__title">Where it went</h2><span class="sec__aside"><a href="#">Month</a></span></div>
+    <div class="bands">
+      <i style="--tint:var(--cat-home);flex:39"></i><i style="--tint:var(--cat-food);flex:23"></i><i style="--tint:var(--cat-cup);flex:9"></i><i style="--tint:var(--cat-ride);flex:7"></i><i style="--tint:var(--text-4);flex:22"></i>
+    </div>
+    <div class="legend">
+      <span style="--tint:var(--cat-home)">Rent / housing</span><span class="m">৳18,000</span><span>39%</span>
+      <span style="--tint:var(--cat-food)">Food &amp; groceries</span><span class="m">৳10,712</span><span>23%</span>
+      <span style="--tint:var(--cat-cup)">Dining out</span><span class="m">৳4,144</span><span>9%</span>
+      <span style="--tint:var(--cat-ride)">Transport</span><span class="m">৳3,132</span><span>7%</span>
+    </div>
+  </section>
+</main>
+
+<nav class="bar">
+  <a class="tab" aria-current="page" href="#"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-grid"/></svg>Home</a>
+  <a class="tab" href="#"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-list"/></svg>Ledger</a>
+  <button class="plus" aria-label="Add"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-plus"/></svg></button>
+  <a class="tab" href="#"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-wallet"/></svg>Accounts</a>
+  <a class="tab" href="#"><svg class="ico"><use href="cat.svg#c-grid"/></svg>More</a>
+</nav>
+</body></html>

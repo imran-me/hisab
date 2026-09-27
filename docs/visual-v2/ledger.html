@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="hisab:standalone" content="design reference for DIRECTION.md 3.7, not an app page"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ledger — v2 mock</title>
+<script>if (new URLSearchParams(location.search).get('theme') === 'light') document.documentElement.dataset.theme = 'light';</script>
+<link rel="stylesheet" href="v2.css"></head>
+<body>
+<header class="lhead">
+  <h1>Ledger</h1>
+  <div style="display:flex;gap:2px;align-items:center">
+    <button class="month" style="font-size:15px">Sep 2026 <svg class="ico"><use href="../../shared/icons/sprite.svg#i-chevron-down"/></svg></button>
+    <button class="iconbtn" aria-label="Search"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-search"/></svg></button>
+  </div>
+</header>
+<div class="sum"><span>Out<b class="m">৳46,166</b></span><span>In<b class="m m--in">৳88,611</b></span><span>Saved<b class="m" style="color:var(--saved)">৳5,000</b></span></div>
+<div class="filters">
+  <div class="seg seg--5"><button aria-pressed="true">All</button><button>Out</button><button>In</button><button>Saved</button><button>Moves</button></div>
+  <button class="iconbtn" aria-label="Filter" style="width:36px"><svg class="ico ico--sm"><use href="../../shared/icons/sprite.svg#i-filter"/></svg></button>
+</div>
+
+<main class="page" style="padding-bottom:90px">
+  <div class="day"><span>Today</span><b class="m">−৳427</b></div>
+  <ul class="rows">
+    <li class="row"><span class="glyph" style="--tint:var(--cat-ride)"><svg class="ico"><use href="cat.svg#c-ride"/></svg></span><div class="row__main"><div class="row__name">CNG to Motijheel</div><div class="row__meta">Transport · Cash in hand · 9:40</div></div><div class="row__amt m">−৳250</div></li>
+    <li class="row"><span class="glyph" style="--tint:var(--cat-cup)"><svg class="ico"><use href="cat.svg#c-cup"/></svg></span><div class="row__main"><div class="row__name">Tea &amp; singara</div><div class="row__meta">Dining out · bKash · 8:15</div></div><div class="row__amt m">−৳177</div></li>
+  </ul>
+  <div class="day"><span>Wed 23 Sep</span><b class="m">−৳3,832</b></div>
+  <ul class="rows">
+    <li class="row"><span class="glyph" style="--tint:var(--cat-food)"><svg class="ico"><use href="cat.svg#c-food"/></svg></span><div class="row__main"><div class="row__name">কারওয়ান বাজার — সপ্তাহের বাজার</div><div class="row__meta">Food &amp; groceries · bKash</div></div><div class="row__amt m">−৳3,513</div></li>
+    <li class="row"><span class="glyph" style="--tint:var(--cat-ride)"><svg class="ico"><use href="cat.svg#c-ride"/></svg></span><div class="row__main"><div class="row__name">Uber</div><div class="row__meta">Transport · Cash in hand</div></div><div class="row__amt m">−৳319</div></li>
+  </ul>
+  <div class="day"><span>Tue 22 Sep</span><b class="m">+৳86,401</b></div>
+  <ul class="rows">
+    <li class="row"><span class="glyph" style="--tint:var(--in)"><svg class="ico"><use href="cat.svg#c-pay"/></svg></span><div class="row__main"><div class="row__name">Salary · September</div><div class="row__meta">Income · City Bank</div></div><div class="row__amt m m--in">+৳88,611</div></li>
+    <li class="row"><span class="glyph" style="--tint:var(--cat-cup)"><svg class="ico"><use href="cat.svg#c-cup"/></svg></span><div class="row__main"><div class="row__name">Dinner out with Rafi and family</div><div class="row__meta">Dining out · Cash in hand</div></div><div class="row__amt m">−৳2,210</div></li>
+  </ul>
+  <div class="day"><span>Mon 21 Sep</span><b class="m">−৳2,035</b></div>
+  <ul class="rows">
+    <li class="row"><span class="glyph" style="--tint:var(--saved)"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-arrow-hold"/></svg></span><div class="row__main"><div class="row__name">DPS instalment</div><div class="row__meta">Saved · City Bank → DPS</div></div><div class="row__amt m m--saved">৳5,000</div></li>
+    <li class="row"><span class="glyph" style="--tint:var(--move)"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-arrow-move"/></svg></span><div class="row__main"><div class="row__name">Top-up</div><div class="row__meta">City Bank → bKash</div></div><div class="row__amt m" style="color:var(--text-2)">৳2,500</div></li>
+    <li class="row"><span class="glyph" style="--tint:var(--cat-food)"><svg class="ico"><use href="cat.svg#c-food"/></svg></span><div class="row__main"><div class="row__name">Lunch<span class="tag">CORRECTED</span></div><div class="row__meta">Dining out · Cash in hand</div></div><div class="row__amt m">−৳450</div></li>
+    <li class="row"><span class="glyph" style="--tint:var(--cat-wifi)"><svg class="ico"><use href="cat.svg#c-wifi"/></svg></span><div class="row__main"><div class="row__name">Cloud hosting</div><div class="row__meta">Subscriptions · Payoneer</div></div><div class="row__amt m">−$12.99<small>৳1,585</small></div></li>
+  </ul>
+</main>
+
+<nav class="bar">
+  <a class="tab" href="#"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-grid"/></svg>Home</a>
+  <a class="tab" aria-current="page" href="#"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-list"/></svg>Ledger</a>
+  <button class="plus" aria-label="Add"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-plus"/></svg></button>
+  <a class="tab" href="#"><svg class="ico"><use href="../../shared/icons/sprite.svg#i-wallet"/></svg>Accounts</a>
+  <a class="tab" href="#"><svg class="ico"><use href="cat.svg#c-grid"/></svg>More</a>
+</nav>
+</body></html>
