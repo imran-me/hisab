@@ -18,8 +18,8 @@
  * "0.1+0.2" is 30 poisha and not 30.000000000000004 of anything.
  */
 
-import { qs, delegate } from '../../shared/js/core/dom.js';
-import { parseAmount, formatMoney, moneyLabel, currency as currencyOf } from '../../shared/js/core/money.js';
+import { qs, delegate, icon } from '../../shared/js/core/dom.js';
+import { parseAmount, formatMoney, currency as currencyOf } from '../../shared/js/core/money.js';
 
 /** Twelve digits of whole part is 999 billion — past that it is a typo. */
 const MAX_WHOLE_DIGITS = 12;
@@ -150,40 +150,50 @@ export function pretty(buffer, code) {
    ========================================================================= */
 
 /**
- * The markup: a 3 × 4 digit block and a column of actions beside it. Two
- * blocks rather than one 4 × 4 grid so the "reaching hand" setting can put the
- * action column on the thumb's side by reversing one flex row, without moving
- * the digits out of the order every phone dialler uses.
+ * The markup: one 4 × 4 grid, as in the v2 mock (DIRECTION §3.7.6). Digits in
+ * the order every phone dialler uses; +, − and a tall Save in the action
+ * column; 00, 0 and ⌫ on the bottom row.
  *
- * The last action key is the form's submit button, and it is the one the
- * thumb rests nearest to.
+ * The action keys are placed by column in the CSS and the rest flow into the
+ * cells left over, so the "reaching hand" setting moves the action column —
+ * and Save with it — to the thumb's side without reordering the digits.
+ *
+ * There is no separate decimal key: most entries here are whole taka, and a
+ * fifth column would push the pad up past the middle of the screen. A
+ * long-press on 00 types the point (its corner shows "·"), and so does "." on
+ * a hardware keyboard. A currency with no minor unit has no point at all.
  */
-export function numpadMarkup({ places = 2, submitLabel = 'Save' } = {}) {
+export function numpadMarkup({ places = 2 } = {}) {
   const digit = (d) => `<button type="button" class="numpad__key" data-key="${d}">${d}</button>`;
   return `
     <div class="numpad" data-numpad>
-      <div class="numpad__digits">
-        ${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(digit).join('')}
-        <button type="button" class="numpad__key" data-key="."${places ? '' : ' disabled'} aria-label="Decimal point">.</button>
-        ${digit('0')}
-        ${digit('00')}
-      </div>
-      <div class="numpad__ops">
-        <button type="button" class="numpad__key numpad__key--op" data-key="back" aria-label="Delete last digit">⌫</button>
-        <button type="button" class="numpad__key numpad__key--op" data-key="-" aria-label="Minus">−</button>
-        <button type="button" class="numpad__key numpad__key--op" data-key="+" aria-label="Plus">+</button>
-        <button type="submit" class="numpad__key numpad__key--save" data-save>${submitLabel}</button>
-      </div>
+      ${['1', '2', '3'].map(digit).join('')}
+      <button type="button" class="numpad__key numpad__key--op numpad__key--plus" data-key="+" aria-label="Plus">+</button>
+      ${['4', '5', '6'].map(digit).join('')}
+      <button type="button" class="numpad__key numpad__key--op numpad__key--minus" data-key="-" aria-label="Minus">−</button>
+      ${['7', '8', '9'].map(digit).join('')}
+      <button type="submit" class="numpad__key numpad__key--save" data-save>Save</button>
+      <button type="button" class="numpad__key numpad__key--dual" data-key="00" data-long-key="."${places ? '' : ' data-no-point'}
+              aria-label="Double zero. Hold for a decimal point.">00</button>
+      ${digit('0')}
+      <button type="button" class="numpad__key numpad__key--op numpad__key--back" data-key="back" aria-label="Delete last digit">${icon('backspace', { class: 'icon' })}</button>
     </div>`;
 }
+
+/** How long a press on 00 has to last to become a decimal point. */
+const HOLD_MS = 420;
 
 /**
  * Wire a pad to its display.
  *
+ * The display shows the RESULT in the big figure and the sum that made it on
+ * the line underneath ("370", then "250 + 120"), because the big figure is
+ * what gets saved.
+ *
  * @param {HTMLFormElement} form
  * @param {object} opts
- * @param {HTMLInputElement} opts.display   inputmode="none" — shows the sum
- * @param {HTMLElement} opts.result         the "= ৳165" line under it
+ * @param {HTMLInputElement} opts.display   inputmode="none" — the big figure
+ * @param {HTMLElement} opts.result         the "250 + 120" line under it
  * @param {() => string} opts.code          the currency, read on every key
  * @param {string} [opts.initial]           a starting buffer
  * @param {Function} [opts.onChange]        receives the buffer
@@ -193,19 +203,28 @@ export function attachNumpad(form, { display, result, code, initial = '', onChan
   // A repeated or re-opened amount is SELECTED: the first digit replaces it
   // rather than appending to it, the same as a selected field would.
   let replaceNext = Boolean(initial);
+  // A point typed in a currency that has none. The digit after it is refused
+  // too: ¥1.5 is a typo, and silently reading it as ¥15 is a tenfold error.
+  let pointRefused = false;
 
   const render = () => {
     const cur = code();
-    display.value = pretty(buffer, cur);
-    // Shrinks in steps as a sum grows, so it never scrolls sideways out of view.
+    const value = evaluate(buffer, cur);
+    const sum = isExpression(buffer);
+
+    display.value = sum && value !== null ? pretty(bufferFor(Math.abs(value), cur), cur) : pretty(buffer, cur);
+    display.classList.toggle('is-negative', sum && value !== null && value <= 0);
+
+    // Shrinks in steps as the figure grows, so it never scrolls sideways.
     const length = display.value.length;
-    if (length > 13) display.dataset.size = 's';
-    else if (length > 9) display.dataset.size = 'm';
+    display.style.setProperty('--len', String(Math.max(1, length)));
+    if (length > 11) display.dataset.size = 's';
+    else if (length > 8) display.dataset.size = 'm';
     else delete display.dataset.size;
     display.classList.toggle('is-selected', replaceNext && Boolean(buffer));
-    const value = evaluate(buffer, cur);
-    if (isExpression(buffer) && value !== null) {
-      result.textContent = value > 0 ? `= ${moneyLabel(value, cur)}` : '= not a positive amount';
+
+    if (sum) {
+      result.textContent = value !== null && value <= 0 ? `${pretty(buffer, cur)} is not a positive amount` : pretty(buffer, cur);
       result.hidden = false;
     } else {
       result.hidden = true;
@@ -214,16 +233,52 @@ export function attachNumpad(form, { display, result, code, initial = '', onChan
     onChange?.(buffer);
   };
 
+  const refuse = () => {
+    display.classList.remove('is-refused');
+    // Reflow, so a second refusal in a row restarts the shake.
+    void display.offsetWidth;
+    display.classList.add('is-refused');
+  };
+
   const apply = (key) => {
     const places = currencyOf(code()).minorUnit;
+    if (key === '.' && places === 0) { pointRefused = true; refuse(); return; }
+    if (pointRefused && /^\d+$/.test(key)) { refuse(); return; }
+    pointRefused = false;
+
     if (replaceNext && key !== 'back' && !OPS.includes(key)) buffer = '';
     if (replaceNext && key === 'back') buffer = '';
     replaceNext = false;
-    buffer = press(buffer, key, places);
+    const next = press(buffer, key, places);
+    if (next === buffer && key !== 'back' && key !== 'clear') refuse();
+    buffer = next;
     render();
   };
 
-  delegate(qs('[data-numpad]', form), 'click', '[data-key]', (_event, button) => {
+  const pad = qs('[data-numpad]', form);
+
+  // Long-press on 00 for the point. The click that follows the hold is
+  // swallowed, or the hold would type ".00".
+  let holdTimer = 0;
+  let held = false;
+  pad.addEventListener('pointerdown', (event) => {
+    const key = event.target.closest('[data-long-key]');
+    if (!key || key.hasAttribute('data-no-point')) return;
+    held = false;
+    holdTimer = window.setTimeout(() => {
+      held = true;
+      apply(key.dataset.longKey);
+      try { navigator.vibrate?.(6); } catch { /* not allowed: fine */ }
+    }, HOLD_MS);
+  });
+  const cancelHold = () => window.clearTimeout(holdTimer);
+  pad.addEventListener('pointerup', cancelHold);
+  pad.addEventListener('pointercancel', cancelHold);
+  pad.addEventListener('pointerleave', cancelHold);
+  pad.addEventListener('contextmenu', (event) => { if (event.target.closest('[data-long-key]')) event.preventDefault(); });
+
+  delegate(pad, 'click', '[data-key]', (_event, button) => {
+    if (held) { held = false; return; }
     apply(button.dataset.key);
     // Focus stays on the display, so a hardware keyboard keeps working after a
     // tap and a screen reader hears the new figure.
@@ -231,7 +286,7 @@ export function attachNumpad(form, { display, result, code, initial = '', onChan
   });
 
   // A hardware keyboard, on a desktop or a phone with one attached. Every key
-  // goes through the same press() as the pad, so the two cannot disagree about
+  // goes through the same apply() as the pad, so the two cannot disagree about
   // what is typeable.
   display.addEventListener('keydown', (event) => {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
@@ -256,6 +311,8 @@ export function attachNumpad(form, { display, result, code, initial = '', onChan
     const minor = parseAmount(event.clipboardData?.getData('text') ?? '', code());
     if (minor !== null && minor > 0) { buffer = bufferFor(minor, code()); replaceNext = false; render(); }
   });
+
+  display.addEventListener('animationend', () => display.classList.remove('is-refused'));
 
   render();
 

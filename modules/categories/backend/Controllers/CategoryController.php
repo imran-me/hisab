@@ -45,6 +45,33 @@ class CategoryController extends Controller
         return response()->json(['data' => $rows]);
     }
 
+    /** The one-tap tiles on the entry sheet. See endpoints.md, "frequent". */
+    public function frequent(Request $request): JsonResponse
+    {
+        $f = $request->validate([
+            'book' => ['sometimes', Rule::in(Category::BOOKS)],
+            'type' => ['sometimes', Rule::in(Category::TYPES)],
+            'days' => ['sometimes', 'integer', 'min:1', 'max:366'],
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:24'],
+        ]);
+
+        $rows = $this->book->frequent(
+            $request->user(),
+            $f['book'] ?? 'personal',
+            $f['type'] ?? 'expense',
+            (int) ($f['days'] ?? 60),
+            (int) ($f['limit'] ?? 8),
+        );
+
+        return response()->json(['data' => array_map(
+            fn (array $r): array => $this->shape($r['category']) + [
+                'uses' => $r['uses'],
+                'last_account_id' => $r['last_account_id'],
+            ],
+            $rows,
+        )]);
+    }
+
     public function store(StoreCategoryRequest $request): JsonResponse
     {
         $category = $this->book->create(

@@ -132,6 +132,72 @@ class CategoryBook
     }
 
     /**
+     * The most used categories for one book and type, most used first, filled
+     * to $limit from the seed order. See endpoints.md, "frequent".
+     *
+     * @return array<int, array{category: Category, uses: int, last_account_id: ?string}>
+     */
+    public function frequent(User $user, string $book, string $type, int $days, int $limit): array
+    {
+        $active = $this->scope($user, $book, $type)->active()
+            ->orderBy('sort_order')->orderBy('id')
+            ->get()->keyBy('id');
+
+        $uses = [];
+        $lastAccount = [];
+
+        $connection = (new Category())->getConnection();
+        if ($connection->getSchemaBuilder()->hasTable('transactions') && $active->isNotEmpty()) {
+            $since = Carbon::now()->subDays($days)->toDateString();
+
+            // Standing entries only: not a reversal mirror, and not an entry a
+            // mirror cancels. A typo corrected three times is one purchase.
+            $reversed = $connection->table('transactions')
+                ->where('user_id', $user->id)
+                ->whereNotNull('reverses_id')
+                ->select('reverses_id');
+
+            $uses = $connection->table('transactions')
+                ->where('user_id', $user->id)
+                ->whereIn('category_id', $active->keys()->all())
+                ->whereNull('reverses_id')
+                ->whereNotIn('id', $reversed)
+                ->where('occurred_on', '>=', $since)
+                ->groupBy('category_id')
+                ->select('category_id', $connection->raw('COUNT(*) AS n'))
+                ->pluck('n', 'category_id')
+                ->map(fn ($n): int => (int) $n)
+                ->all();
+
+            // The account of the latest entry per category, at any date. One
+            // query ordered newest first; the first row seen per category wins.
+            foreach ($connection->table('transactions')
+                ->where('user_id', $user->id)
+                ->whereIn('category_id', $active->keys()->all())
+                ->whereNull('reverses_id')
+                ->orderByDesc('occurred_on')->orderByDesc('id')
+                ->get(['category_id', 'account_id']) as $row) {
+                $lastAccount[$row->category_id] ??= $row->account_id;
+            }
+        }
+
+        // Most used first; ties, and the unused, keep the seed order - which is
+        // the order $active is already in, and sortBy is stable.
+        $position = $active->keys()->flip();
+
+        return $active->values()
+            ->sortBy(fn (Category $c): array => [-($uses[$c->id] ?? 0), $position[$c->id]])
+            ->take($limit)
+            ->map(fn (Category $c): array => [
+                'category' => $c,
+                'uses' => $uses[$c->id] ?? 0,
+                'last_account_id' => $lastAccount[$c->id] ?? null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * Whether any transaction points at this category.
      *
      * The ledger module owns that table and does not exist yet, so this asks the

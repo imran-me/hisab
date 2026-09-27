@@ -127,3 +127,51 @@ standing rows with `corrects_id` null whose amount, account and type match a
 `corrects_id` row created within a few seconds of them. Not cleaned up here:
 removing rows is not something this app does, so each needs a reversal, and
 which ones to reverse is the owner's call.
+
+## B2 — Category tiles that save, and the sheet laid out to the v2 mock
+
+`GET /api/categories/frequent` (contract in categories `endpoints.md` first):
+the top N active categories by standing uses in the last 60 days, filled in
+seed order, each with `uses` and `last_account_id`. Counted through the schema,
+so categories still does not depend on the ledger. 6 tests
+(`CategoriesFrequentTest`): ranking and fill, reversed entries and mirrors not
+counted, the window, archived excluded, last account, another owner's rows.
+
+**Fixed, pre-existing:** `categories/backend/api.js` never read the server, so
+with a backend every categorised entry was refused (client ids). It now loads
+every book and type from `/api/categories` (archived included, for `find()`),
+creates through the server and keeps the server's row, and never falls
+through to device data on a 401.
+
+The sheet, per DIRECTION §3.7.6 and review round 3: no title bar (the title
+stays for assistive tech; dismiss by handle, backdrop or Escape); the amount
+centred with ৳ (or the code, for another currency) as the currency button, in
+plain ink for Out, `--in` for In, `--saved` for Save; the sum on the line under
+it ("250 + 120") while the big figure shows the result; account / Today /
+Details pills; a 4 × 2 grid of the seven most used categories plus More; the
+4 × 4 pad with +, − and a two-row marigold Save, and 00 · 0 · ⌫ on the bottom
+row. **Tapping a tile saves.** Save without a category says "Tap a category
+to save" and nudges the grid (only when categories exist). The tile's
+`last_account_id` becomes the account unless the person chose one; the toast
+names what was used ("Added ৳250 · Transport · Cash in hand").
+**Necessity is never pre-set**: it is sent only when picked in Details (a 4-up
+segmented row that says which band the category will apply), otherwise the
+category's band applies on both sides. Details replaces the tiles in the
+middle of the sheet, so the amount stays pinned and the pad never moves.
+
+**Decision, flagged:** the mock's pad has no decimal key. A long-press on 00
+types the point (its corner shows "·"), as does "." on a keyboard; a currency
+with no minor unit has none. Also from review round 3 (Low): a point refused in
+yen now refuses the digit after it too and shakes the figure, so ¥1.5 can no
+longer become ¥15.
+
+Tints are the `--cat-*` tokens through `modules/categories/glyphs.js` (keyed
+on the category's stable `key`). Icons are existing sprite icons until the
+category glyphs are in the sprite; that map is the one place to change.
+
+**Verified:** php artisan test 145 passed. Ledger harness 33. Against the
+server at 360×780: + → 2-5-0 → Save says "Tap a category to save"; tapping
+Transport saves `amount_minor` 25000, `category_label` Transport, `necessity`
+1 (from the category, not 3) and closes the sheet. Screenshots in both themes
+with a sum on the pad: the sheet top is at y≈141, nothing scrolls, no overflow.
+**Not yet:** the recent strip (B3) and the draft (B4) are next.

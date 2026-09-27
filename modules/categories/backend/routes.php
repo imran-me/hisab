@@ -22,6 +22,7 @@ Route::prefix('categories')->group(function (): void {
     // Everything else is the owner's own rows.
     Route::middleware('auth')->group(function (): void {
         Route::get('/', [CategoryController::class, 'index']);
+        Route::get('/frequent', [CategoryController::class, 'frequent']);
         Route::post('/', [CategoryController::class, 'store']);
         Route::patch('/{id}', [CategoryController::class, 'update']);
         Route::delete('/{id}', [CategoryController::class, 'destroy']);

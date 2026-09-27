@@ -78,6 +78,42 @@ category would put a household grocery bill in a profit figure.
 Archived categories are excluded by default because they exist for history, not
 for picking.
 
+## `GET /api/categories/frequent`
+
+The categories the entry sheet offers as one-tap tiles: the owner's most used
+for this book and type, most used first.
+
+| Query | |
+|---|---|
+| `book` | `personal` (default) or `business` |
+| `type` | `income`, `expense` (default) or `deposit` |
+| `days` | the window, default `60`, 1–366 |
+| `limit` | default `8`, 1–24 |
+
+```json
+{ "data": [
+  { "id": "01J…", "key": "transport", "label": "Transport", "type": "expense",
+    "book": "personal", "necessity": 1, "archived_at": null, "created_at": "…",
+    "uses": 14, "last_account_id": "01J…" }
+] }
+```
+
+- **Ranked by `uses`**: entries in the window filed under the category that
+  still stand. A reversal mirror is not a use, and neither is an entry that
+  was reversed: a typo corrected three times is one purchase, not four.
+- **Always `limit` rows when that many exist.** A new owner with no history,
+  or a quiet month, gets the rest filled in the seed order (`sort_order`, then
+  creation order), with `uses: 0`. The sheet never shows a half-empty grid.
+- **Active categories only.** An archived one is gone from pickers even if it
+  was used last week.
+- **`last_account_id`** is the account of the most recent entry under this
+  category, at any date, or `null`. The sheet uses it as the default account
+  when the tile is tapped: the CNG is paid from cash, the electricity bill
+  from bKash.
+- Counted from the ledger's table through the schema, not the ledger's model,
+  so this module does not depend on that one; without a `transactions` table
+  every row has `uses: 0`.
+
 ## `GET /api/categories/necessity`
 
 The four bands, as reference data.
