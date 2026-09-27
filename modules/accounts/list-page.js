@@ -147,7 +147,7 @@ function drawGroup(host, rows, balances, { empty = null, archived = false } = {}
             </span>
           </span>
           <span class="row__end">
-            <span class="money money--md ${tone}">${formatMoneyHTML(balance, account.currency)}</span>
+            <span class="money money--md ${tone}">${formatMoneyHTML(balance, account.currency, { minor: 'never' })}</span>
             ${available !== null ? `<span class="meta">${esc(moneyLabel(available, account.currency))} available</span>` : ''}
           </span>
         </a>

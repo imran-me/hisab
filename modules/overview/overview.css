@@ -31,15 +31,15 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--ink);
+  color: var(--text-1);
   font-family: var(--font-display);
-  font-size: var(--fs-19);
+  font-size: var(--t-head);
   font-weight: var(--fw-semibold);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.home-month .icon { color: var(--ink-3); }
+.home-month .icon { color: var(--text-3); }
 .home-month:active { opacity: 0.7; }
 
 .home-book {
@@ -49,9 +49,9 @@
   min-height: 34px;
   padding-inline: var(--s-3);
   border: 1px solid var(--line);
-  border-radius: var(--r-full);
+  border-radius: var(--r-pill);
   background: none;
-  color: var(--ink-2);
+  color: var(--text-2);
   font-size: var(--fs-13);
   font-weight: var(--fw-medium);
   cursor: pointer;
@@ -61,11 +61,11 @@
   content: '';
   width: 6px;
   height: 6px;
-  border-radius: var(--r-full);
-  background: var(--ink-3);
+  border-radius: var(--r-pill);
+  background: var(--text-3);
 }
 
-.home-book.is-business::before { background: var(--flow-biz); }
+.home-book.is-business::before { background: var(--biz); }
 
 /* One book only: the pill is a label, not a control. */
 .home-book:disabled { cursor: default; opacity: 1; }
@@ -82,17 +82,18 @@
   font-family: var(--font-body);
   font-size: var(--fs-13);
   font-weight: var(--fw-medium);
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
 /* The one large figure on the screen, in the display face. */
 .home-hero__figure {
   margin-block-start: var(--s-2);
   font-family: var(--font-display);
-  font-size: var(--fs-44);
+  font-size: var(--t-hero);
   font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-hero);
   line-height: var(--lh-flush);
-  letter-spacing: -0.012em;
+  letter-spacing: var(--track-figure);
 }
 
 /* The ৳ and any poisha are set small and quiet, so the number read is the
@@ -101,11 +102,11 @@
 .home-hero__figure .money__code {
   font-size: 0.5em;
   font-weight: var(--fw-medium);
-  color: var(--ink-3);
+  color: var(--text-3);
   margin-inline-end: 0.1em;
 }
 
-.home-hero__figure .money__minor { font-size: 0.42em; color: var(--ink-3); }
+.home-hero__figure .money__minor { font-size: 0.42em; color: var(--text-3); }
 
 .home-hero__skeleton { width: 10rem; }
 
@@ -118,8 +119,8 @@
 .home-pace__bar {
   position: relative;
   height: 6px;
-  border-radius: var(--r-full);
-  background: var(--surface-3);
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
 }
 
 .home-pace__fill {
@@ -128,7 +129,7 @@
   inset-inline-start: 0;
   width: var(--fill, 0%);
   border-radius: inherit;
-  background: var(--ink);
+  background: var(--text-1);
   transition: width var(--t-slow) var(--ease-out);
 }
 
@@ -150,10 +151,10 @@
   gap: var(--s-3);
   margin: var(--s-3) 0 0;
   font-size: var(--fs-13);
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
-.home-pace__text strong { color: var(--ink); font-weight: var(--fw-semibold); }
+.home-pace__text strong { color: var(--text-1); font-weight: var(--fw-semibold); }
 .home-pace__text .is-over { color: var(--danger); }
 .home-pace__used { flex: none; }
 
@@ -183,7 +184,7 @@
   align-items: center;
   gap: var(--s-2);
   font-size: var(--fs-12);
-  color: var(--ink-3);
+  color: var(--text-3);
 }
 
 .home-flow__item dt::before {
@@ -191,22 +192,23 @@
   width: 6px;
   height: 6px;
   border-radius: 2px;
-  background: var(--dot, var(--ink-3));
+  background: var(--dot, var(--text-3));
 }
 
 .home-flow__item dd {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--fs-16);
+  font-size: var(--t-fig);
   font-weight: var(--fw-semibold);
-  color: var(--ink);
+  font-stretch: var(--wd-fig);
+  color: var(--text-1);
 }
 
-.home-flow__item--in   { --dot: var(--flow-in); }
-.home-flow__item--hold { --dot: var(--flow-hold); }
-.home-flow__item--out  { --dot: var(--ink-2); }
-.home-flow__item--in dd   { color: var(--flow-in-ink); }
-.home-flow__item--hold dd { color: var(--flow-hold-ink); }
+.home-flow__item--in   { --dot: var(--in); }
+.home-flow__item--hold { --dot: var(--saved); }
+.home-flow__item--out  { --dot: var(--text-2); }
+.home-flow__item--in dd   { color: var(--in); }
+.home-flow__item--hold dd { color: var(--saved); }
 
 /* ---- Sections ------------------------------------------------------------
    Lighter than the shared .section-head: no rule under the title, and the
@@ -225,16 +227,17 @@
 .home-sec__title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--fs-16);
+  font-size: var(--t-section);
   font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-title);
 }
 
-.home-sec__aside { font-size: var(--fs-13); color: var(--ink-3); }
+.home-sec__aside { font-size: var(--fs-13); color: var(--text-3); }
 
 .home-sec__link {
   font-size: var(--fs-14);
   font-weight: var(--fw-medium);
-  color: var(--accent-ink);
+  color: var(--accent-text);
   text-decoration: none;
   padding-block: var(--s-2);
 }
@@ -249,11 +252,11 @@
   gap: var(--s-3);
   min-height: var(--tap);
   padding: var(--s-3) var(--s-4);
-  color: var(--ink-2);
+  color: var(--text-2);
   font-size: var(--fs-14);
 }
 
-.home-today__more .row__title { color: var(--ink-2); font-weight: var(--fw-regular); }
+.home-today__more .row__title { color: var(--text-2); font-weight: var(--fw-regular); }
 
 /* ---- Accounts strip ----------------------------------------------------- */
 .home-accounts {
@@ -272,8 +275,8 @@
   flex: none;
   min-width: 7.25rem;
   max-width: 12rem;
-  border-radius: var(--r-3);
-  background: var(--surface);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
 }
 
 .home-account > a {
@@ -297,16 +300,17 @@
   gap: var(--s-2);
   min-width: 0;
   font-size: var(--fs-13);
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
-.home-account__name .icon { flex: none; color: var(--ink-3); }
+.home-account__name .icon { flex: none; color: var(--text-3); }
 .home-account__name > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .home-account__balance {
   font-family: var(--font-display);
-  font-size: var(--fs-16);
+  font-size: var(--t-fig-sm);
   font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-fig);
 }
 
 /* A spendable account below zero is a missing entry in real life: the
@@ -315,21 +319,21 @@
 .home-account.is-negative .home-account__balance { color: var(--danger); }
 
 .home-account--loading { padding: var(--s-4) var(--s-3); min-width: 7.25rem; }
-.home-account--add > a { flex-direction: row; align-items: center; color: var(--accent-ink); }
+.home-account--add > a { flex-direction: row; align-items: center; color: var(--accent-text); }
 
 /* ---- Where it went ------------------------------------------------------ */
 .home-bands {
   display: flex;
   gap: 2px;
   height: 10px;
-  border-radius: var(--r-1);
+  border-radius: var(--r-xs);
   overflow: hidden;
 }
 
 .home-bands > i {
   flex: var(--seg-share, 1) 1 0;
   min-width: 2px;
-  background: var(--seg-color, var(--ink-4));
+  background: var(--seg-color, var(--text-4));
 }
 
 .home-legend {
@@ -346,7 +350,7 @@
   align-items: center;
   gap: var(--s-2);
   min-width: 0;
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
 .home-legend__name::before {
@@ -355,11 +359,11 @@
   width: 8px;
   height: 8px;
   border-radius: 2px;
-  background: var(--seg-color, var(--ink-4));
+  background: var(--seg-color, var(--text-4));
 }
 
 .home-legend__value { text-align: end; }
-.home-legend__pct { text-align: end; color: var(--ink-3); font-size: var(--fs-13); }
+.home-legend__pct { text-align: end; color: var(--text-3); font-size: var(--fs-13); }
 
 /* ---- What the numbers say ----------------------------------------------- */
 .home-notes {
@@ -377,21 +381,21 @@
   flex-wrap: wrap;
   gap: var(--s-1) var(--s-2);
   padding: var(--s-3) var(--s-4);
-  border-radius: var(--r-2);
-  border-inline-start: 3px solid var(--note-tone, var(--ink-4));
-  background: var(--surface);
+  border-radius: var(--r-sm);
+  border-inline-start: 3px solid var(--note-tone, var(--text-4));
+  background: var(--bg-1);
   font-size: var(--fs-14);
 }
 
-.home-note__lead { font-weight: var(--fw-semibold); color: var(--ink); }
-.home-note__text { color: var(--ink-3); font-size: var(--fs-13); }
+.home-note__lead { font-weight: var(--fw-semibold); color: var(--text-1); }
+.home-note__text { color: var(--text-3); font-size: var(--fs-13); }
 
-.home-note--in   { --note-tone: var(--flow-in); }
+.home-note--in   { --note-tone: var(--in); }
 .home-note--out  { --note-tone: var(--danger); }
-.home-note--hold { --note-tone: var(--flow-hold); }
+.home-note--hold { --note-tone: var(--saved); }
 .home-note--warn { --note-tone: var(--warn); }
-.home-note--info { --note-tone: var(--flow-biz); }
+.home-note--info { --note-tone: var(--biz); }
 
 /* ---- The month sheet ---------------------------------------------------- */
-.home-months [aria-current='true'] .row__title { color: var(--accent-ink); font-weight: var(--fw-semibold); }
-.home-months .icon { color: var(--accent-ink); }
+.home-months [aria-current='true'] .row__title { color: var(--accent-text); font-weight: var(--fw-semibold); }
+.home-months .icon { color: var(--accent-text); }

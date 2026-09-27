@@ -19,16 +19,17 @@
   font-family: var(--font-body);
   font-size: var(--fs-13);
   font-weight: var(--fw-medium);
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
 .acc-net__figure,
 .acc-hero__balance {
   font-family: var(--font-display);
-  font-size: var(--fs-44);
+  font-size: var(--t-hero);
   font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-hero);
   line-height: var(--lh-flush);
-  letter-spacing: -0.012em;
+  letter-spacing: var(--track-figure);
 }
 
 .acc-net__figure .money__sym,
@@ -37,12 +38,12 @@
 .acc-hero__balance .money__code {
   font-size: 0.5em;
   font-weight: var(--fw-medium);
-  color: var(--ink-3);
+  color: var(--text-3);
   margin-inline-end: 0.1em;
 }
 
 .acc-net__figure .money__minor,
-.acc-hero__balance .money__minor { font-size: 0.42em; color: var(--ink-3); }
+.acc-hero__balance .money__minor { font-size: 0.42em; color: var(--text-3); }
 
 .acc-net__split {
   display: grid;
@@ -53,14 +54,15 @@
 
 .acc-net__part { display: flex; flex-direction: column; gap: var(--s-1); padding: var(--s-3) 0; min-width: 0; }
 .acc-net__part + .acc-net__part { border-inline-start: 1px solid var(--line-soft); padding-inline-start: var(--s-3); }
-.acc-net__part dt { font-size: var(--fs-12); color: var(--ink-3); }
+.acc-net__part dt { font-size: var(--fs-12); color: var(--text-3); }
 .acc-net__part dd {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--fs-19);
+  font-size: var(--t-fig);
   font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-fig);
 }
-.acc-net__part--hold dd { color: var(--flow-hold-ink); }
+.acc-net__part--hold dd { color: var(--saved); }
 
 /* ---- An account row ------------------------------------------------------
    The row is a link to the account; the actions button sits beside it, not
@@ -104,15 +106,15 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--s-2);
-  color: var(--ink-3);
+  color: var(--text-3);
 }
 
-.acc-hero__meta .icon { color: var(--ink-3); }
+.acc-hero__meta .icon { color: var(--text-3); }
 
 .acc-hero__name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: var(--fs-19);
+  font-size: var(--t-title);
   font-weight: var(--fw-semibold);
   /* A long account name wraps; it is the page's subject and is never cut. */
   overflow-wrap: anywhere;
@@ -121,7 +123,7 @@
 .acc-hero__balance { margin-block-start: var(--s-2); }
 .acc-hero__balance.is-negative { color: var(--danger); }
 
-.acc-hero__note { margin: var(--s-1) 0 0; font-size: var(--fs-13); color: var(--ink-2); }
+.acc-hero__note { margin: var(--s-1) 0 0; font-size: var(--fs-13); color: var(--text-2); }
 
 .acc-month {
   display: grid;
@@ -132,9 +134,9 @@
 
 .acc-month__item { display: flex; flex-direction: column; gap: var(--s-1); padding: var(--s-3) 0; min-width: 0; }
 .acc-month__item + .acc-month__item { border-inline-start: 1px solid var(--line-soft); padding-inline-start: var(--s-3); }
-.acc-month__item dt { font-size: var(--fs-12); color: var(--ink-3); }
-.acc-month__item dd { margin: 0; font-family: var(--font-display); font-size: var(--fs-16); font-weight: var(--fw-semibold); }
-.acc-month__item--in dd { color: var(--flow-in-ink); }
+.acc-month__item dt { font-size: var(--fs-12); color: var(--text-3); }
+.acc-month__item dd { margin: 0; font-family: var(--font-display); font-size: var(--t-fig); font-weight: var(--fw-semibold); font-stretch: var(--wd-fig); }
+.acc-month__item--in dd { color: var(--in); }
 
 .acc-entries { margin-block-start: var(--s-6); }
 
@@ -145,8 +147,8 @@
   margin-block-end: var(--s-2);
 }
 
-.acc-entries__title { margin: 0; font-family: var(--font-display); font-size: var(--fs-16); font-weight: var(--fw-semibold); }
-.acc-entries__count { font-size: var(--fs-13); color: var(--ink-3); }
+.acc-entries__title { margin: 0; font-family: var(--font-display); font-size: var(--t-section); font-weight: var(--fw-semibold); font-stretch: var(--wd-title); }
+.acc-entries__count { font-size: var(--fs-13); color: var(--text-3); }
 .acc-entries__more { margin-block-start: var(--s-3); align-self: center; }
 
 .acc-card { border: 0; }
@@ -157,7 +159,7 @@
   padding: var(--s-3) var(--s-4) var(--s-1);
   font-size: var(--fs-12);
   font-weight: var(--fw-medium);
-  color: var(--ink-3);
+  color: var(--text-3);
 }
 
-.acc-row__after { font-size: var(--fs-12); color: var(--ink-3); }
+.acc-row__after { font-size: var(--fs-12); color: var(--text-3); }

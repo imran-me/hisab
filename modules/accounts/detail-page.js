@@ -194,9 +194,9 @@ function entryRow(row, moved, balanceAfter, account) {
           <span class="row__sub"><span>${esc(sub)}</span></span>
         </span>
         <span class="row__end">
-          <span class="money money--md${tone}">${formatMoneyHTML(moved, row.currency, { sign: 'always' })}</span>
+          <span class="money money--md${tone}">${formatMoneyHTML(moved, row.currency, { sign: 'always', minor: 'never' })}</span>
           ${row.currency === account.currency
-            ? `<span class="acc-row__after money">${formatMoneyHTML(balanceAfter, account.currency)}</span>`
+            ? `<span class="acc-row__after money">${formatMoneyHTML(balanceAfter, account.currency, { minor: 'never' })}</span>`
             : ''}
         </span>
       </button>

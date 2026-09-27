@@ -80,6 +80,9 @@ async function refresh() {
 /** A figure that stands on its own: the full amount, marked up. */
 const figure = (minor, code) => formatMoneyHTML(minor, code);
 
+/** A figure in a list row or a chip: whole units, the way every list reads (A1). */
+const listFigure = (minor, code, opts = {}) => formatMoneyHTML(minor, code, { minor: 'never', ...opts });
+
 /** A figure inside a sentence: the marker, whole units. */
 const inline = (minor, code) => moneyLabel(minor, code, { minor: 'never' });
 
@@ -297,7 +300,7 @@ function entryRow(row, account) {
           </span>
         </span>
         <span class="row__end">
-          <span class="money money--md${type.tone === 'out' ? '' : ` money--${type.tone}`}">${formatMoneyHTML(amount, row.currency, { sign })}</span>
+          <span class="money money--md${type.tone === 'out' ? '' : ` money--${type.tone}`}">${listFigure(amount, row.currency, { sign })}</span>
         </span>
       </button>
     </li>`;
@@ -341,7 +344,7 @@ function drawAccounts(accountRows, balances) {
             ${icon(type.icon, { class: 'icon icon--sm' })}
             <span>${esc(account.name)}</span>
           </span>
-          <span class="money home-account__balance">${figure(balance, account.currency)}</span>
+          <span class="money home-account__balance">${listFigure(balance, account.currency)}</span>
           ${flagged ? '<span class="sr-only">Below zero: an entry may be missing.</span>' : ''}
         </a>
       </li>`;
@@ -371,7 +374,7 @@ function drawBreakdown(summary, display) {
 
   const bands = all.slice(0, 4).map((c, i) => ({ ...c, color: segmentColor(i) }));
   const rest = all.slice(4).reduce((sum, c) => sum + c.value, 0);
-  if (rest > 0) bands.push({ name: 'Everything else', value: rest, color: 'var(--ink-4)' });
+  if (rest > 0) bands.push({ name: 'Everything else', value: rest, color: 'var(--text-4)' });
 
   // --seg-share is per-instance data, the one kind of value that reaches CSS
   // from JS (see .meter in _data.css).
@@ -383,7 +386,7 @@ function drawBreakdown(summary, display) {
 
   qs('[data-breakdown-legend]').innerHTML = bands.slice(0, 3).map((b) => `
     <span class="home-legend__name" style="--seg-color:${b.color}">${esc(b.name)}</span>
-    <span class="home-legend__value money">${figure(b.value, display)}</span>
+    <span class="home-legend__value money">${listFigure(b.value, display)}</span>
     <span class="home-legend__pct">${Math.round(share(b.value))}%</span>`).join('');
 }
 

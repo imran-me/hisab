@@ -160,3 +160,22 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
   `entryActions()`, which B can now delete.
 - Where it went still colours by `segmentColor()`; it switches to the
   category tint tokens when A ships them.
+
+### v2 tokens and type on Home and Accounts (Dev A's notes)
+
+- `overview.css`, `accounts.css` and the page scripts no longer read any v1
+  alias (`--ink*`, `--surface*`, `--flow-*`, `--accent-ink`, `--r-1..4`,
+  `--r-full`); checked with a grep. Reports, business, investments and budgets
+  have no module CSS yet. No `.fab` markup is left in Track C's pages.
+- Heroes are `--t-hero` at `--wd-hero` with `--track-figure`; In / Saved /
+  Out and the net-worth pair `--t-fig`; strip balances `--t-fig-sm`; section
+  titles `--t-section` at `--wd-title`; the month name `--t-head`.
+- List rows and chips use `{ minor: 'never' }`: Home's Today rows, account
+  chips and category rows; the Accounts list; the detail's entries and
+  balance-after. Heroes keep the default (poisha shown small when not zero).
+- Category glyphs and tints (`db2595d`) are in the sprite, but nothing maps a
+  category to a tint yet. **Needs Track B:** a tint name per category (in the
+  categories seed / API, and on the summary's `by_category` rows), so Home and
+  Month colour a category by what it is rather than by its rank.
+- Verified at 360×780 in both themes: Home 1073px, Accounts 891px, no
+  OVERFLOW, figures in Anek, nothing cut.
