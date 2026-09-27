@@ -123,20 +123,28 @@
 
 .row--stripe:nth-child(even) { background: var(--wash-stripe); }
 
-/* The leading glyph: a 40px tile, never a circle (circles read as avatars).
-   A category tile is its tint's icon on the tint at 15% — set --tint on the
-   tile (a .cat-* class) and it follows. With no tint: --text-3. */
+/* The leading glyph: a 40px coloured circle (owner, 2026-09-27: "coloured
+   icon circles on everything, nothing a bare text row"). The icon is drawn in
+   its tint on the tint at 15%, with a hairline ring of the same tint so the
+   circle holds its edge on paper. A .cat-* class or --tint sets the tint;
+   with neither, the icon itself picks one (see the table below), and with an
+   icon the table does not know, marigold. */
 .row__glyph {
   flex: none;
   width: 40px;
   height: 40px;
-  border-radius: var(--r-md);
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  color: var(--tint, var(--text-2));
-  background: color-mix(in srgb, var(--tint, var(--text-3)) 15%, transparent);
+  color: var(--tint, var(--accent-text));
+  background: color-mix(in srgb, var(--tint, var(--accent)) 15%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint, var(--accent)) 22%, transparent);
   border: 0;
 }
+
+/* A touch heavier than the 1.5 hairline: a 20px icon on a coloured circle
+   reads as a mark rather than a sketch. */
+.row__glyph > .icon { width: 20px; height: 20px; stroke-width: 1.75; }
 
 /* Category tints, by name. A module sets the class; the colour is a token. */
 .cat-food      { --tint: var(--cat-food); }
@@ -148,12 +156,60 @@
 .cat-mobile    { --tint: var(--cat-mobile); }
 .cat-health    { --tint: var(--cat-health); }
 
-.row__glyph--in    { background: var(--in-wash);   color: var(--in);   border-color: transparent; }
-.row__glyph--out   { background: var(--out-wash);  color: var(--out);  border-color: transparent; }
-.row__glyph--hold  { background: var(--saved-wash); color: var(--saved); border-color: transparent; }
-.row__glyph--move  { background: var(--move-wash); color: var(--move);     border-color: transparent; }
-.row__glyph--biz   { background: var(--biz-wash);  color: var(--biz);  border-color: transparent; }
-.row__glyph--vault { background: var(--vault-wash);     color: var(--vault);     border-color: transparent; }
+.row__glyph--in    { --tint: var(--money-in); }
+.row__glyph--out   { --tint: var(--money-out); }
+.row__glyph--hold  { --tint: var(--saved); }
+.row__glyph--move  { --tint: var(--move); }
+.row__glyph--biz   { --tint: var(--biz); }
+.row__glyph--vault { --tint: var(--vault); }
+
+/* Which colour an uncoloured glyph takes, by the icon inside it. Zero
+   specificity (:where), so any class a module sets wins. */
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-cat-food"])) { --tint: var(--cat-food); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-cat-transport"])) { --tint: var(--cat-transport); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-cat-home"])) { --tint: var(--cat-home); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-cat-utilities"])) { --tint: var(--cat-utilities); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-cat-dining"])) { --tint: var(--cat-dining); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-cat-shopping"])) { --tint: var(--cat-shopping); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-cat-mobile"])) { --tint: var(--cat-mobile); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-cat-health"])) { --tint: var(--cat-health); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-cash"])) { --tint: var(--money-in); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-bank"])) { --tint: var(--biz); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-mobile"])) { --tint: var(--cat-dining); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-card"])) { --tint: var(--accent-text); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-wallet"])) { --tint: var(--saved); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-coins"])) { --tint: var(--saved); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-trend-up"])) { --tint: var(--cat-shopping); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-trend-down"])) { --tint: var(--cat-dining); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-shield-lock"])) { --tint: var(--vault); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-lock"])) { --tint: var(--vault); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-unlock"])) { --tint: var(--vault); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-key"])) { --tint: var(--vault); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-fingerprint"])) { --tint: var(--vault); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-sliders"])) { --tint: var(--cat-mobile); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-tag"])) { --tint: var(--cat-food); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-target"])) { --tint: var(--cat-health); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-briefcase"])) { --tint: var(--biz); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-chart"])) { --tint: var(--cat-transport); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-pie"])) { --tint: var(--cat-transport); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-grid"])) { --tint: var(--cat-home); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-home"])) { --tint: var(--cat-home); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-list"])) { --tint: var(--cat-transport); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-user"])) { --tint: var(--cat-home); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-users"])) { --tint: var(--cat-home); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-globe"])) { --tint: var(--biz); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-link"])) { --tint: var(--cat-transport); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-note"])) { --tint: var(--cat-utilities); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-calendar"])) { --tint: var(--cat-utilities); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-clock"])) { --tint: var(--cat-utilities); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-inbox"])) { --tint: var(--cat-shopping); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-refresh"])) { --tint: var(--cat-shopping); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-arrow-in"])) { --tint: var(--money-in); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-arrow-out"])) { --tint: var(--money-out); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-arrow-hold"])) { --tint: var(--saved); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-arrow-move"])) { --tint: var(--move); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-alert"])) { --tint: var(--warn); }
+:where(.row__glyph, .empty__glyph):where(:has(use[href$="#i-info"])) { --tint: var(--biz); }
 
 /* The middle column. flex:1 with min-width:0 — the min-width is what lets the
    title truncate; without it the amount on the right is pushed off screen. */
@@ -217,17 +273,24 @@
 }
 
 .empty__glyph {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--r-md);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--bg-3);
-  border: 1px solid var(--line);
-  color: var(--text-4);
+  color: var(--tint, var(--accent-text));
+  background: color-mix(in srgb, var(--tint, var(--accent)) 16%, transparent);
+  /* Two soft halos: an empty state is an invitation, and it should look like
+     one rather than like a missing image. */
+  box-shadow:
+    0 0 0 8px color-mix(in srgb, var(--tint, var(--accent)) 7%, transparent),
+    0 0 0 16px color-mix(in srgb, var(--tint, var(--accent)) 3.5%, transparent);
+  margin-block: var(--s-3);
 }
 
-.empty__title { font-size: var(--fs-16); font-weight: var(--fw-semibold); color: var(--text-2); }
+.empty__glyph > .icon { width: 28px; height: 28px; }
+
+.empty__title { font-size: var(--t-section); font-weight: var(--fw-semibold); color: var(--text-1); }
 .empty__text  { font-size: var(--fs-13); max-width: 26rem; line-height: var(--lh-normal); }
 
 /* ---- Skeleton ----------------------------------------------------------
@@ -247,7 +310,7 @@
 
 .skeleton--text  { height: 0.7em; width: 100%; }
 .skeleton--line  { height: 0.7em; width: 60%; }
-.skeleton--glyph { width: 38px; height: 38px; border-radius: var(--r-sm); }
+.skeleton--glyph { width: 40px; height: 40px; border-radius: 50%; }
 .skeleton--fig   { height: 1em; width: 5rem; }
 
 @media (prefers-reduced-motion: reduce) {

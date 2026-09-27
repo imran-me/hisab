@@ -443,3 +443,19 @@ wide mark sits centred. Commons was queried with a generic User-Agent.
 
 Verified: `tools/institutions.html` at 360 in both themes. All 40 tiles
 are square and legible at 24 and 40px.
+
+## Coloured icon circles
+
+`.row__glyph` is now a 40px coloured circle: the icon in its tint, on the
+tint at 15%, with a hairline ring. A glyph that no module has coloured gets
+a tint from its icon, through a zero-specificity table (cash is green, bank
+blue, wallet violet, vault cyan, sliders periwinkle, the eight categories
+their own tints). Any module class still wins, and an unknown icon falls
+back to marigold. Empty states are a 64px tinted circle with two soft
+halos. Skeleton glyphs are circles too. The More sheet shows an avatar with
+the account's initial beside Sign out.
+
+Verified at 360: Accounts at night (every account row has a coloured
+circle) and the More sheet in both themes. The Ledger in light theme was
+still on skeletons when shot (slow serial server), so it was checked at
+night only.

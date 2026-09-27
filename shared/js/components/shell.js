@@ -283,6 +283,7 @@ export function openMore() {
         </li>`).join('')}
     </ul>
     <div class="more__account" data-more-account hidden>
+      <span class="more__avatar" data-more-avatar aria-hidden="true"></span>
       <span class="more__who">
         <span class="label">Signed in</span>
         <span class="more__email" data-more-email></span>
@@ -298,7 +299,11 @@ export function openMore() {
   // nothing to sign out of.
   session().then((s) => {
     if (!s.authenticated) return;
-    qs('[data-more-email]', body).textContent = s.user?.email ?? '';
+    const email = s.user?.email ?? '';
+    qs('[data-more-email]', body).textContent = email;
+    // The initial of the name, or of the email: a face for the account block,
+    // so it reads as "you" rather than as a form field.
+    qs('[data-more-avatar]', body).textContent = (s.user?.name || email || '?').trim().charAt(0).toUpperCase();
     qs('[data-more-account]', body).hidden = false;
   }).catch(() => {});
 
