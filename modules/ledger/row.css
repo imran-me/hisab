@@ -1,0 +1,35 @@
+/* =========================================================================
+   Ledger · pieces shared by the sheet, the picker and the ledger row
+   -------------------------------------------------------------------------
+   Loaded by the code that uses them (styles.js), so a page showing ledger
+   rows does not need to know this file exists.
+   ========================================================================= */
+
+/* ---- An account's logo --------------------------------------------------
+   A monogram disc until Track A's bankLogo() lands. Tinted by the kind of
+   account - the pink of a mobile wallet, the blue of a bank - so the kind
+   reads before the letters do. */
+.acct-logo {
+  --logo: var(--text-3);
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--logo) 18%, transparent);
+  color: var(--logo);
+  font-family: var(--font-body);
+  font-weight: var(--fw-bold);
+  letter-spacing: .02em;
+  line-height: 1;
+}
+
+.acct-logo--md { width: 40px; height: 40px; font-size: var(--fs-13); }
+.acct-logo--sm { width: 18px; height: 18px; font-size: .5625rem; }
+
+.acct-logo--cash       { --logo: var(--in); }
+.acct-logo--bank       { --logo: var(--cat-transport); }
+.acct-logo--mfs        { --logo: var(--cat-health); }
+.acct-logo--wallet     { --logo: var(--cat-mobile); }
+.acct-logo--card       { --logo: var(--cat-home); }
+.acct-logo--savings,
+.acct-logo--investment { --logo: var(--saved); }

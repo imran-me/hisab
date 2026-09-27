@@ -1,24 +1,27 @@
 /* =========================================================================
    Ledger · the entry sheet
    -------------------------------------------------------------------------
-   Its own file, loaded by entry-sheet.js rather than by a page, because the
-   sheet opens on pages that are not the Ledger — Home, account detail — and a
-   page should not have to know which of another module's stylesheets its
-   compose button needs.
+   Loaded by entry-sheet.js (see styles.js), because the sheet opens on pages
+   that are not the Ledger.
 
-   The v2 layout (DIRECTION §3.7.6): type → amount → pills → categories → pad,
-   about 650px at 360 × 780 with nothing scrolling. Tokens only: the palette
-   and the faces are Track A's, so this file picks up any change to them.
+   The owner's spec: type, amount, account, category, note - and a small date
+   chip. Nothing else in the default view. Tokens only; the colours for money
+   out and in are Track A's --money-out / --money-in, with the nearest
+   existing tokens as the fallback until those land.
    ========================================================================= */
+
+.sheet--entry {
+  --entry-out: var(--money-out, var(--danger));
+  --entry-in: var(--money-in, var(--in));
+}
 
 .sheet--entry .sheet__body {
   padding: 0 var(--s-4) calc(var(--s-3) + var(--safe-bottom));
   gap: 0;
 }
 
-/* No title bar. The type control already says what the sheet is, and the
-   70px go to the amount. The title stays for assistive tech (the dialog is
-   labelled by it); dismissing is the handle, the backdrop or Escape. */
+/* No title bar: the type control says what the sheet is. The title stays for
+   assistive tech; dismiss by the handle, the backdrop or Escape. */
 .sheet--entry .sheet__head {
   position: absolute;
   width: 1px;
@@ -32,7 +35,6 @@
 
 .sheet--entry .sheet__head [data-sheet-close] { display: none; }
 
-/* The form fills the body; only the middle (tiles or details) can scroll. */
 .entry {
   flex: 1 1 auto;
   min-height: 0;
@@ -42,11 +44,12 @@
 }
 
 .entry > * { flex: none; }
+.entry__error { margin: calc(-1 * var(--s-2)) 0 0; text-align: center; }
 
-/* ---- Segmented control: the type, and the necessity bands ---------------- */
+/* ---- Type: Expense / Income / Transfer ---------------------------------- */
 .entry .segment {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 2px;
   padding: 3px;
   border-radius: var(--r-md);
@@ -57,14 +60,12 @@
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 34px;
-  padding-inline: var(--s-1);
+  min-height: 36px;
   border-radius: calc(var(--r-md) - 2px);
   color: var(--text-2);
   font-family: var(--font-body);
   font-size: var(--t-ui);
-  font-weight: var(--fw-medium);
-  text-align: center;
+  font-weight: var(--fw-semibold);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
@@ -73,22 +74,19 @@
 .entry .segment__option input { position: absolute; opacity: 0; width: 0; height: 0; }
 .entry .segment__option:has(input:focus-visible) { box-shadow: var(--e-focus); }
 .entry .segment__option:has(input:checked) { background: var(--bg-1); color: var(--text-1); box-shadow: var(--shadow-lift); }
-.entry .segment__option--out:has(input:checked)  { color: var(--out); }
-.entry .segment__option--in:has(input:checked)   { color: var(--in); }
-.entry .segment__option--hold:has(input:checked) { color: var(--saved); }
-
-/* Necessity: four short words on one row, as the type is. */
-.entry .segment--need .segment__option { font-size: var(--fs-12); min-height: 36px; }
+.entry .segment__option--expense:has(input:checked) { color: var(--entry-out); }
+.entry .segment__option--income:has(input:checked)  { color: var(--entry-in); }
 
 /* ---- The amount ----------------------------------------------------------
-   The largest type in the app, centred, with the ৳ at half size before it.
-   Out is plain ink: the ordinary case carries no colour (§3.7). */
+   Red while it is an expense, green while it is income, ink for a transfer.
+   The colour changes as the type does, so a wrong type is seen, not found
+   later in a total. */
 .entry__amount {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   gap: var(--s-1);
-  padding-top: var(--s-2);
+  min-height: 64px;
 }
 
 .entry__currency {
@@ -99,7 +97,8 @@
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  color: var(--text-3);
+  color: currentColor;
+  opacity: .6;
   font-family: var(--font-display);
   font-size: calc(var(--t-entry) * .5);
   font-weight: var(--fw-semibold);
@@ -108,8 +107,14 @@
   cursor: pointer;
 }
 
-/* A foreign currency shows its code, which is three letters, not a glyph. */
 .entry__currency.is-code { font-size: var(--t-section); letter-spacing: .02em; }
+
+.entry__amount,
+.entry__display { color: var(--text-1); }
+[data-flow='expense'] .entry__amount,
+[data-flow='expense'] .entry__display { color: var(--entry-out); }
+[data-flow='income'] .entry__amount,
+[data-flow='income'] .entry__display { color: var(--entry-in); }
 
 .entry__display {
   flex: 0 1 auto;
@@ -118,6 +123,10 @@
   width: calc(var(--len, 1) * 1ch + 4px);
   max-width: 100%;
   min-width: 1ch;
+  /* An explicit height: the shared input rules give a text field a tall
+     box, and at this size that doubled the space around the figure. */
+  height: 1.15em;
+  min-height: 0;
   border: 0;
   background: transparent;
   padding: 0;
@@ -128,37 +137,20 @@
   font-weight: var(--fw-semibold);
   font-stretch: var(--wd-hero);
   letter-spacing: -.01em;
-  line-height: var(--lh-flush);
-  color: var(--text-1);
+  line-height: 1;
   caret-color: var(--accent);
+  transition: color var(--t-fast) var(--ease);
 }
 
 .entry__display:focus { outline: none; box-shadow: none; }
-
-/* The empty amount is a placeholder, not "you have ৳0": same size, the
-   quietest ink, and the caret after it says "type here". */
 .entry__display::placeholder { color: var(--text-4); opacity: 1; }
 .entry__display[data-size='m'] { font-size: calc(var(--t-entry) * .78); }
 .entry__display[data-size='s'] { font-size: calc(var(--t-entry) * .6); }
-
-/* A repeated or restored amount is "selected": the next digit replaces it. */
 .entry__display.is-selected { background: var(--accent-wash); border-radius: var(--r-sm); }
-
-[data-flow='income']  .entry__display { color: var(--in); }
-[data-flow='deposit'] .entry__display { color: var(--saved); }
 .entry__display.is-negative { color: var(--danger); }
 
-/* A key the pad refused (a third decimal, a point in yen) nudges the figure. */
-.entry__display.is-refused { animation: entry-refuse var(--t-base) var(--ease-snap); }
-
-@keyframes entry-refuse {
-  0%, 100% { transform: translateX(0); }
-  30% { transform: translateX(-4px); }
-  60% { transform: translateX(3px); }
-}
-
 .entry__sum {
-  margin-top: calc(-1 * var(--s-2));
+  margin-top: calc(-1 * var(--s-3));
   text-align: center;
   font-family: var(--font-body);
   font-variant-numeric: tabular-nums;
@@ -166,123 +158,94 @@
   color: var(--text-3);
 }
 
-.entry__error { margin: 0; text-align: center; }
-
-/* ---- Pills: account, date, Details --------------------------------------- */
-.entry__pills {
+/* ---- The account card(s) ------------------------------------------------ */
+.entry__accounts {
   display: flex;
-  gap: 6px;
+  align-items: stretch;
+  gap: var(--s-2);
 }
 
-.entry-pill {
-  display: inline-flex;
+.entry__accounts .acct-card { flex: 1 1 0; }
+.entry__arrow { flex: none; align-self: center; color: var(--text-3); }
+
+.acct-card {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  gap: var(--s-3);
   min-width: 0;
-  min-height: 34px;
-  padding: 0 10px;
+  min-height: 56px;
+  padding: var(--s-2) var(--s-3);
   border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background: transparent;
+  border-radius: var(--r-lg);
+  background: var(--bg-1);
   color: var(--text-1);
-  font-family: var(--font-body);
-  font-size: var(--fs-13);
-  font-weight: var(--fw-semibold);
-  white-space: nowrap;
+  text-align: start;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform var(--t-press) var(--ease), background-color var(--t-fast) var(--ease);
+  transition: transform var(--t-press) var(--ease), border-color var(--t-fast) var(--ease);
 }
 
-/* 34px drawn, 44px to the finger: the hit area grows past the border. */
-.entry-pill { position: relative; }
-.entry-pill::after { content: ''; position: absolute; inset: -5px 0; }
+.acct-card:active { transform: scale(.98); }
+.acct-card:focus-visible { outline: none; box-shadow: var(--e-focus); }
 
-.entry-pill[hidden] { display: none; }
-.entry-pill:active { transform: scale(.97); background: var(--wash-press); }
-.entry-pill .icon { flex: none; color: var(--text-2); }
+/* The account changed because the category remembers it: say so, briefly. */
+.acct-card.is-switched { animation: entry-flash 700ms var(--ease-out); }
 
-.entry-pill--account { flex: 1 1 0; justify-content: flex-start; }
-.entry-pill__icon { display: inline-flex; flex: none; }
-.entry-pill__label { flex: none; color: var(--text-3); font-weight: var(--fw-medium); }
-.entry-pill__value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.entry-pill__chev { margin-inline-start: auto; flex: none; }
-.entry-pill--quiet { color: var(--text-2); }
-.entry-pill--quiet[aria-expanded='true'] { border-color: var(--accent); color: var(--text-1); }
+@keyframes entry-flash {
+  0% { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+  100% { border-color: var(--line); box-shadow: none; }
+}
 
-/* ---- Recent entries: one scrolling row ----------------------------------
-   Filled chips with no border, so they read as content rather than as
-   settings like the pills above. The row runs to the sheet's edge and fades,
-   which is what says "there is more this way". */
-.entry__recents {
+.acct-card__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.acct-card__label { font-size: var(--t-meta); color: var(--text-3); white-space: nowrap; }
+.acct-card__tail { font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.acct-card__name { font-size: var(--t-body); font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-card__balance { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-variant-numeric: tabular-nums; }
+.acct-card__now { font-size: var(--t-body); font-weight: var(--fw-medium); color: var(--text-2); }
+.acct-card__was { font-size: var(--t-meta); color: var(--text-3); text-decoration: line-through; text-decoration-color: var(--text-4); }
+.acct-card__after { font-size: var(--t-body); font-weight: var(--fw-semibold); color: var(--text-1); }
+.acct-card__now.is-negative,
+.acct-card__after.is-negative { color: var(--danger); }
+.acct-card__chev { flex: none; color: var(--text-3); }
+.acct-card__pair-after { display: none; }
+
+/* A transfer has two cards on one row. Each keeps its logo and name; the
+   balance after the move sits under the name, and the chevron and the
+   crossed-out "before" figure go, so both names keep their width. */
+.entry__accounts.is-pair .acct-card { padding-inline: var(--s-2); gap: var(--s-2); }
+.entry__accounts.is-pair .acct-card__main { gap: 1px; }
+.entry__accounts.is-pair .acct-card__balance { display: none; }
+.entry__accounts.is-pair .acct-card__chev { display: none; }
+.entry__accounts.is-pair .acct-logo--md { width: 32px; height: 32px; font-size: var(--fs-12); }
+.entry__accounts.is-pair .acct-card__pair-after { display: block; font-size: var(--t-meta); font-weight: var(--fw-semibold); color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.acct-card__pair-after.is-negative { color: var(--danger); }
+.acct-card__balance > * { white-space: nowrap; }
+
+/* ---- Category chips: colour circles, one row ---------------------------- */
+.entry__cats {
   display: flex;
-  gap: var(--s-2);
+  gap: var(--s-1);
   overflow-x: auto;
   scrollbar-width: none;
   margin-inline: calc(-1 * var(--s-4));
-  padding-inline: var(--s-4);
+  padding: 2px var(--s-4);
   scroll-padding-inline: var(--s-4);
   /* Any opaque colour works as a mask; a token keeps literals out of here. */
   mask-image: linear-gradient(to right, var(--text-1) calc(100% - var(--s-6)), transparent);
 }
 
-.entry__recents::-webkit-scrollbar { display: none; }
-.entry__recents[hidden] { display: none; }
-
-.entry-recent {
-  flex: none;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  min-height: 34px;
-  padding: 0 var(--s-3);
-  border: 0;
-  border-radius: var(--r-pill);
-  background: var(--bg-3);
-  font-family: var(--font-body);
-  font-size: var(--fs-13);
-  line-height: 34px;
-  white-space: nowrap;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform var(--t-press) var(--ease);
-}
-
-.entry-recent:active { transform: scale(.97); }
-.entry-recent[aria-pressed='true'] { box-shadow: inset 0 0 0 1.5px var(--accent); }
-.entry-recent__name { color: var(--text-1); font-weight: var(--fw-semibold); max-width: 9rem; overflow: hidden; text-overflow: ellipsis; }
-.entry-recent__amount { color: var(--text-2); font-variant-numeric: tabular-nums; }
-
-/* ---- The middle: category tiles, or the details in their place ---------- */
-.entry__middle {
-  flex: 0 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.entry__cats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--s-2) var(--s-1);
-}
-
-.entry__cats[hidden],
-.entry__cats.is-covered { display: none; }
-
-/* Save without a category points here. */
-.entry__cats.is-asking { animation: entry-refuse var(--t-base) var(--ease-snap); }
+.entry__cats::-webkit-scrollbar { display: none; }
+.entry__cats[hidden] { display: none; }
 
 .entry-cat {
+  flex: none;
+  width: 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  min-width: 0;
-  padding: var(--s-1) 0;
+  padding: 2px 0;
   border: 0;
-  border-radius: var(--r-md);
   background: none;
   color: var(--text-2);
   font-family: var(--font-body);
@@ -293,45 +256,145 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* The tint comes from the shared .cat-<name> class on the tile. */
-
 .entry-cat__glyph {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--r-md);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   color: var(--tint, var(--text-2));
-  background: color-mix(in srgb, var(--tint, var(--text-3)) 15%, transparent);
-  transition: transform var(--t-press) var(--ease), box-shadow var(--t-fast) var(--ease);
+  background: color-mix(in srgb, var(--tint, var(--text-3)) 18%, transparent);
+  transition: transform var(--t-press) var(--ease-snap), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
 
 .entry-cat__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.entry-cat:active .entry-cat__glyph { transform: scale(.94); }
+.entry-cat:active .entry-cat__glyph { transform: scale(.92); }
 .entry-cat:focus-visible { outline: none; }
 .entry-cat:focus-visible .entry-cat__glyph { box-shadow: var(--e-focus); }
-.entry-cat[aria-pressed='true'] { color: var(--text-1); }
-.entry-cat[aria-pressed='true'] .entry-cat__glyph { box-shadow: inset 0 0 0 1.5px var(--tint, var(--text-2)); }
 
-.entry__details {
-  flex: 0 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding-block: var(--s-1);
+/* Chosen: the circle fills with its own colour and the icon turns to the
+   sheet's ground, so the choice reads from across the room. */
+.entry-cat[aria-checked='true'] { color: var(--text-1); font-weight: var(--fw-semibold); }
+.entry-cat[aria-checked='true'] .entry-cat__glyph {
+  background: var(--tint, var(--text-2));
+  color: var(--bg-2);
+  transform: scale(1.04);
 }
 
-.entry__details[hidden] { display: none; }
+/* ---- The note, and the date chip beside it ------------------------------ */
+.entry__note-row {
+  position: relative;
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.entry__note {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: var(--fs-16);   /* 16: iOS zooms a smaller input */
+}
+
+.entry__note::placeholder { color: var(--text-3); }
+.entry__note:focus { outline: none; border-color: var(--accent); }
+
+.entry__date {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.entry__date.is-set { border-color: var(--accent); color: var(--text-1); }
+
+/* The real date input, kept for showPicker() and assistive tech, drawn nowhere. */
+.entry__date-input {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- Recent entries: one slim row --------------------------------------- */
+.entry__recents {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: calc(-1 * var(--s-4));
+  padding-inline: var(--s-4);
+  mask-image: linear-gradient(to right, var(--text-1) calc(100% - var(--s-6)), transparent);
+}
+
+.entry__recents::-webkit-scrollbar { display: none; }
+.entry__recents[hidden] { display: none; }
+.entry__recents-label { flex: none; font-size: var(--t-meta); color: var(--text-3); }
+
+.entry-recent {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  height: 30px;
+  padding: 0 var(--s-3);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  font-family: var(--font-body);
+  font-size: var(--fs-12);
+  line-height: 30px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.entry-recent:active { transform: scale(.97); }
+.entry-recent__name { color: var(--text-1); font-weight: var(--fw-semibold); max-width: 8rem; overflow: hidden; text-overflow: ellipsis; }
+.entry-recent__amount { color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+.entry__reverse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 36px;
+  border: 0;
+  background: none;
+  color: var(--danger);
+  font-family: var(--font-body);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
 
 /* ---- The pad ---------------------------------------------------------------
-   One 4 × 4 grid. The action keys are placed in the last column and Save
-   spans two rows; the digits flow into what is left, in dialler order. The
-   "reaching hand" setting moves the action column to the left. */
+   One 4 × 4 grid: +, − and a two-row Save in the last column, the digits in
+   dialler order, 00 · 0 · ⌫ on the bottom row. The "reaching hand" setting
+   moves the action column to the left. */
 .numpad {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, 52px);
+  grid-template-rows: repeat(4, 50px);
   grid-auto-flow: row dense;
   gap: 6px;
   margin-top: auto;
@@ -369,30 +432,17 @@
   transition: transform var(--t-press) var(--ease), background-color var(--t-press) var(--ease);
 }
 
-.numpad__key:active:not(:disabled) { transform: scale(.97); background: var(--wash-press); }
+.numpad__key:active:not(:disabled) { transform: scale(.96); background: var(--wash-press); }
 .numpad__key:focus-visible { outline: none; box-shadow: var(--e-focus); }
-
+.numpad__key--op { background: transparent; color: var(--text-2); box-shadow: inset 0 0 0 1px var(--line); }
 .numpad__key--op .icon { width: 22px; height: 22px; }
 
-.numpad__key--op {
-  background: transparent;
-  color: var(--text-2);
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-
 /* 00 holds the decimal point: its corner says so, where a point exists. */
-.numpad__key--dual::after {
-  content: '·';
-  position: absolute;
-  top: 4px;
-  right: 8px;
-  font-size: var(--fs-16);
-  color: var(--text-3);
-}
-
+.numpad__key--dual::after { content: '·'; position: absolute; top: 4px; right: 8px; font-size: var(--fs-16); color: var(--text-3); }
 .numpad__key--dual[data-no-point]::after { content: none; }
 
 .numpad__key--save {
+  overflow: hidden;
   background: var(--accent);
   color: var(--on-accent);
   font-family: var(--font-body);
@@ -402,22 +452,94 @@
 }
 
 .numpad__key--save:active:not(:disabled) { background: var(--accent-text); }
-.numpad__key--save.is-busy { opacity: .6; }
+.numpad__key--save.is-busy { opacity: .7; }
+
+/* ---- Attention, and the save ---------------------------------------------- */
+.is-nudged { animation: entry-nudge var(--t-base) var(--ease-snap); }
+
+@keyframes entry-nudge {
+  0%, 100% { transform: translateX(0); }
+  30% { transform: translateX(-5px); }
+  60% { transform: translateX(4px); }
+}
+
+.entry__display.is-refused { animation: entry-nudge var(--t-base) var(--ease-snap); }
+
+/* Saved: the Save key fills to a check, and the figure drops toward the
+   account card it is recorded against, then the sheet leaves. */
+.entry.is-saved .numpad__key--save { font-size: 0; }
+.entry.is-saved .numpad__key--save::after {
+  content: '';
+  width: 22px;
+  height: 12px;
+  border-left: 3px solid var(--on-accent);
+  border-bottom: 3px solid var(--on-accent);
+  transform: translateY(-3px) rotate(-45deg) scale(0);
+  animation: entry-check 260ms var(--ease-snap) forwards;
+}
+
+.entry.is-saved .entry__amount { animation: entry-drop 380ms var(--ease-in) forwards; }
+.entry.is-saved .acct-card { animation: entry-land 420ms var(--ease-out); }
+
+@keyframes entry-check { to { transform: translateY(-3px) rotate(-45deg) scale(1); } }
+@keyframes entry-drop { to { transform: translateY(48px) scale(.55); opacity: 0; } }
+@keyframes entry-land {
+  60% { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-wash); }
+  100% { border-color: var(--line); box-shadow: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .numpad__key,
-  .entry-pill,
-  .entry-cat__glyph { transition: opacity 120ms linear; }
+  .acct-card,
+  .entry-cat__glyph,
+  .entry__display { transition: opacity 120ms linear; }
   .numpad__key:active:not(:disabled),
-  .entry-pill:active,
-  .entry-cat:active .entry-cat__glyph { transform: none; }
+  .acct-card:active,
+  .entry-cat:active .entry-cat__glyph,
+  .entry-cat[aria-checked='true'] .entry-cat__glyph { transform: none; }
+  .is-nudged,
   .entry__display.is-refused,
-  .entry__cats.is-asking { animation: none; }
+  .acct-card.is-switched,
+  .entry.is-saved .entry__amount,
+  .entry.is-saved .acct-card { animation: none; }
+  .entry.is-saved .entry__amount { opacity: .4; }
+  .entry.is-saved .numpad__key--save::after { animation: none; transform: translateY(-3px) rotate(-45deg); }
 }
 
-/* On a wide screen the sheet is a centred dialog and the pad would be a slab
-   of buttons across it. Capped, because a mouse does not need 80px keys. */
+/* ---- The account picker sheet --------------------------------------------- */
+.sheet--picker .sheet__body { padding-top: var(--s-2); gap: var(--s-4); }
+.acct-pick { display: flex; flex-direction: column; gap: var(--s-4); }
+.acct-pick__head { margin: 0 0 var(--s-2); font-size: var(--t-meta); font-weight: var(--fw-semibold); color: var(--text-3); letter-spacing: .02em; }
+.acct-pick__list { list-style: none; margin: 0; padding: 0; border-radius: var(--r-lg); background: var(--bg-1); overflow: clip; }
+.acct-pick__list > li + li { border-top: 1px solid var(--line-soft); }
+
+.acct-pick__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  background: transparent;
+  color: var(--text-1);
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.acct-pick__row:active { background: var(--wash-press); }
+.acct-pick__row[aria-pressed='true'] { background: var(--accent-wash); }
+.acct-pick__row--untracked { border-radius: var(--r-lg); background: var(--bg-1); }
+.acct-pick__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.acct-pick__name { font-size: var(--t-body); font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-pick__meta { font-size: var(--t-meta); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.acct-pick__balance { flex: none; font-size: var(--t-body); font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; }
+.acct-pick__balance.is-negative { color: var(--danger); }
+.acct-pick__tick { flex: none; color: var(--accent-text); }
+
+/* On a wide screen the sheet is a centred dialog. */
 @media (min-width: 700px) {
-  .numpad, .entry__cats { max-width: 24rem; width: 100%; margin-inline: auto; }
+  .numpad { max-width: 24rem; width: 100%; margin-inline: auto; }
   .sheet--entry .sheet__head [data-sheet-close] { display: inline-flex; }
 }

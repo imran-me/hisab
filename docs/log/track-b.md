@@ -259,3 +259,42 @@ ADDED, and a deposit mirror ignored. It now counts exactly as `summary()` does.
 
 **Verified:** ledger harness 40 (1 new: setting a new USD rate leaves
 September's converted expense unchanged).
+
+## Owner override — the entry sheet is five things
+
+The owner's spec: "entry will be simple: amount, type, category, note, from
+cash or bank account". The sheet is now exactly that, top to bottom:
+
+- **Type** in plain words: Expense / Income / Transfer. A Transfer INTO a
+  savings or investment account is recorded as a `deposit` (still a
+  first-class type, so savings figures stay right) without the person having
+  to know the word.
+- **Amount** on the pad, large: red for Expense, green for Income, ink for a
+  Transfer, via `--money-out` / `--money-in` with `--danger` / `--in` as the
+  fallback until A's tokens land.
+- **Account** as a card: logo, name, masked number, and the balance before
+  (struck through) and after this entry. From for an expense, To for income,
+  From → To for a transfer (each card shows its balance after the move).
+  Tapping opens a new **account picker sheet** (`account-picker.js`) grouped
+  Cash / Bank / Mobile wallet / Card / Savings & investments; each row has a
+  logo (a tinted monogram until A's `bankLogo()` lands; `logoFor()` is the one
+  place to swap), name, institution and •• tail, and current balance.
+- **Category** as icon chips in colour circles, one scrolling row; the chosen
+  one fills with its colour. More opens the full list. Choosing a category
+  switches to the account last used with it (remembered on the device, and
+  from the server's `last_account_id`), and the card flashes to say so.
+- **Note**: one line, always visible. **Date**: a small chip beside it.
+- One slim "Again?" row of recent entries stays.
+
+Gone from the default view: necessity, the Details drawer, the pills, payee
+and method (payee and method are carried hidden so a repeat or a correction
+keeps them). Necessity always comes from the category now. Save: a haptic, the
+Save key turns into a check, the figure drops toward the account card, then
+the sheet closes (420ms; an opacity fade under reduced motion). Tapping a
+category no longer saves by itself, since the note is on screen: amount →
+category → Save.
+
+**Verified** at 360×780 against the server, dark and day (screenshots in the
+session scratchpad under `devb/owner/`): expense, income, transfer and the
+picker. Saving 120 + Transport + note stored `expense` 12000 Transport,
+necessity 1 from the category, the note. Ledger harness 40, check-pages ok.

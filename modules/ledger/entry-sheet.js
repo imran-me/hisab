@@ -1,37 +1,41 @@
 /**
  * Ledger · the entry sheet
  *
- * The most-used screen in the product: adding a transaction, one-handed, in a
- * few seconds, usually while standing somewhere. Everything about it is shaped
- * by that. The target (docs/DIRECTION.md §3.4) is tap +, type 2-5-0, tap
- * Transport: three taps plus the digits, with nothing needed above the middle
- * of the screen. The layout is the v2 mock (§3.7.6): type → amount → account /
- * date / Details → recent → categories → pad.
+ * The owner's spec, in their words: "entry will be simple: amount, type,
+ * category, note, from cash or bank account". So the sheet is exactly that,
+ * top to bottom, and nothing else in the default view:
  *
- * Design decisions worth stating:
+ *   type      Expense / Income / Transfer, in plain words
+ *   amount    large, typed on the pad drawn in the sheet; red while it is an
+ *             expense, green while it is income
+ *   account   From (expense), To (income), From → To (transfer), with the
+ *             balance it will have after this entry
+ *   category  icon chips in colour circles
+ *   note      one line, always visible
+ *   date      a small chip, Today unless changed
  *
- * · THE AMOUNT IS FIRST, AND TYPED ON A PAD DRAWN IN THE SHEET. The display is
- *   inputmode="none", so the system keyboard never opens for it and never
- *   covers the form. See numpad.js for why it also does sums.
- * · A CATEGORY TILE SAVES. The last thing chosen is the category, so choosing
- *   it is the save: no separate confirm for the common case. Save without a
- *   category asks for one, because "Uncategorised · Discretionary" is the
- *   lazy path producing useless data.
- * · NOTHING IS PRE-SET THAT IS A JUDGEMENT. The necessity comes from the
- *   category (Rent is essential) unless the person picks one; the form never
- *   defaults it to Discretionary.
- * · EVERYTHING ELSE HAS A DEFAULT AND IS ONE TAP AWAY. The account is a pill
- *   that shows what it will use; date, payee, note and necessity sit behind
- *   Details.
- * · OUT IS PLAIN INK. Most entries are spending, and a red figure on every
- *   one of them turns the ledger into an alarm (§3.7). In, Save and Move keep
- *   their colours; Out is the ordinary case.
+ * Decisions worth stating:
+ *
+ * · THE PAD, NOT THE SYSTEM KEYBOARD, for the amount (inputmode="none"), so
+ *   nothing covers the sheet while the figure is typed. See numpad.js for the
+ *   sums and the minor-unit rule.
+ * · THREE TYPES ON SCREEN, FOUR IN THE LEDGER. A deposit - money moved into
+ *   savings, still yours - stays a first-class type (CONVENTIONS.md), but the
+ *   person does not have to know the word: a Transfer INTO a savings or
+ *   investment account is recorded as a deposit, because that is what it is.
+ * · A CATEGORY IS ASKED FOR, NOT DEFAULTED. Save without one points at the
+ *   chips. "Uncategorised" is what the lazy path produces when allowed to.
+ * · THE NECESSITY IS NEVER ASKED HERE. It comes from the category (Rent is
+ *   essential), on both sides; the person can change it on the Ledger later.
+ * · THE ACCOUNT IS REMEMBERED PER CATEGORY. Choosing Transport picks the
+ *   account the last Transport entry came from, unless an account was chosen
+ *   by hand in this sheet.
  */
 
 import { el, qs, qsa, icon, esc, delegate } from '../../shared/js/core/dom.js';
 import { moneyLabel, CURRENCIES, currency as currencyOf } from '../../shared/js/core/money.js';
 import { today, formatDate } from '../../shared/js/core/dates.js';
-import { storage, KEYS } from '../../shared/js/core/storage.js';
+import { storage, KEYS, moduleStore } from '../../shared/js/core/storage.js';
 import { on, EVENTS } from '../../shared/js/core/bus.js';
 import { openSheet } from '../../shared/js/components/sheet.js';
 import { toastOk, toastFailure, toast } from '../../shared/js/components/toast.js';
@@ -41,30 +45,28 @@ import * as accounts from '../accounts/backend/api.js';
 import * as categories from '../categories/backend/api.js';
 import { glyphOf } from '../categories/glyphs.js';
 import { numpadMarkup, attachNumpad, bufferFor } from './numpad.js';
+import { pickAccount, logoFor, maskedTail } from './account-picker.js';
+import { loadStyles } from './styles.js';
 
-/** Tiles on the grid: seven categories and More, a 4 × 2 block. */
-const TILES = 7;
+/** The three words on the type control, and the ledger type each writes. */
+const KINDS = [
+  { key: 'expense', label: 'Expense' },
+  { key: 'income', label: 'Income' },
+  { key: 'transfer', label: 'Transfer' },
+];
 
-/** Recent-entry chips: enough to cover a week's repeats, few enough to scan. */
-const RECENTS = 8;
+/** Category chips: the most used, then More. One scrolling row. */
+const CHIPS = 11;
+
+/** Recent-entry chips: one slim row. */
+const RECENTS = 6;
 
 /**
- * The sheet's stylesheet, loaded once on first open and awaited, so the sheet
- * never paints unstyled for a frame. Resolved against this file rather than the
- * page, because the sheet opens from pages in other folders.
+ * The account last used for each category, on this device. The server's
+ * GET /categories/frequent says the same from history; this covers what was
+ * entered a minute ago and the no-backend case.
  */
-let styles = null;
-function ensureStyles() {
-  if (!styles) {
-    styles = new Promise((resolve) => {
-      const link = el('link', { rel: 'stylesheet', href: new URL('./entry-sheet.css', import.meta.url).href });
-      link.addEventListener('load', resolve);
-      link.addEventListener('error', resolve);   // unstyled beats no sheet at all
-      document.head.append(link);
-    });
-  }
-  return styles;
-}
+const prefs = moduleStore('ledger-entry');
 
 /**
  * Only one entry sheet at a time: a double tap on + must not stack two. Set
@@ -93,10 +95,11 @@ async function open(opts) {
   const editing = opts.transaction || null;
   const book = state.book();
 
-  const [accountRes, methodList] = await Promise.all([
+  const [accountRes, balanceRes] = await Promise.all([
     accounts.list({ book }),
-    categories.methods(),
-    ensureStyles(),
+    ledger.balances({ book }),
+    loadStyles('entry-sheet.css'),
+    loadStyles('row.css'),
   ]);
 
   const accountRows = accountRes.data;
@@ -113,21 +116,28 @@ async function open(opts) {
   // edited with an unrelated half-typed one.
   const draft = editing ? null : storage.get(KEYS.DRAFT, null);
 
-  const initial = editing || draft || {
+  const initial = { ...(editing || draft || {
     type: opts.type || 'expense',
     account_id: (await accounts.defaultFor(book))?.id || accountRows[0].id,
     occurred_on: today(),
-  };
+  }) };
 
-  // Asking for a type is explicit — a long-press on + offering In is nothing
-  // but that request — so it beats the type a restored draft happens to carry.
+  // Asking for a type is explicit — a long-press on + offering Income is
+  // nothing but that request — so it beats the type a restored draft carries.
   if (!editing && opts.type) initial.type = opts.type;
   if (!accountRows.some((a) => a.id === initial.account_id)) initial.account_id = accountRows[0].id;
 
   const form = el('form', { class: 'entry', novalidate: true });
-  form.dataset.flow = initial.type || 'expense';
 
-  const ctx = { form, book, accountRows, methodList, editing, pad: null, tiles: [], sheet: null, onSaved: opts.onSaved };
+  const ctx = {
+    form, book, accountRows, editing,
+    balances: balanceRes.data || {},
+    pad: null, chips: [], categoryRows: [], recents: [],
+    sheet: null, onSaved: opts.onSaved,
+    // A deposit being corrected keeps its type even when its destination is
+    // not tracked here; see kindOf().
+    wasDeposit: editing?.type === 'deposit',
+  };
 
   const sheet = openSheet({
     title: editing ? 'Correct entry' : 'New entry',
@@ -211,22 +221,24 @@ export function mountCompose({ onSaved } = {}) {
    ========================================================================= */
 
 async function renderForm(ctx, initial) {
-  const { form, accountRows, methodList, editing } = ctx;
-  const type = initial.type || 'expense';
+  const { form, accountRows } = ctx;
+  // A deposit is shown as the Transfer it looks like to the person.
+  const kind = initial.type === 'deposit' ? 'transfer' : (initial.type || 'expense');
   const account = accountRows.find((a) => a.id === initial.account_id) || accountRows[0];
   const cur = initial.currency || account.currency;
   const places = currencyOf(cur).minorUnit;
 
+  form.dataset.flow = kind;
   form.innerHTML = `
-    <!-- Type. A radio group, so arrow keys move between the four and a screen
-         reader announces "2 of 4". Short words, so all four fit at 320px. -->
+    <!-- Type. A radio group, so arrow keys move between the three and a screen
+         reader announces "2 of 3". -->
     <fieldset class="fieldset entry__types">
       <legend class="sr-only">Type of entry</legend>
       <div class="segment" role="radiogroup">
-        ${ledger.TYPES.map((t) => `
-          <label class="segment__option segment__option--${t.tone}">
-            <input type="radio" name="type" value="${t.key}"${t.key === type ? ' checked' : ''} aria-label="${esc(t.label)}">
-            <span>${esc(t.short)}</span>
+        ${KINDS.map((k) => `
+          <label class="segment__option segment__option--${k.key}">
+            <input type="radio" name="kind" value="${k.key}"${k.key === kind ? ' checked' : ''}>
+            <span>${k.label}</span>
           </label>`).join('')}
       </div>
     </fieldset>
@@ -242,116 +254,66 @@ async function renderForm(ctx, initial) {
     </div>
     <p class="entry__sum" data-result aria-live="polite" hidden></p>
     <p class="field__error entry__error" data-error="amount_minor" role="alert" hidden></p>
-    <p class="field__error entry__error" data-error="entry" role="alert" hidden></p>
 
-    <!-- What will be used, as pills. Nothing here needs touching for the
-         common case. -->
-    <div class="entry__pills">
-      <button type="button" class="entry-pill entry-pill--account" data-pick="account" aria-haspopup="menu">
-        <span class="entry-pill__icon" data-account-icon></span>
-        <span class="sr-only" data-account-label>From</span>
-        <span class="entry-pill__value" data-account-name></span>
-        ${icon('chevron-down', { class: 'icon icon--sm entry-pill__chev' })}
-      </button>
-      <button type="button" class="entry-pill entry-pill--account" data-pick="to" aria-haspopup="menu" hidden>
-        <span class="entry-pill__label">To</span>
-        <span class="entry-pill__value" data-to-name></span>
-      </button>
-      <button type="button" class="entry-pill" data-pick="date" aria-haspopup="menu">
-        ${icon('calendar', { class: 'icon icon--sm' })}
-        <span class="entry-pill__value" data-date-name></span>
-      </button>
-      <button type="button" class="entry-pill entry-pill--quiet" data-details-toggle
-              aria-controls="entry-details" aria-expanded="${editing ? 'true' : 'false'}">
-        ${icon('sliders', { class: 'icon icon--sm' })}
-        <span class="entry-pill__value">Details</span>
-      </button>
-    </div>
-    <input type="hidden" name="account_id" value="${esc(account.id)}">
-    <input type="hidden" name="to_account_id" value="${esc(initial.to_account_id || initial.counter_account_id || '')}">
-    <input type="hidden" name="category_id" value="${esc(initial.category_id || '')}">
-    <!-- Recent entries (R#2): most of a month is the same fifteen. A chip
-         fills everything and selects the amount, so repeating yesterday's
-         CNG is + and Save. -->
-    <div class="entry__recents" data-recents role="group" aria-label="Repeat a recent entry" hidden></div>
+    <!-- The account, with what it will hold after this entry. -->
+    <div class="entry__accounts" data-accounts></div>
     <p class="field__error entry__error" data-error="account_id" role="alert" hidden></p>
     <p class="field__error entry__error" data-error="to_account_id" role="alert" hidden></p>
 
-    <!-- The middle of the sheet: the category tiles, or - with Details open -
-         the details in their place. Only this part scrolls, so the pad never
-         leaves the thumb. -->
-    <div class="entry__middle">
-      <div class="entry__cats" data-cats role="group" aria-label="Category — tap one to save"></div>
+    <!-- Category: icon chips in colour circles, one scrolling row. -->
+    <div class="entry__cats" data-cats role="radiogroup" aria-label="Category"></div>
+    <p class="field__error entry__error" data-error="category_id" role="alert" hidden></p>
+    <p class="field__error entry__error" data-error="entry" role="alert" hidden></p>
 
-      <div class="entry__details stack stack--4" id="entry-details" data-details${editing ? '' : ' hidden'}>
-        <div class="field" data-category-field>
-          <label class="field__label" for="entry-category">Category</label>
-          <select class="select" id="entry-category" data-category-select></select>
-          <p class="field__error" data-error="category_id" hidden></p>
-        </div>
-
-        <!-- Necessity — expenses only, and never pre-set: until someone picks
-             one, the category's own band applies. -->
-        <fieldset class="fieldset" data-necessity-field hidden>
-          <legend class="field__label">Was it worth it? <span class="field__hint" data-necessity-hint></span></legend>
-          <div class="segment segment--need" role="radiogroup" data-necessity-choices></div>
-        </fieldset>
-
-        <div class="grid grid--pair">
-          <div class="field">
-            <label class="field__label" for="entry-date">Date</label>
-            <input class="input" type="date" id="entry-date" name="occurred_on"
-                   value="${esc(initial.occurred_on || today())}" max="${esc(nextYear())}">
-            <p class="field__error" data-error="occurred_on" hidden></p>
-          </div>
-          <div class="field">
-            <label class="field__label" for="entry-method">Paid with</label>
-            <select class="select" id="entry-method" name="method">
-              <option value="">—</option>
-              ${methodList.map((m) => `<option value="${esc(m.key)}"${m.key === initial.method ? ' selected' : ''}>${esc(m.label)}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-
-        <div class="field">
-          <label class="field__label" for="entry-payee" data-payee-label>Paid to</label>
-          <input class="input" id="entry-payee" name="payee" autocomplete="off"
-                 value="${esc(initial.payee || '')}" placeholder="Shop, person or source">
-        </div>
-
-        <div class="field">
-          <label class="field__label" for="entry-note">Note</label>
-          <textarea class="textarea" id="entry-note" name="note" rows="2"
-                    placeholder="What was this for?">${esc(initial.note || '')}</textarea>
-        </div>
-
-        ${editing ? `
-          <button type="button" class="btn btn--danger btn--block" data-delete>
-            ${icon('trash', { class: 'icon icon--sm' })}<span>Reverse this entry</span>
-          </button>` : ''}
-      </div>
+    <!-- The note, always visible, and the date as a small chip beside it. -->
+    <div class="entry__note-row">
+      <label class="sr-only" for="entry-note">Note</label>
+      <input class="entry__note" id="entry-note" name="note" autocomplete="off"
+             enterkeyhint="done" maxlength="2000" placeholder="Add a note"
+             value="${esc(initial.note || '')}">
+      <button type="button" class="entry__date" data-pick-date aria-haspopup="menu">
+        ${icon('calendar', { class: 'icon icon--sm' })}<span data-date-name></span>
+      </button>
+      <input type="date" class="entry__date-input" name="occurred_on" tabindex="-1" aria-label="Date"
+             value="${esc(initial.occurred_on || today())}" max="${esc(nextYear())}">
     </div>
+    <p class="field__error entry__error" data-error="occurred_on" role="alert" hidden></p>
+
+    <!-- Repeat a recent entry: one slim row, only when there is history. -->
+    <div class="entry__recents" data-recents role="group" aria-label="Repeat a recent entry" hidden></div>
+
+    <input type="hidden" name="account_id" value="${esc(account.id)}">
+    <input type="hidden" name="to_account_id" value="${esc(initial.to_account_id || initial.counter_account_id || '')}">
+    <input type="hidden" name="category_id" value="${esc(initial.category_id || '')}">
+    <!-- Carried, not shown: a correction or a repeat keeps the payee and the
+         method it had, and a correction keeps its necessity. -->
+    <input type="hidden" name="payee" value="${esc(initial.payee || '')}">
+    <input type="hidden" name="method" value="${esc(initial.method || '')}">
+    <input type="hidden" name="necessity" value="${esc(ctx.editing?.necessity || '')}">
+
+    ${ctx.editing ? `
+      <button type="button" class="entry__reverse" data-delete>
+        ${icon('trash', { class: 'icon icon--sm' })}<span>Reverse this entry instead</span>
+      </button>` : ''}
 
     ${numpadMarkup({ places })}
   `;
 
-  const display = qs('#entry-amount', form);
   ctx.pad = attachNumpad(form, {
-    display,
+    display: qs('#entry-amount', form),
     result: qs('[data-result]', form),
     code: () => currencyCode(form),
     initial: bufferFor(initial.amount_minor, cur),
-    onChange: () => ctx.draftSoon?.(),
+    onChange: () => { syncAccounts(ctx); ctx.draftSoon?.(); },
   });
 
   setCurrency(ctx, cur);
-  if (editing?.necessity) form.dataset.needSet = 'true';
-  await syncType(ctx, initial);
+  await syncKind(ctx, initial);
   attachHandlers(ctx);
 
   // The sheet focused its first control before this form was filled in, so
   // the amount is focused here. inputmode=none: no keyboard comes up.
-  display.focus({ preventScroll: true });
+  qs('#entry-amount', form).focus({ preventScroll: true });
 }
 
 /** The currency the amount is being typed in. */
@@ -360,38 +322,41 @@ function currencyCode(form) {
 }
 
 /**
- * Everything that changes when the type changes.
+ * The ledger type this entry will be written as.
  *
- * Kept in ONE function rather than scattered across four listeners, because the
- * fields that appear and disappear have to agree with each other — a visible
- * "To" on an expense, or a necessity band on a transfer, produces a row the
- * counting rules cannot classify.
+ * A Transfer into a savings or investment account is a DEPOSIT: money out of
+ * what can be spent that is still yours. Recording it as a transfer would
+ * leave the savings figures at zero however much was put away. A deposit
+ * being corrected stays one, even when its destination is not tracked here.
  */
-async function syncType(ctx, initial = {}) {
+function kindOf(ctx) {
+  const { form, accountRows } = ctx;
+  const kind = form.elements.kind.value;
+  if (kind !== 'transfer') return kind;
+  const to = accountRows.find((a) => a.id === form.elements.to_account_id.value);
+  if (to && !accounts.isSpendable(to)) return 'deposit';
+  if (!to && ctx.wasDeposit) return 'deposit';
+  return 'transfer';
+}
+
+/** Everything that changes with the type, in one place. */
+async function syncKind(ctx, initial = {}) {
   const { form, book, accountRows } = ctx;
-  const type = form.elements.type.value;
-  form.dataset.flow = type;   // recolours the amount — see entry-sheet.css
+  const kind = form.elements.kind.value;
+  form.dataset.flow = kind;   // recolours the amount — see entry-sheet.css
 
-  const isTransfer = type === 'transfer';
-  const isDeposit = type === 'deposit';
-  const isIncome = type === 'income';
+  const isTransfer = kind === 'transfer';
 
-  qs('[data-category-field]', form).hidden = isTransfer;
-  if (isTransfer) qs('[data-recents]', form).hidden = true;
-  qs('[data-cats]', form).hidden = isTransfer;
-  qs('[data-necessity-field]', form).hidden = type !== 'expense';
-  qs('[data-pick="to"]', form).hidden = !(isTransfer || isDeposit);
-  qs('[data-account-label]', form).textContent = isIncome ? 'Into' : 'From';
-  qs('[data-payee-label]', form).textContent = isIncome ? 'Received from' : 'Paid to';
-
-  // A transfer must land somewhere tracked, or it is not a transfer — it is
-  // money leaving, which is an expense or a deposit. So it gets a default
-  // destination rather than a blank one the person has to notice.
+  // A transfer must land somewhere, so it gets a default destination rather
+  // than a blank one the person has to notice.
   const to = form.elements.to_account_id;
-  if (isTransfer && (!to.value || to.value === form.elements.account_id.value)) {
-    to.value = accountRows.find((a) => a.id !== form.elements.account_id.value)?.id || '';
+  if (isTransfer && !ctx.wasDeposit && (!to.value || to.value === form.elements.account_id.value)) {
+    to.value = accountRows.find((a) => a.id !== form.elements.account_id.value && accounts.isSpendable(a))?.id
+      || accountRows.find((a) => a.id !== form.elements.account_id.value)?.id || '';
   }
-  if (!isTransfer && !isDeposit) to.value = '';
+  if (!isTransfer) to.value = '';
+
+  qs('[data-cats]', form).hidden = isTransfer;
 
   // A category belongs to one type; switching type drops it rather than
   // filing an income under an expense category.
@@ -400,158 +365,169 @@ async function syncType(ctx, initial = {}) {
 
   if (!isTransfer) {
     const [rows, frequent] = await Promise.all([
-      categories.list({ book, type }),
-      categories.frequent({ book, type, limit: TILES }),
+      categories.list({ book, type: kind }),
+      categories.frequent({ book, type: kind, limit: CHIPS }),
     ]);
-    // The type may have changed again while those were loading.
-    if (form.elements.type.value !== type) return;
+    if (form.elements.kind.value !== kind) return;   // changed again meanwhile
 
     ctx.categoryRows = rows;
-    ctx.tiles = frequent.length ? frequent : rows.slice(0, TILES);
+    ctx.chips = frequent.length ? frequent : rows.slice(0, CHIPS);
     if (chosen && rows.some((c) => c.id === chosen)) form.elements.category_id.value = chosen;
-
-    drawTiles(ctx);
-    await drawRecents(ctx, type);
-    qs('[data-category-select]', form).innerHTML = `<option value="">Choose a category</option>` +
-      rows.map((c) => `<option value="${esc(c.id)}"${c.id === form.elements.category_id.value ? ' selected' : ''}>${esc(c.label)}</option>`).join('');
+    drawChips(ctx);
+  } else {
+    ctx.categoryRows = [];
   }
 
-  if (type === 'expense') {
-    const bands = await categories.necessityBands();
-    const picked = form.dataset.needSet === 'true' ? Number(initial.necessity || qs('[name="necessity"]:checked', form)?.value) : 0;
-    qs('[data-necessity-choices]', form).innerHTML = bands.map((b) => `
-      <label class="segment__option segment__option--need-${b.band}" title="${esc(b.hint)}">
-        <input type="radio" name="necessity" value="${b.band}"${b.band === picked ? ' checked' : ''}>
-        <span>${esc(b.label)}</span>
-      </label>`).join('');
-    ctx.bands = bands;
-    syncNecessityHint(ctx);
-  }
-
-  syncChips(ctx);
+  await drawRecents(ctx, kind);
+  syncAccounts(ctx);
+  syncDate(ctx);
 }
 
 /**
- * The 4 × 2 tile grid: the most used categories, then More.
- *
- * The chosen category is ALWAYS on the grid, even when it is not one of the
- * seven most used - a restored draft or a correction filed under "Charity"
- * must show that it is filed under Charity - so it takes the last slot.
+ * The account card(s): From for an expense, To for income, From → To for a
+ * transfer. Each shows the logo, the name, the masked number, and the balance
+ * it will have once this entry is saved - the one figure that tells you
+ * whether you can afford it.
  */
-function drawTiles(ctx) {
+function syncAccounts(ctx) {
+  const { form, accountRows, balances } = ctx;
+  const kind = form.elements.kind.value;
+  const amount = ctx.pad?.value() || 0;
+  const code = currencyCode(form);
+  const from = accountRows.find((a) => a.id === form.elements.account_id.value);
+  const to = accountRows.find((a) => a.id === form.elements.to_account_id.value);
+
+  const card = (account, role, label, sign) => {
+    if (!account) {
+      return `
+        <button type="button" class="acct-card" data-pick="${role}">
+          ${logoFor(null)}
+          <span class="acct-card__main">
+            <span class="acct-card__label">${esc(label)}</span>
+            <span class="acct-card__name">Not tracked here</span>
+          </span>
+        </button>`;
+    }
+    const now = balances[account.id];
+    // After this entry - only when the figure is in the account's own
+    // currency; a dollar charge on a taka card is converted on save, and a
+    // guess here would be a different number from the one the ledger shows.
+    const after = now !== undefined && account.currency === code && amount > 0 ? now + sign * amount : null;
+    return `
+      <button type="button" class="acct-card" data-pick="${role}" aria-haspopup="dialog">
+        ${logoFor(account)}
+        <span class="acct-card__main">
+          <span class="acct-card__label">${esc(label)}${maskedTail(account) ? ` <span class="acct-card__tail">${esc(maskedTail(account))}</span>` : ''}</span>
+          <span class="acct-card__name">${esc(account.name)}</span>
+          ${now === undefined ? '' : `<span class="acct-card__pair-after${(after ?? now) < 0 ? ' is-negative' : ''}">${esc(moneyLabel(after ?? now, account.currency, { minor: 'never' }))}</span>`}
+        </span>
+        <span class="acct-card__balance">
+          ${now === undefined ? '' : after === null
+            ? `<span class="acct-card__now${now < 0 ? ' is-negative' : ''}">${esc(moneyLabel(now, account.currency, { minor: 'never' }))}</span>`
+            : `<span class="acct-card__was">${esc(moneyLabel(now, account.currency, { minor: 'never' }))}</span>
+               <span class="acct-card__after${after < 0 ? ' is-negative' : ''}">${esc(moneyLabel(after, account.currency, { minor: 'never' }))}</span>`}
+        </span>
+        ${icon('chevron-down', { class: 'icon icon--sm acct-card__chev' })}
+      </button>`;
+  };
+
+  const host = qs('[data-accounts]', form);
+  host.classList.toggle('is-pair', kind === 'transfer');
+  if (kind === 'expense') host.innerHTML = card(from, 'from', 'From', -1);
+  else if (kind === 'income') host.innerHTML = card(from, 'from', 'To', 1);
+  else {
+    host.innerHTML = card(from, 'from', 'From', -1)
+      + `<span class="entry__arrow" aria-hidden="true">${icon('arrow-move', { class: 'icon icon--sm' })}</span>`
+      + card(to, 'to', 'To', 1);
+  }
+}
+
+/** The category chips: circles in each category's own colour, then More. */
+function drawChips(ctx) {
   const { form } = ctx;
   const chosen = form.elements.category_id.value;
-  let tiles = ctx.tiles.slice(0, TILES);
-  if (chosen && !tiles.some((c) => c.id === chosen)) {
-    const hit = ctx.categoryRows?.find((c) => c.id === chosen);
-    if (hit) tiles = [...tiles.slice(0, TILES - 1), hit];
+  let chips = ctx.chips.slice(0, CHIPS);
+  // The chosen category is always on the row - a draft or a correction filed
+  // under Charity must show that it is filed under Charity.
+  if (chosen && !chips.some((c) => c.id === chosen)) {
+    const hit = ctx.categoryRows.find((c) => c.id === chosen);
+    if (hit) chips = [hit, ...chips.slice(0, CHIPS - 1)];
   }
+  ctx.shown = chips;
 
-  qs('[data-cats]', form).innerHTML = tiles.map((c) => {
+  qs('[data-cats]', form).innerHTML = chips.map((c) => {
     const { icon: glyph, className } = glyphOf(c);
     return `
-      <button type="button" class="entry-cat ${className}" data-cat="${esc(c.id)}" aria-pressed="${c.id === chosen}">
+      <button type="button" class="entry-cat ${className}" role="radio" data-cat="${esc(c.id)}" aria-checked="${c.id === chosen}">
         <span class="entry-cat__glyph">${icon(glyph, { class: 'icon' })}</span>
         <span class="entry-cat__label">${esc(shortLabel(c.label))}</span>
       </button>`;
   }).join('') + `
-      <button type="button" class="entry-cat entry-cat--more" data-cat-more aria-controls="entry-details">
+      <button type="button" class="entry-cat entry-cat--more" data-cat-more aria-haspopup="menu">
         <span class="entry-cat__glyph">${icon('grid', { class: 'icon' })}</span>
         <span class="entry-cat__label">More</span>
       </button>`;
 }
 
+/** "Food & groceries" → "Food", so a chip's label fits under its circle. */
+function shortLabel(label) {
+  return String(label || '').split(/\s*[&/]\s*|\s+-\s+/)[0];
+}
+
 /**
- * The recent strip: the last few DISTINCT entries of this type, newest first.
- *
- * Built from the rows the ledger already holds - no request - and made
- * distinct on payee + category + account, because that is what "the same
- * thing again" means: the CNG from cash is one chip however many times it was
- * taken, and the CNG paid by bKash is another. A correction's replacement
- * counts; a reversed entry and its mirror do not, since they are not in the
- * standing list.
+ * The recent strip: the last few DISTINCT entries of this type, newest
+ * first, told apart by payee + category + account - what "the same thing
+ * again" means. Built from the rows the ledger already holds; no request.
  */
-async function drawRecents(ctx, type) {
+async function drawRecents(ctx, kind) {
   const { form, editing, book } = ctx;
   const host = qs('[data-recents]', form);
-  if (editing) { host.hidden = true; return; }
+  if (editing || kind === 'transfer') { host.hidden = true; return; }
 
-  const rows = (await ledger.list({ book, type })).data;
-  if (form.elements.type.value !== type) return;
+  const rows = (await ledger.list({ book, type: kind })).data;
+  if (form.elements.kind.value !== kind) return;
 
   const seen = new Set();
   const picks = [];
   for (const row of rows) {
-    const key = `${(row.payee || '').toLowerCase()}|${row.category_id || ''}|${row.account_id}`;
-    if (seen.has(key) || !(row.payee || row.category_label)) continue;
+    const key = `${(row.payee || row.note || '').toLowerCase()}|${row.category_id || ''}|${row.account_id}`;
+    if (seen.has(key) || !(row.payee || row.note || row.category_label)) continue;
     seen.add(key);
     picks.push(row);
     if (picks.length >= RECENTS) break;
   }
   ctx.recents = picks;
 
-  host.innerHTML = picks.map((row, i) => `
+  host.innerHTML = `<span class="entry__recents-label">Again?</span>` + picks.map((row, i) => `
     <button type="button" class="entry-recent" data-recent="${i}">
-      <span class="entry-recent__name">${esc(row.payee || shortLabel(row.category_label))}</span>
-      <span class="entry-recent__amount">${esc(moneyLabel(row.amount_minor, row.currency))}</span>
+      <span class="entry-recent__name">${esc(row.payee || row.note || shortLabel(row.category_label))}</span>
+      <span class="entry-recent__amount">${esc(moneyLabel(row.amount_minor, row.currency, { minor: 'never' }))}</span>
     </button>`).join('');
   host.hidden = picks.length === 0;
 }
 
-/**
- * Fill the sheet from a recent entry: payee, category, account, method, note,
- * currency and amount - the amount SELECTED, so one keystroke replaces it
- * when today's fare is different. The date stays today.
- */
+/** Fill the sheet from a recent entry, with the amount selected. */
 function repeatEntry(ctx, row) {
   const { form, accountRows } = ctx;
   const account = accountRows.find((a) => a.id === row.account_id);
-  if (account) { form.dataset.accountSet = 'true'; pickAccountRow(ctx, account); }
+  if (account) { form.dataset.accountSet = 'true'; setAccount(ctx, 'from', account); }
   if (row.currency && row.currency !== currencyCode(form)) {
     qs('[data-currency-picker]', form).dataset.userSet = 'true';
     setCurrency(ctx, row.currency);
   }
   form.elements.payee.value = row.payee || '';
-  form.elements.note.value = row.note || '';
   form.elements.method.value = row.method || '';
-  if (row.type === 'transfer' || row.type === 'deposit') {
-    form.elements.to_account_id.value = row.counter_account_id || form.elements.to_account_id.value;
-  }
-  if (row.category_id) { chooseCategory(ctx, row.category_id); drawTiles(ctx); }
+  form.elements.note.value = row.note || '';
+  if (row.category_id) chooseCategory(ctx, row.category_id, { auto: false });
   ctx.pad.set(row.amount_minor);
-  syncChips(ctx);
-  qsa('[data-recent]', form).forEach((b) => b.setAttribute('aria-pressed', String(ctx.recents[Number(b.dataset.recent)] === row)));
+  syncAccounts(ctx);
   qs('#entry-amount', form).focus({ preventScroll: true });
 }
 
-/** "Food & groceries" → "Food", so eight labels fit a 360px row at 11.5px. */
-function shortLabel(label) {
-  return String(label).split(/\s*[&/]\s*|\s+-\s+/)[0];
-}
-
-/** Under "Was it worth it?": which band applies if nobody picks one. */
-function syncNecessityHint(ctx) {
-  const { form } = ctx;
-  const hint = qs('[data-necessity-hint]', form);
-  if (!hint) return;
-  const category = ctx.categoryRows?.find((c) => c.id === form.elements.category_id.value);
-  const band = ctx.bands?.find((b) => b.band === Number(category?.necessity));
-  hint.textContent = form.dataset.needSet === 'true' || !band ? '' : `· ${band.label}, from the category`;
-}
-
-/** The pills say what will be used, in words. */
-function syncChips(ctx) {
-  const { form, accountRows } = ctx;
-  const byId = (id) => accountRows.find((a) => a.id === id);
-
-  const account = byId(form.elements.account_id.value);
-  qs('[data-account-name]', form).textContent = account?.name || 'Choose';
-  qs('[data-account-icon]', form).innerHTML = icon(accounts.typeOf(account?.type).icon, { class: 'icon icon--sm' }).value;
-
-  const to = form.elements.to_account_id.value;
-  qs('[data-to-name]', form).textContent = to ? (byId(to)?.name || 'Choose') : 'Not tracked here';
-
-  qs('[data-date-name]', form).textContent = dayName(form.elements.occurred_on.value);
+function syncDate(ctx) {
+  const value = ctx.form.elements.occurred_on.value;
+  qs('[data-date-name]', ctx.form).textContent = dayName(value);
+  qs('[data-pick-date]', ctx.form).classList.toggle('is-set', Boolean(value) && value !== today());
 }
 
 function dayName(dateKey) {
@@ -560,52 +536,60 @@ function dayName(dateKey) {
   return formatDate(dateKey);
 }
 
-function setDetails(form, open) {
-  const region = qs('[data-details]', form);
-  region.hidden = !open;
-  // The tiles and the details share the middle of the sheet: showing both
-  // would push the pad down past the thumb.
-  qs('[data-cats]', form).classList.toggle('is-covered', open);
-  qs('[data-details-toggle]', form).setAttribute('aria-expanded', String(open));
-  if (open) region.scrollTop = 0;
-}
-
-function chooseCategory(ctx, id) {
-  const { form } = ctx;
+function chooseCategory(ctx, id, { auto = true } = {}) {
+  const { form, accountRows } = ctx;
   form.elements.category_id.value = id;
-  qs('[data-category-select]', form).value = id;
-  qsa('[data-cat]', form).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cat === id)));
+  drawChips(ctx);
   clearError(form, 'category_id');
   clearError(form, 'entry');
-  syncNecessityHint(ctx);
+
+  // The account used last for this category, unless one was chosen by hand:
+  // the CNG comes out of cash, the electricity bill out of bKash.
+  if (auto && form.dataset.accountSet !== 'true') {
+    const remembered = prefs.read({})[id]
+      || ctx.chips.find((c) => c.id === id)?.last_account_id;
+    const account = accountRows.find((a) => a.id === remembered);
+    if (account && account.id !== form.elements.account_id.value) {
+      setAccount(ctx, 'from', account);
+      qs('.acct-card', form)?.classList.add('is-switched');
+    }
+  }
   ctx.draftSoon?.();
+}
+
+/** Set one end of the entry, carrying the currency and the other end with it. */
+function setAccount(ctx, role, account) {
+  const { form, accountRows } = ctx;
+  if (role === 'to') {
+    form.elements.to_account_id.value = account.id;
+  } else {
+    form.elements.account_id.value = account.id;
+    // The account's currency becomes the amount's currency, unless the person
+    // has deliberately picked a different one.
+    if (qs('[data-currency-picker]', form).dataset.userSet !== 'true') setCurrency(ctx, account.currency);
+    if (form.elements.to_account_id.value === account.id) {
+      form.elements.to_account_id.value = form.elements.kind.value === 'transfer'
+        ? (accountRows.find((a) => a.id !== account.id)?.id || '') : '';
+    }
+  }
+  syncAccounts(ctx);
 }
 
 function attachHandlers(ctx) {
   const { form, accountRows, editing } = ctx;
 
-  delegate(form, 'change', '[name="type"]', () => syncType(ctx));
+  delegate(form, 'change', '[name="kind"]', () => syncKind(ctx));
 
-  // THE FAST PATH: a tile chooses the category and saves. When correcting an
-  // entry it only chooses - a correction is a deliberate act and gets its own
-  // Save - and without an amount it chooses and asks for the amount.
-  delegate(form, 'click', '[data-cat]', async (_e, button) => {
-    chooseCategory(ctx, button.dataset.cat);
-    if (editing) return;
+  delegate(form, 'click', '[data-cat]', (_e, button) => chooseCategory(ctx, button.dataset.cat));
 
-    // The account used last for this category, unless the person picked one:
-    // the CNG comes out of cash, the electricity bill out of bKash.
-    const tile = ctx.tiles.find((c) => c.id === button.dataset.cat);
-    if (form.dataset.accountSet !== 'true' && tile?.last_account_id && accountRows.some((a) => a.id === tile.last_account_id)) {
-      pickAccountRow(ctx, accountRows.find((a) => a.id === tile.last_account_id));
-    }
-
-    const amount = ctx.pad.value();
-    if (amount === null || amount <= 0) {
-      showError(form, 'amount_minor', 'Type the amount, then tap the category.');
-      return;
-    }
-    form.requestSubmit();
+  delegate(form, 'click', '[data-cat-more]', (_e, button) => {
+    import('../../shared/js/components/menu.js').then(({ menu }) => {
+      menu(button, ctx.categoryRows.map((c) => ({
+        label: c.label,
+        icon: glyphOf(c).icon,
+        onClick: () => chooseCategory(ctx, c.id),
+      })), { align: 'end' });
+    });
   });
 
   delegate(form, 'click', '[data-recent]', (_e, button) => {
@@ -613,57 +597,45 @@ function attachHandlers(ctx) {
     if (row) repeatEntry(ctx, row);
   });
 
-  delegate(form, 'click', '[data-cat-more]', () => {
-    setDetails(form, true);
-    const select = qs('[data-category-select]', form);
-    select.focus();
-    try { select.showPicker?.(); } catch { /* not allowed here: focus will do */ }
-  });
+  delegate(form, 'click', '[data-pick]', async (_e, button) => {
+    const role = button.dataset.pick;
+    const kind = form.elements.kind.value;
+    const other = role === 'to' ? form.elements.account_id.value : form.elements.to_account_id.value;
+    const rows = kind === 'transfer' ? accountRows.filter((a) => a.id !== other) : accountRows;
+    const title = role === 'to' ? 'Move to' : kind === 'income' ? 'Received into' : kind === 'transfer' ? 'Move from' : 'Pay from';
 
-  delegate(form, 'change', '[data-category-select]', (_e, select) => {
-    chooseCategory(ctx, select.value);
-    drawTiles(ctx);
-  });
-
-  delegate(form, 'change', '[name="necessity"]', () => { form.dataset.needSet = 'true'; syncNecessityHint(ctx); });
-  delegate(form, 'change', '[name="occurred_on"]', () => syncChips(ctx));
-
-  delegate(form, 'click', '[data-details-toggle]', () => {
-    setDetails(form, qs('[data-details]', form).hidden);
-  });
-
-  delegate(form, 'click', '[data-pick="account"]', (_e, button) => {
-    pickAccount(button, accountRows, form.elements.account_id.value, (account) => {
-      form.dataset.accountSet = 'true';
-      pickAccountRow(ctx, account);
+    const picked = await pickAccount({
+      title,
+      rows,
+      balances: ctx.balances,
+      selectedId: role === 'to' ? form.elements.to_account_id.value : form.elements.account_id.value,
+      allowUntracked: role === 'to' && ctx.wasDeposit,
     });
+    if (!picked) return;
+    if (role === 'from') form.dataset.accountSet = 'true';
+    setAccount(ctx, role, picked);
+    ctx.draftSoon?.();
   });
 
-  delegate(form, 'click', '[data-pick="to"]', (_e, button) => {
-    const from = form.elements.account_id.value;
-    const options = accountRows.filter((a) => a.id !== from);
-    const untracked = form.elements.type.value === 'deposit'
-      ? [{ id: '', name: 'Not tracked here' }] : [];
-    pickAccount(button, [...options, ...untracked], form.elements.to_account_id.value, (account) => {
-      form.elements.to_account_id.value = account.id;
-      syncChips(ctx);
-    });
-  });
-
-  delegate(form, 'click', '[data-pick="date"]', (_e, button) => {
+  delegate(form, 'click', '[data-pick-date]', (_e, button) => {
     import('../../shared/js/components/menu.js').then(({ menu }) => {
-      const set = (value) => { form.elements.occurred_on.value = value; syncChips(ctx); };
+      const set = (value) => { form.elements.occurred_on.value = value; syncDate(ctx); ctx.draftSoon?.(); };
       menu(button, [
         { label: 'Today', icon: 'calendar', onClick: () => set(today()) },
         { label: 'Yesterday', icon: 'calendar', onClick: () => set(shiftDay(today(), -1)) },
         { label: 'Another day…', icon: 'calendar', onClick: () => {
-          setDetails(form, true);
           const input = form.elements.occurred_on;
-          input.focus();
-          try { input.showPicker?.(); } catch { /* not allowed here: the focused field will do */ }
+          try { input.showPicker(); } catch { input.focus(); }
         } },
-      ], { align: 'start' });
+      ], { align: 'end' });
     });
+  });
+  form.elements.occurred_on.addEventListener('change', () => syncDate(ctx));
+
+  // Enter in the note is "done", not "submit": the keyboard goes away and the
+  // pad is back, with Save where the thumb is.
+  form.elements.note.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); form.elements.note.blur(); }
   });
 
   delegate(form, 'click', '[data-currency-picker]', (_e, button) => openCurrencyPicker(ctx, button));
@@ -690,32 +662,6 @@ function attachHandlers(ctx) {
   }
 }
 
-/** Set the source account, carrying the currency and the transfer's other end with it. */
-function pickAccountRow(ctx, account) {
-  const { form, accountRows } = ctx;
-  form.elements.account_id.value = account.id;
-  // The account's currency becomes the amount's currency, unless the person
-  // has deliberately picked a different one.
-  if (qs('[data-currency-picker]', form).dataset.userSet !== 'true') setCurrency(ctx, account.currency);
-  if (form.elements.to_account_id.value === account.id) form.elements.to_account_id.value = '';
-  if (form.elements.type.value === 'transfer' && !form.elements.to_account_id.value) {
-    form.elements.to_account_id.value = accountRows.find((a) => a.id !== account.id)?.id || '';
-  }
-  syncChips(ctx);
-}
-
-function pickAccount(anchor, rows, selectedId, onPick) {
-  import('../../shared/js/components/menu.js').then(({ menu }) => {
-    menu(anchor, rows.map((a) => ({
-      // The currency is named only when it is not the home one, the same rule
-      // the formatter follows for figures.
-      label: `${a.name}${a.currency && a.currency !== state.currency() ? ` · ${a.currency}` : ''}${a.id === selectedId ? '  ✓' : ''}`,
-      icon: a.id ? accounts.typeOf(a.type).icon : 'arrow-hold',
-      onClick: () => onPick(a),
-    })), { align: 'start' });
-  });
-}
-
 /**
  * The currency button shows what A1's formatter shows for that currency: ৳
  * for the home currency, the code for any other. It carries the code itself in
@@ -729,12 +675,11 @@ function setCurrency(ctx, code) {
   button.classList.toggle('is-code', mark.length > 1);
   button.setAttribute('aria-label', `Currency, ${currencyOf(code).name || code}. Change`);
   // A new minor unit changes what the pad may type — JPY has no point.
-  const dual = qs('[data-long-key]', ctx.form);
-  if (dual) dual.toggleAttribute('data-no-point', currencyOf(code).minorUnit === 0);
+  qs('[data-long-key]', ctx.form)?.toggleAttribute('data-no-point', currencyOf(code).minorUnit === 0);
   ctx.pad?.refresh();
 }
 
-/** A short currency list — the ones in use, then the rest. */
+/** A short currency list. */
 function openCurrencyPicker(ctx, button) {
   import('../../shared/js/components/menu.js').then(({ menu }) => {
     const items = Object.values(CURRENCIES).slice(0, 10).map((c) => ({
@@ -742,6 +687,7 @@ function openCurrencyPicker(ctx, button) {
       onClick: () => {
         button.dataset.userSet = 'true';
         setCurrency(ctx, c.code);
+        syncAccounts(ctx);
       },
     }));
     menu(button, items, { align: 'start' });
@@ -755,55 +701,46 @@ function openCurrencyPicker(ctx, button) {
 async function submit(ctx) {
   const { form, editing, sheet, onSaved, pad } = ctx;
   clearErrors(form);
-
-  const button = qs('[data-save]', form);
   if (form.dataset.busy === 'true') return;   // a second tap while the first is in flight
 
   const code = currencyCode(form);
   const amount = pad.value();
-  const type = form.elements.type.value;
+  const type = kindOf(ctx);
 
   // null rather than 0 for an unreadable figure, precisely so this check can
-  // exist. A silent zero would save a transaction that looks deliberate and is
-  // wrong. A sum that comes out negative is refused the same way: the sign of
+  // exist. A sum that comes out negative is refused the same way: the sign of
   // an entry is its type.
   if (amount === null || amount <= 0) {
-    showError(form, 'amount_minor', amount === null ? 'Enter an amount.' : 'That sum is not a positive amount.');
-    form.elements.amount.focus();
+    showError(form, 'amount_minor', amount === null ? 'Type the amount.' : 'That sum is not a positive amount.');
+    nudge(qs('#entry-amount', form));
     return;
   }
 
-  // A category is asked for, not defaulted. "Uncategorised" is what the lazy
-  // path produces when it is allowed to, and it makes every report useless.
-  // Only when there are categories to choose from: an empty set must not
-  // lock the person out of recording anything.
+  // A category is asked for, not defaulted - but only when there are some to
+  // choose from, or an empty set would lock the person out of recording.
   const categoryId = type === 'transfer' ? null : (form.elements.category_id.value || null);
-  if (type !== 'transfer' && !categoryId && ctx.categoryRows?.length) {
-    showError(form, 'entry', 'Tap a category to save.');
-    qs('[data-cats]', form).classList.remove('is-asking');
-    void qs('[data-cats]', form).offsetWidth;
-    qs('[data-cats]', form).classList.add('is-asking');
+  if (type !== 'transfer' && !categoryId && ctx.categoryRows.length) {
+    showError(form, 'entry', 'Pick a category.');
+    nudge(qs('[data-cats]', form));
     return;
   }
 
+  const button = qs('[data-save]', form);
   form.dataset.busy = 'true';
   button.classList.add('is-busy');
 
-  const category = ctx.categoryRows?.find((c) => c.id === categoryId);
-  // Sent only when the person picked one; otherwise the category's band
-  // applies, on both sides (LedgerWriter::snapshotCategory, api.js create).
-  const necessity = type === 'expense' && form.dataset.needSet === 'true'
-    ? (qs('[name="necessity"]:checked', form)?.value || null) : null;
-
+  const category = ctx.categoryRows.find((c) => c.id === categoryId);
   const payload = {
     type,
     amount_minor: amount,
     currency: code,
     account_id: form.elements.account_id.value,
-    to_account_id: form.elements.to_account_id?.value || null,
+    to_account_id: (type === 'transfer' || type === 'deposit') ? (form.elements.to_account_id.value || null) : null,
     category_id: categoryId,
     category_label: category?.label || null,
-    necessity,
+    // Only a correction carries one - the band the entry already had. A new
+    // entry takes its category's band, on both sides.
+    necessity: type === 'expense' && editing ? (form.elements.necessity.value || null) : null,
     method: form.elements.method.value || null,
     payee: form.elements.payee.value,
     note: form.elements.note.value,
@@ -820,11 +757,6 @@ async function submit(ctx) {
     if (res.reason === 'invalid') {
       const errors = Object.entries(res.errors || {});
       for (const [field, messages] of errors) showError(form, field, messages[0]);
-      // An error for a field that lives behind Details opens Details, so the
-      // message is not hidden in a collapsed region.
-      if (errors.some(([field]) => ['occurred_on', 'category_id', 'payee', 'note', 'method'].includes(field))) setDetails(form, true);
-      // A field with no error slot of its own still gets a message, rather than
-      // the save silently doing nothing.
       if (!errors.some(([field]) => qs(`[data-error="${field}"]`, form))) {
         showError(form, 'entry', errors[0]?.[1]?.[0] || 'Could not save that entry.');
       }
@@ -836,17 +768,34 @@ async function submit(ctx) {
 
   ctx.saved = true;
   storage.remove(KEYS.DRAFT);
-  // A light tick under the thumb says "recorded" before the eye finds the
-  // toast. Where vibrate is missing (iOS, desktop) nothing happens.
+  if (categoryId) prefs.write({ ...prefs.read({}), [categoryId]: payload.account_id });
+
+  // THE SAVE, felt: a tick under the thumb, the Save key turns into a check
+  // and the figure drops into the account it came from, then the sheet goes.
+  // 420ms in all - long enough to register, short enough never to wait for.
   try { navigator.vibrate?.(8); } catch { /* not allowed: fine */ }
+  await celebrate(form);
   sheet.close('saved');
 
-  // What was recorded, in words: the account may have been chosen for the
-  // person by the category, and this is where they see which.
   const account = ctx.accountRows.find((a) => a.id === payload.account_id);
   const parts = [moneyLabel(amount, code), category?.label, account?.name].filter(Boolean);
-  toastOk(`${editing ? 'Corrected' : 'Added'} ${parts.join(' · ')}.`);
+  toastOk(`${editing ? 'Corrected' : 'Saved'} ${parts.join(' · ')}.`);
   onSaved?.(res.data);
+}
+
+/** The save animation. Resolves when it has played (at once without motion). */
+function celebrate(form) {
+  form.classList.add('is-saved');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return new Promise((resolve) => window.setTimeout(resolve, reduced ? 120 : 420));
+}
+
+/** A short shake on whatever needs attention. */
+function nudge(node) {
+  if (!node) return;
+  node.classList.remove('is-nudged');
+  void node.offsetWidth;   // restart the animation on a second nudge
+  node.classList.add('is-nudged');
 }
 
 function showError(form, field, message) {
@@ -854,10 +803,6 @@ function showError(form, field, message) {
   if (!node) return;
   node.textContent = message;
   node.hidden = false;
-  // aria-invalid is the source of truth for the error state, so the styling and
-  // the screen-reader announcement can never disagree.
-  const control = form.elements[field] || form.elements[field.replace('_minor', '')];
-  if (control?.setAttribute) control.setAttribute('aria-invalid', 'true');
 }
 
 function clearError(form, field) {
@@ -867,7 +812,6 @@ function clearError(form, field) {
 
 function clearErrors(form) {
   qsa('[data-error]', form).forEach((node) => { node.hidden = true; node.textContent = ''; });
-  qsa('[aria-invalid]', form).forEach((node) => node.removeAttribute('aria-invalid'));
 }
 
 function saveDraft(ctx) {
@@ -877,20 +821,17 @@ function saveDraft(ctx) {
   if (!pad || ctx.saved || ctx.editing) return;
   const amount = pad.value();
   const note = form.elements.note?.value?.trim();
-  const payee = form.elements.payee?.value?.trim();
-  // Only worth keeping if something was actually typed. A draft holding nothing
-  // but a default type would re-open every new entry pre-filled for no reason;
-  // and clearing the amount clears the draft.
-  if (!amount && !note && !payee) { storage.remove(KEYS.DRAFT); return; }
+  // Only worth keeping if something was actually typed; clearing the amount
+  // and the note clears the draft.
+  if (!amount && !note) { storage.remove(KEYS.DRAFT); return; }
 
   storage.set(KEYS.DRAFT, {
-    type: form.elements.type.value,
+    type: kindOf(ctx),
     amount_minor: amount,
     currency: currencyCode(form),
     account_id: form.elements.account_id.value,
     to_account_id: form.elements.to_account_id.value || null,
     category_id: form.elements.category_id.value || null,
-    necessity: form.dataset.needSet === 'true' ? (qs('[name="necessity"]:checked', form)?.value || null) : null,
     method: form.elements.method.value || null,
     payee: form.elements.payee.value,
     note,
