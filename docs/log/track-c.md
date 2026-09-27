@@ -242,3 +242,20 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
   account saved through the form (branch, tail 6789, number encrypted,
   salary, blue, ৳50,000 opening), the edit form showing a ৳1,250 gap and the
   adjustment button. Screens: scratchpad `c/f1d`, `c/f3d`, `c/f4l`, `c/f4d`.
+
+### Owner override 2 — accounts as their cards
+
+- `account-card.js`: every account printed like its card in the bank's brand
+  colour (A's `bank-logo.js` / institutions) or the colour chosen in the form,
+  with the tile, issuer and branch, account type or network, masked number,
+  name and holder, Default / Below zero pills, and the balance. Ink is white or
+  near-black by contrast; colours reach CSS through `style-vars.js` (moved to
+  accounts; CSP). The list uses it; the account page uses it large as its
+  header, with the last statement's gap and a one-tap adjustment under it.
+- The form's bank picker and wallet tiles now use A's institutions and
+  `bankLogo()`; my stand-in `institutions.json` is deleted.
+- Card grounds for chosen colours are eight deep hexes in `brand.js`, as
+  brand data like A's list (noted for review).
+- Screens: scratchpad `c/k1d` (list, night), `c/k2l` (detail, day).
+- Not done (deadline): step 3, red/green across Home, Accounts, detail and
+  Month.

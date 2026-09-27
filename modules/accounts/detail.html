@@ -66,12 +66,13 @@
              own currency, never converted - this is the one screen where the
              figure should match the bank's app to the poisha. -->
         <section class="acc-hero" aria-labelledby="acc-name">
-          <p class="acc-hero__meta" data-meta></p>
-          <h2 class="acc-hero__name" id="acc-name" data-name>
-            <span class="skeleton skeleton--line"></span>
-          </h2>
-          <div class="acc-hero__balance money" data-balance></div>
+          <h2 class="sr-only" id="acc-name" data-name>Account</h2>
+          <div data-card><div class="acc-card acc-card--hero"><span class="skeleton skeleton--line"></span></div></div>
           <p class="acc-hero__note" data-note hidden></p>
+          <div class="acc-recon" data-recon hidden>
+            <p class="acc-recon__text" data-recon-text></p>
+            <button type="button" class="btn btn--secondary btn--sm" data-recon-adjust hidden></button>
+          </div>
         </section>
 
         <!-- This month through this account: what came in and what went out. -->

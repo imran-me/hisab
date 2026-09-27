@@ -19,6 +19,8 @@ import * as accounts from './backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import * as fx from '../fx/backend/api.js';
 import { openAccountSheet } from './account-form.js';
+import { accountCard } from './account-card.js';
+import { applyStyleVars } from './style-vars.js';
 
 mountShell({ title: 'Accounts' });
 
@@ -105,7 +107,7 @@ function drawTotals({ spendable, held, balances, rates, display }) {
   note.hidden = parts.length === 0;
 }
 
-function drawGroup(host, rows, balances, { empty = null, archived = false } = {}) {
+function drawGroup(host, rows, balances, { empty = null } = {}) {
   if (!rows.length && empty) {
     host.innerHTML = `<li>
       <div class="empty">
@@ -117,47 +119,17 @@ function drawGroup(host, rows, balances, { empty = null, archived = false } = {}
     return;
   }
 
-  host.innerHTML = rows.map((account) => {
-    const type = accounts.typeOf(account.type);
-    const balance = balances[account.id] ?? 0;
-
-    // A credit card's balance is normally negative, and that is not a warning —
-    // it is what a card is. It is coloured only when it is over its limit.
-    const overLimit = type.credit && account.credit_limit_minor && Math.abs(balance) > account.credit_limit_minor;
-    const tone = overLimit ? 'money--out' : (balance < 0 && !type.credit) ? 'money--out' : 'money--flat';
-
-    const available = type.credit && account.credit_limit_minor
-      ? account.credit_limit_minor - Math.abs(Math.min(0, balance))
-      : null;
-
-    // The name has the title line to itself. The Default badge used to sit
-    // inside it, and at 360px it ellipsised "Cash in hand" and then itself;
-    // on the meta line it is a flex:none chip that costs the name nothing.
-    const meta = [type.label, account.institution, account.number_tail ? `••${account.number_tail}` : null]
-      .filter(Boolean).join(' · ');
-
-    return `
-      <li class="acc-item${archived ? ' is-archived' : ''}">
-        <a class="row acc-item__link" href="detail.html?id=${encodeURIComponent(account.id)}">
-          <span class="row__glyph">${icon(type.icon, { class: 'icon' })}</span>
-          <span class="row__main">
-            <span class="row__title">${esc(account.name)}</span>
-            <span class="row__sub">
-              <span>${esc(meta)}</span>
-              ${account.is_default ? '<span class="chip acc-item__badge">Default</span>' : ''}
-            </span>
-          </span>
-          <span class="row__end">
-            <span class="money money--md ${tone}">${formatMoneyHTML(balance, account.currency, { minor: 'never' })}</span>
-            ${available !== null ? `<span class="meta">${esc(moneyLabel(available, account.currency))} available</span>` : ''}
-          </span>
-        </a>
-        <button type="button" class="btn btn--icon btn--sm acc-item__menu" data-account-menu="${esc(account.id)}"
-                aria-label="Actions for ${esc(account.name)}">
-          ${icon('more', { class: 'icon' })}
-        </button>
-      </li>`;
-  }).join('');
+  // Each account as its card, with its actions button over the card's top
+  // corner - beside the link, never inside it, so "…" never navigates.
+  host.innerHTML = rows.map((account) => `
+    <li class="acc-cards__item">
+      ${accountCard(account, balances[account.id] ?? 0, { href: `detail.html?id=${encodeURIComponent(account.id)}` })}
+      <button type="button" class="acc-cards__menu" data-account-menu="${esc(account.id)}"
+              aria-label="Actions for ${esc(account.name)}">
+        ${icon('more', { class: 'icon' })}
+      </button>
+    </li>`).join('');
+  applyStyleVars(host);
 }
 
 /* =========================================================================

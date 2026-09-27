@@ -21,7 +21,7 @@ import { openSheet } from '../../shared/js/components/sheet.js';
 import { toastOk, toastFailure } from '../../shared/js/components/toast.js';
 import * as accounts from './backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
-import { institutions, monogram, lookup, COLOURS } from './brand.js';
+import { banks, wallets, findInstitution, bankLogo, COLOURS } from './brand.js';
 
 /** The five kinds the form starts with, and the account type each files as. */
 const KINDS = [
@@ -78,6 +78,29 @@ const field = (id, label, input, hint = '') => `
 const money = (minor, code) => (minor ? esc(formatMoney(minor, code, { minor: 'auto' })) : '');
 
 /**
+ * Post the one entry that brings the ledger to a statement's figure.
+ *
+ * An ordinary entry, so it shows in the ledger and in the month like any
+ * other: the ledger stays the one source of the balance, and nothing about
+ * it is hidden.
+ *
+ * @param {object} account
+ * @param {number} gap   statement minus derived balance, in minor units
+ * @param {string} on    the statement's date
+ */
+export function postAdjustment(account, gap, on) {
+  return ledger.create({
+    type: gap > 0 ? 'income' : 'expense',
+    account_id: account.id,
+    amount_minor: Math.abs(gap),
+    currency: account.currency,
+    occurred_on: on,
+    payee: 'Balance adjustment',
+    note: `Reconciled to the statement of ${formatDate(on)}`,
+  });
+}
+
+/**
  * @param {object|null} account   an account to edit, or null for a new one
  * @param {object} [opts]
  * @param {number} [opts.balance] the derived balance, for the statement gap
@@ -88,7 +111,6 @@ export async function openAccountSheet(account = null, { balance = null } = {}) 
   const current = editing
     ? (await accounts.details(account.id)).data || account
     : { type: 'cash', currency: state.currency(), opening_on: today() };
-  const cat = await institutions();
   let kind = kindOf(current);
 
   const form = document.createElement('form');
@@ -112,7 +134,7 @@ export async function openAccountSheet(account = null, { balance = null } = {}) 
     <div data-for="bank card" class="field acc-picker">
       <label class="field__label" for="acc-institution" data-institution-label>Bank</label>
       <div class="acc-picker__input">
-        <span class="acc-mark" data-picked-mark aria-hidden="true"></span>
+        <span class="acc-picker__mark" data-picked-mark aria-hidden="true"></span>
         <input class="input" id="acc-institution" name="institution" autocomplete="off"
                value="${esc(current.institution || '')}" placeholder="Search banks, or type a name">
       </div>
@@ -122,10 +144,10 @@ export async function openAccountSheet(account = null, { balance = null } = {}) 
     <fieldset class="fieldset" data-for="mfs">
       <legend class="field__label">Provider</legend>
       <div class="acc-providers">
-        ${cat.wallets.map((w) => `
-          <label class="acc-provider acc-colour--${esc(w.colour)}">
-            <input type="radio" name="provider" value="${esc(w.name)}"${w.name === current.institution ? ' checked' : ''}>
-            <span class="acc-mark">${esc(w.mark)}</span>
+        ${wallets().map((w) => `
+          <label class="acc-provider">
+            <input type="radio" name="provider" value="${esc(w.name)}"${findInstitution(current.institution)?.id === w.id ? ' checked' : ''}>
+            ${bankLogo(w, 36)}
             <span>${esc(w.name)}</span>
           </label>`).join('')}
       </div>
@@ -225,19 +247,19 @@ export async function openAccountSheet(account = null, { balance = null } = {}) 
   const list = qs('[data-picker-list]', form);
 
   const paintMark = () => {
-    const known = lookup(cat, input.value);
+    const known = findInstitution(input.value);
     const mark = qs('[data-picked-mark]', form);
-    mark.textContent = input.value ? (known?.mark || monogram(input.value)) : '';
-    mark.className = `acc-mark acc-colour--${known?.colour || 'slate'}`;
-    mark.hidden = !input.value;
+    mark.innerHTML = known ? bankLogo(known, 36) : '';
+    mark.hidden = !known;
   };
 
   const search = () => {
     const q = input.value.trim().toLowerCase();
-    const hits = cat.banks.filter((b) => !q || b.name.toLowerCase().includes(q) || b.mark.toLowerCase().includes(q)).slice(0, 6);
+    const hits = banks().filter((b) => !q
+      || [b.name, b.short, ...(b.match || [])].some((t) => String(t).toLowerCase().includes(q))).slice(0, 6);
     list.innerHTML = hits.map((b) => `
       <li><button type="button" class="acc-picker__item" data-pick="${esc(b.name)}">
-        <span class="acc-mark acc-colour--${esc(b.colour)}">${esc(b.mark)}</span><span>${esc(b.name)}</span>
+        ${bankLogo(b, 36)}<span>${esc(b.name)}</span>
       </button></li>`).join('');
     list.hidden = hits.length === 0 || document.activeElement !== input;
     paintMark();
@@ -278,18 +300,7 @@ export async function openAccountSheet(account = null, { balance = null } = {}) 
   delegate(form, 'click', '[data-adjust]', async (_e, button) => {
     if (!gap) return;
     button.disabled = true;
-    const on = form.elements.statement_on.value || today();
-    // An adjustment is an ordinary entry, so it shows in the ledger and in
-    // the month like any other: the ledger stays the one source of the balance.
-    const res = await ledger.create({
-      type: gap > 0 ? 'income' : 'expense',
-      account_id: current.id,
-      amount_minor: Math.abs(gap),
-      currency: current.currency,
-      occurred_on: on,
-      payee: 'Balance adjustment',
-      note: `Reconciled to the statement of ${formatDate(on)}`,
-    });
+    const res = await postAdjustment(current, gap, form.elements.statement_on.value || today());
     if (!res.ok) { button.disabled = false; toastFailure(res, 'Could not post the adjustment.'); return; }
     balance += gap;
     toastOk('Adjustment posted. The ledger now matches the statement.');

@@ -1,56 +1,67 @@
 /**
- * Accounts · how an account looks: its institution's mark and its colour
+ * Accounts · how an account looks
  *
- * The banks and wallets the form offers, each with a short mark and the
- * colour it usually wears, come from data/institutions.json. The colour is a
- * token NAME (Account::COLOURS), mapped to a palette token in accounts.css, so
- * nothing here writes a hex and the theme still decides the shade.
+ * The institution, its tile and its brand colour come from Dev A's shared
+ * list (shared/js/data/institutions.js, shared/js/components/bank-logo.js).
+ * This file adds only what an account CARD needs on top: the ground colour
+ * the card is printed in, and the ink that reads on it.
  *
- * A stand-in for Dev A's shared institutions list and bankLogo(): when those
- * land, markFor() returns their logo and the monogram stays as the fallback.
+ * CARD GROUNDS ARE DATA, like the brand colours beside them: the colour a
+ * card is printed in, not a design token. A known bank's card is its brand
+ * colour; an account with a colour chosen in the form, or with no known
+ * institution, is printed in one of eight deep grounds below. The choice the
+ * owner makes is stored as a NAME (Account::COLOURS), never as a hex.
  */
 
-import { siteURL } from '../../shared/js/core/paths.js';
+import { institutions, accountInstitution, findInstitution, bankLogo, accountLogo } from '../../shared/js/components/bank-logo.js';
 
+export { institutions, findInstitution, bankLogo, accountLogo };
+
+/** The colour names an account can wear, in the order the form offers them. */
 export const COLOURS = ['marigold', 'green', 'violet', 'blue', 'rose', 'teal', 'orange', 'slate'];
 
-let catalogue = null;
+/** Deep enough for white lettering on every one; the swatch in the form is the token of the same name. */
+const GROUNDS = {
+  marigold: '#B7791F',
+  green: '#11694A',
+  violet: '#4B3B9A',
+  blue: '#1D4F91',
+  rose: '#A3264F',
+  teal: '#0F6E78',
+  orange: '#B4501A',
+  slate: '#3A4556',
+};
 
-/** @returns {Promise<{banks: object[], wallets: object[]}>} */
-export async function institutions() {
-  if (catalogue) return catalogue;
-  try {
-    catalogue = await fetch(siteURL('modules/accounts/data/institutions.json')).then((r) => r.json());
-  } catch {
-    catalogue = { banks: [], wallets: [] };
-  }
-  return catalogue;
-}
+/** A card with no chosen colour and no brand prints in its type's ground. */
+const BY_TYPE = { cash: 'green', bank: 'blue', mfs: 'rose', card: 'slate', wallet: 'teal', savings: 'violet', investment: 'marigold' };
 
-/** Up to five letters from a name: "Dutch-Bangla Bank" -> "DBB", "bKash" -> "bK". */
-export function monogram(name) {
-  const words = String(name || '').replace(/\b(bank|ltd|limited|plc)\b/gi, '').trim().split(/[\s-]+/).filter(Boolean);
-  if (!words.length) return '·';
-  if (words.length === 1) return words[0].slice(0, 2);
-  return words.map((w) => w[0]).join('').slice(0, 4).toUpperCase();
-}
-
-/** The catalogue entry for an institution name, if it is one we know. */
-export function lookup(cat, name) {
-  const key = String(name || '').trim().toLowerCase();
-  if (!key) return null;
-  return [...cat.banks, ...cat.wallets].find((i) => i.name.toLowerCase() === key) || null;
+/** White or near-black lettering, whichever clears 4.5:1 on the ground. */
+function inkOn(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#FFFFFF';
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const c = parseInt(m[1].slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return (1.05 / (lum + 0.05)) >= 4.5 ? '#FFFFFF' : '#16181D';
 }
 
 /**
- * The mark and colour an account wears: its own colour when one was chosen,
- * else its institution's, else one by type.
+ * How an account's card is printed.
+ *
+ * @returns {{inst: object, ground: string, ink: string, vars: string}}
+ *   `vars` is for data-vars (style-vars.js): the CSP blocks style="".
  */
-export function brandFor(cat, account) {
-  const known = lookup(cat, account.institution);
-  const byType = { cash: 'green', bank: 'blue', mfs: 'rose', card: 'slate', wallet: 'teal', savings: 'violet', investment: 'marigold' };
-  return {
-    mark: known?.mark || monogram(account.institution || account.name),
-    colour: COLOURS.includes(account.colour) ? account.colour : (known?.colour || byType[account.type] || 'slate'),
-  };
+export function cardLook(account) {
+  const inst = accountInstitution(account);
+  const chosen = COLOURS.includes(account.colour) ? GROUNDS[account.colour] : null;
+  const brand = inst && inst.kind !== 'generic' && /^#[0-9a-f]{6}$/i.test(inst.color || '') ? inst.color : null;
+  const ground = chosen || brand || GROUNDS[BY_TYPE[account.type] || 'slate'];
+  const ink = inkOn(ground);
+  return { inst, ground, ink, vars: `card:${ground};card-ink:${ink}` };
 }
+
+/** The picker's lists: banks for a bank or a card's issuer, wallets for mobile money. */
+export const banks = () => institutions.filter((i) => i.kind === 'bank');
+export const wallets = () => institutions.filter((i) => i.kind === 'mfs').slice(0, 4);

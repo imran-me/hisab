@@ -23,7 +23,7 @@ import { mountCompose } from '../ledger/entry-sheet.js';
 import { mountPeriodTop, drawPeriodTop } from './period-top.js';
 import { cumulativeChart, inOutChart } from './charts.js';
 import { insightLine } from './insight-text.js';
-import { applyStyleVars } from './style-vars.js';
+import { applyStyleVars } from '../accounts/style-vars.js';
 
 mountShell({ title: 'Month' });
 mountCompose({ onSaved: () => refresh() });

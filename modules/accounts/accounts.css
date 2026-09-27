@@ -64,23 +64,164 @@
 }
 .acc-net__part--hold dd { color: var(--saved); }
 
-/* ---- An account row ------------------------------------------------------
-   The row is a link to the account; the actions button sits beside it, not
-   inside it, so a tap on "⋯" never navigates. */
-.acc-item { display: flex; align-items: center; min-width: 0; }
-.acc-item__link { flex: 1 1 auto; min-width: 0; padding-inline-end: var(--s-2); }
-.acc-item__menu { flex: none; margin-inline-end: var(--s-2); }
+/* ---- An account, printed as its card -------------------------------------
+   The ground is the bank's colour (or the one chosen in the form) and the ink
+   is white or near-black, whichever reads on it; both arrive as --card and
+   --card-ink from account-card.js through the CSSOM. Everything else on the
+   card is drawn in currentColor, so it is right on any ground. */
+.acc-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-3); }
+.acc-cards__item { position: relative; }
 
-/* The badge is on the meta line and never shrinks; the meta text before it
-   is what gives way. */
-.acc-item__badge { flex: none; }
+.acc-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: 176px;
+  padding: var(--s-4);
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  background: var(--card, var(--bg-3));
+  color: var(--card-ink, var(--text-1));
+  text-decoration: none;
+  box-shadow: var(--shadow-menu);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease-out);
+}
 
-/* An archived account is dimmed but NOT hidden or struck through. It is still
-   a real account with real history behind it; struck-through text says
-   "deleted", which is the one thing archiving specifically is not. */
-.is-archived .row__title,
-.is-archived .money { opacity: 0.55; }
-.is-archived .row__glyph { opacity: 0.4; }
+a.acc-card:active { transform: scale(0.985); }
+a.acc-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* The printed sheen: a light from the top right and two faint rings, all in
+   the card's own ink, so it reads as a card and not as a coloured box. */
+.acc-card__sheen,
+.acc-card__sheen::before,
+.acc-card__sheen::after { position: absolute; pointer-events: none; z-index: -1; }
+
+.acc-card__sheen {
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, currentColor 20%, transparent), transparent 55%),
+    linear-gradient(160deg, transparent 55%, color-mix(in srgb, currentColor 6%, transparent));
+}
+
+.acc-card__sheen::before,
+.acc-card__sheen::after {
+  content: '';
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.acc-card__sheen::before { width: 240px; height: 240px; right: -90px; bottom: -150px; }
+.acc-card__sheen::after  { width: 170px; height: 170px; right: -40px; bottom: -120px; }
+
+.acc-card__top { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.acc-cards__item .acc-card__top { padding-inline-end: 40px; }
+.acc-card__logo { display: inline-flex; flex: none; border-radius: var(--r-md); box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 22%, transparent); }
+
+.acc-card__issuer { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.acc-card__bank {
+  font-family: var(--font-display);
+  font-size: var(--t-section);
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-title);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.acc-card__branch { font-size: var(--fs-12); opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.acc-card__kind {
+  flex: none;
+  padding: 3px var(--s-2);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+
+.acc-card__number {
+  font-family: var(--font-body);
+  font-size: var(--fs-16);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.14em;
+  opacity: 0.92;
+}
+
+.acc-card__foot { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-3); min-width: 0; }
+.acc-card__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acc-card__name { font-size: var(--fs-14); font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); font-size: var(--fs-12); opacity: 0.85; }
+
+.acc-card__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px var(--s-2);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-semibold);
+}
+
+/* A spendable account below zero is an entry missing in real life. */
+.acc-card__pill--warn { background: var(--danger); color: var(--bg-0); }
+
+.acc-card__balance { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; text-align: end; }
+.acc-card__balance-label { font-size: var(--fs-11); opacity: 0.78; }
+.acc-card__balance-label .money__sym { color: inherit; }
+
+.acc-card__figure {
+  font-family: var(--font-display);
+  font-size: var(--fs-23);
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-fig);
+  line-height: var(--lh-flush);
+}
+
+.acc-card__figure .money__sym,
+.acc-card__figure .money__code,
+.acc-card__figure .money__minor { color: inherit; opacity: 0.75; }
+
+.acc-card--hero { min-height: 204px; }
+.acc-card--hero .acc-card__figure { font-size: var(--fs-34); }
+
+/* Archived: still a real account with history, so dimmed, never struck out. */
+.acc-card.is-archived { opacity: 0.6; filter: saturate(0.35); }
+
+/* The last statement against the ledger, under the account's card. */
+.acc-recon {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin-block-start: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+}
+
+.acc-recon__text { margin: 0; font-size: var(--fs-13); color: var(--text-2); }
+.acc-recon__text strong { color: var(--text-1); }
+
+/* The actions button rides on the card's corner, outside the link. */
+.acc-cards__menu {
+  position: absolute;
+  inset-block-start: var(--s-3);
+  inset-inline-end: var(--s-3);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bg-0) 45%, transparent);
+  color: var(--text-1);
+  cursor: pointer;
+}
 
 /* The account form's type picker wraps — seven types of very different label
    lengths, and no side-by-side comparison is being made between them. */
@@ -178,23 +319,6 @@
 .acc-colour--orange   { --acc: var(--warn); }
 .acc-colour--slate    { --acc: var(--move); }
 
-/* An institution's mark: a monogram tile in its colour. */
-.acc-mark {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  min-width: 36px;
-  height: 36px;
-  padding-inline: var(--s-1);
-  border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--acc, var(--text-3)) 18%, transparent);
-  color: var(--acc, var(--text-2));
-  font-family: var(--font-display);
-  font-size: var(--fs-12);
-  font-weight: var(--fw-bold);
-  letter-spacing: 0.02em;
-}
-
 /* =========================================================================
    The form
    ========================================================================= */
@@ -278,7 +402,9 @@
 }
 
 .acc-provider input { position: absolute; opacity: 0; width: 0; height: 0; }
-.acc-provider:has(input:checked) { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 10%, transparent); color: var(--text-1); }
+.acc-provider:has(input:checked) { border-color: var(--accent); background: var(--bg-3); color: var(--text-1); }
+.acc-picker__mark { display: inline-flex; flex: none; }
+.acc-picker__mark:empty { display: none; }
 .acc-provider:has(input:focus-visible) { box-shadow: var(--e-focus); }
 
 /* Colour swatches. */

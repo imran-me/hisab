@@ -23,7 +23,7 @@ import * as accounts from '../accounts/backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import * as fx from '../fx/backend/api.js';
 import { mountPeriodTop, drawPeriodTop } from '../reports/period-top.js';
-import { applyStyleVars } from '../reports/style-vars.js';
+import { applyStyleVars } from '../accounts/style-vars.js';
 import { openEntrySheet, mountCompose } from '../ledger/entry-sheet.js';
 
 // Adding is the tab bar's + (A2), which emits EVENTS.COMPOSE; mountCompose()

@@ -1,5 +1,8 @@
 /**
- * Reports · per-instance CSS values, set the way the CSP allows
+ * Accounts · per-instance CSS values, set the way the CSP allows
+ *
+ * Kept in accounts because Home, Month and the account cards all use it and
+ * all already depend on this module; its natural home is shared/ (Dev A).
  *
  * A bar's width or a segment's colour is data, not styling, so it reaches
  * CSS as a custom property. It CANNOT arrive as a style="" attribute in
