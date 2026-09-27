@@ -7,13 +7,11 @@
  * wallet, Card - where each row shows the logo, the name, the masked number
  * and what is in it right now.
  *
- * The logo is a monogram for now: the initials of the institution (or the
- * account's name) on a disc tinted by the kind of account. Track A is adding
- * a shared bankLogo(); when it lands, logoFor() is the one function that
- * changes.
+ * The logo is Track A's accountLogo() (shared/js/components/bank-logo.js).
  */
 
 import { el, esc, icon, delegate } from '../../shared/js/core/dom.js';
+import { accountLogo } from '../../shared/js/components/bank-logo.js';
 import { moneyLabel } from '../../shared/js/core/money.js';
 import { openSheet } from '../../shared/js/components/sheet.js';
 import * as accounts from '../accounts/backend/api.js';
@@ -28,7 +26,9 @@ const GROUPS = [
 ];
 
 /**
- * A small round logo for an account.
+ * An account's logo: Track A's tile for its bank or wallet (the brand's own
+ * logo or monogram, matched from the institution field or the name), or a
+ * neutral disc for "not tracked here".
  *
  * @param {object} account
  * @param {object} [opts]
@@ -38,15 +38,7 @@ export function logoFor(account, { size = 'md' } = {}) {
   if (!account?.id) {
     return `<span class="acct-logo acct-logo--${size} acct-logo--none" aria-hidden="true">${icon('arrow-hold', { class: 'icon icon--sm' })}</span>`;
   }
-  const source = (account.institution || account.name || '?').trim();
-  // Two letters from two words ("Dutch-Bangla" → DB, "Cash in hand" → CI),
-  // or the first two of one word ("bKash" → BK). Letters only: a digit in a
-  // monogram reads as a balance.
-  const words = source.split(/[\s\-_/&.]+/).filter((w) => /\p{L}/u.test(w));
-  const letters = words.length > 1
-    ? words[0][0] + words[1][0]
-    : (words[0] || source).replace(/[^\p{L}]/gu, '').slice(0, 2);
-  return `<span class="acct-logo acct-logo--${size} acct-logo--${esc(account.type || 'cash')}" aria-hidden="true">${esc(letters.toUpperCase() || '?')}</span>`;
+  return `<span class="acct-logo acct-logo--${size} acct-logo--tile">${accountLogo(account, size === 'sm' ? 18 : 40)}</span>`;
 }
 
 /** "•• 4521", or nothing when no tail is stored. Only the tail ever is. */

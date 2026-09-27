@@ -19,6 +19,11 @@
    same corners without making the card a scroll container. */
 .ledger-card { overflow: clip; }
 
+/* The filter bar and the day headings are both sticky at --z-sticky, and the
+   headings come later in the page, so a heading being pushed out slid OVER
+   the (translucent) bar. The bar is the one that has to win. */
+.page > .sticky-bar { z-index: calc(var(--z-sticky) + 1); }
+
 .ledger-day > .list-group-head {
   top: calc(var(--header-h) + var(--safe-top) + var(--ledger-bar-h, 0px));
 }

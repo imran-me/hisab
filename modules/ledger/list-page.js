@@ -18,6 +18,7 @@ import * as ledger from './backend/api.js';
 import * as accounts from '../accounts/backend/api.js';
 import * as fx from '../fx/backend/api.js';
 import { openEntrySheet, mountCompose } from './entry-sheet.js';
+import { rowLook, entryRowHTML } from './row.js';
 
 // No header actions: adding an entry is the tab bar's + and nothing else
 // (docs/DIRECTION.md §3.2). Three buttons for one job was two too many.
@@ -107,7 +108,8 @@ async function refresh() {
   ]);
 
   drawTotals(summaryRes.data, display);
-  drawList(listRes.data, accountRes.data, display, rates);
+  const look = await rowLook({ rows: listRes.data, book });
+  drawList(listRes.data, look, display, rates);
 
   // Announced rather than left silent: a screen-reader user filtering a list
   // gets no feedback at all from the list simply changing underneath them.
@@ -128,7 +130,7 @@ function drawTotals(summary, display) {
     </div>`;
 }
 
-function drawList(rows, accountRows, display, rates) {
+function drawList(rows, look, display, rates) {
   const host = qs('[data-list]');
 
   if (!rows.length) {
@@ -143,13 +145,6 @@ function drawList(rows, accountRows, display, rates) {
       </div></li>`;
     return;
   }
-
-  const byId = new Map(accountRows.map((a) => [a.id, a]));
-
-  // Which of these rows has been cancelled. Derived once per render rather than
-  // per row: entryRow() is called for every visible entry, and a scan inside it
-  // would be quadratic on a busy month.
-  const reversedIds = new Set(rows.filter((r) => r.reverses_id).map((r) => r.reverses_id));
 
   // Grouped by day, with the day's net beside the heading. The net is what
   // makes a day heading worth its row — "Sat 5 Sep" alone is a divider, "Sat 5
@@ -198,79 +193,24 @@ function drawList(rows, accountRows, display, rates) {
           </span>
         </div>
         <ul class="list">
-          ${dayRows.map((row) => entryRow(row, byId, reversedIds)).join('')}
+          ${dayRows.map((row) => entryRowHTML(row, look, { cells: desktopCells(row, look) })).join('')}
         </ul>
       </li>`;
   }).join('');
 }
 
-function entryRow(row, byId, reversedIds) {
-  const type = ledger.typeOf(row.type);
-  const account = byId.get(row.account_id);
-  const amount = row.direction === 'in' ? row.amount_minor : -row.amount_minor;
-
-  // The necessity band is shown only where it means something — on an expense.
+/**
+ * The wide-screen columns (above 900px). The row itself is the shared one in
+ * row.js; only these cells are the Ledger's own, because only the Ledger lays
+ * entries out as a table.
+ */
+function desktopCells(row, look) {
   const band = row.type === 'expense' && row.necessity
     ? `<span class="chip chip--need-${row.necessity}">${esc(bandLabel(row.necessity))}</span>` : '';
-
-  // What this row IS, in the history of the money — the part that makes a
-  // corrected ledger readable rather than merely honest. Without it the
-  // History view is three near-identical rows and no way to tell which is
-  // which.
-  const isReversal = Boolean(row.reverses_id);
-  const wasReversed = reversedIds.has(row.id);
-  const isReplacement = Boolean(row.corrects_id);
-
-  const mark = isReversal
-    ? '<span class="chip chip--warn">Reversal</span>'
-    : wasReversed
-      ? '<span class="chip">Reversed</span>'
-      : isReplacement
-        ? '<span class="chip chip--in">Corrected</span>'
-        : '';
-
-  // The reason belongs beside the row it explains. A reason nobody sees next to
-  // the entry may as well not have been asked for.
-  const why = isReversal && row.reversal_reason
-    ? `<span aria-hidden="true">·</span><span>${esc(row.reversal_reason)}</span>` : '';
-
-  // A cancelled entry is struck through and dimmed: it is still part of the
-  // record, and it no longer counts. Saying that visually is cheaper than
-  // explaining it.
-  const stateClass = (isReversal || wasReversed) ? ' row--void' : '';
-
-  // The same row, in cells.
-  //
-  // CONVENTIONS.md: mobile is the primary target and the desktop layout is the
-  // enhancement, so this is ONE markup that reflows rather than two renderers.
-  // Below 900px the cells are hidden and their content stays in the sub-line,
-  // where it already read well at 360px; above it they become columns under a
-  // header. Two renderers would drift, and the narrow one is the one that
-  // matters most.
   return `
-    <li>
-      <button type="button" class="row row--ledger${stateClass}" data-edit="${esc(row.id)}">
-        <span class="row__glyph row__glyph--${type.tone}">${icon(type.icon, { class: 'icon' })}</span>
-
-        <span class="row__main">
-          <span class="row__title">${esc(row.payee || row.category_label || type.label)}</span>
-          <span class="row__sub">
-            ${row.category_label ? `<span>${esc(row.category_label)}</span><span aria-hidden="true">·</span>` : ''}
-            <span>${esc(account?.name || 'Unknown account')}</span>
-            ${why}
-          </span>
-        </span>
-
-        <span class="row__cell row__cell--category">${esc(row.category_label || '—')}</span>
-        <span class="row__cell row__cell--need">${band || mark || ''}</span>
-        <span class="row__cell row__cell--method">${esc(methodLabel(row.method) || '—')}</span>
-
-        <span class="row__end">
-          <span class="money money--md money--${type.tone}">${formatMoneyHTML(amount, row.currency, { sign: 'always' })}</span>
-          <span class="row__end-mark">${mark || ''}</span>
-        </span>
-      </button>
-    </li>`;
+    <span class="row__cell row__cell--category">${esc(row.category_label || '—')}</span>
+    <span class="row__cell row__cell--need">${band}</span>
+    <span class="row__cell row__cell--method">${esc(methodLabel(row.method) || '—')}</span>`;
 }
 
 /* The band labels live in the categories module's seed data, but rendering a

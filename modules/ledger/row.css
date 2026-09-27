@@ -6,30 +6,36 @@
    ========================================================================= */
 
 /* ---- An account's logo --------------------------------------------------
-   A monogram disc until Track A's bankLogo() lands. Tinted by the kind of
-   account - the pink of a mobile wallet, the blue of a bank - so the kind
-   reads before the letters do. */
+   The tile itself is Track A's (bank-logo.js); this is only its box. The
+   untracked case is a neutral disc. */
 .acct-logo {
-  --logo: var(--text-3);
   flex: none;
   display: inline-grid;
   place-items: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--logo) 18%, transparent);
-  color: var(--logo);
-  font-family: var(--font-body);
-  font-weight: var(--fw-bold);
-  letter-spacing: .02em;
-  line-height: 1;
+  line-height: 0;
 }
 
-.acct-logo--md { width: 40px; height: 40px; font-size: var(--fs-13); }
-.acct-logo--sm { width: 18px; height: 18px; font-size: .5625rem; }
+.acct-logo--md { width: 40px; height: 40px; }
+.acct-logo--sm { width: 18px; height: 18px; }
+.acct-logo--tile > * { width: 100%; height: 100%; }
 
-.acct-logo--cash       { --logo: var(--in); }
-.acct-logo--bank       { --logo: var(--cat-transport); }
-.acct-logo--mfs        { --logo: var(--cat-health); }
-.acct-logo--wallet     { --logo: var(--cat-mobile); }
-.acct-logo--card       { --logo: var(--cat-home); }
-.acct-logo--savings,
-.acct-logo--investment { --logo: var(--saved); }
+.acct-logo--none {
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-3) 18%, transparent);
+  color: var(--text-3);
+}
+
+/* ---- The ledger row ------------------------------------------------------
+   The owner's rule for rows: an expense amount in red, income in green, a
+   category icon in a colour circle, and the account's logo. Built on the
+   shared .row; these rules only add what a ledger entry has. */
+.entry-row .row__glyph {
+  border-radius: 50%;
+}
+
+.entry-row .row__sub { gap: 6px; }
+.entry-row__account { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.entry-row__account .acct-logo { border-radius: 4px; overflow: hidden; }
+.entry-row__account > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Amount colours come from the shared formatter (money--in / money--out). */

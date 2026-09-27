@@ -298,3 +298,24 @@ category → Save.
 session scratchpad under `devb/owner/`): expense, income, transfer and the
 picker. Saving 120 + Transport + note stored `expense` 12000 Transport,
 necessity 1 from the category, the note. Ledger harness 40, check-pages ok.
+
+## Ledger rows to the owner's rule, and one exported row renderer (C's request 3)
+
+`modules/ledger/row.js` exports `rowLook()` (accounts, categories and the
+reversed set, fetched once per render) and `entryRowHTML(row, look, opts)`:
+a category icon in its colour circle (the type's glyph for a transfer), the
+title (payee, else the note, else the category), the category and the
+account's logo + name on the sub-line, and the amount through the shared
+formatter with `type` so an expense is red with − and income green with +
+(a reversal mirror is coloured by its sign), `minor: 'never'`. Options:
+`showAccount: false` for an account's own screen, `after` for a running
+balance line, `cells` for the Ledger's wide-screen columns. Its CSS
+(`row.css`) loads itself. **For C:** Home's Today and account detail can drop
+their local `entryRow()` for this.
+
+Account logos are now A's `accountLogo()` (bank-logo.js) everywhere in the
+ledger, sheet and picker. Also fixed: a day heading being pushed out slid over
+the translucent filter bar (same z-index, later in the page).
+
+**Verified** at 360×780, dark and day: rows show tinted circles, bKash's pink
+tile, red −৳ amounts, the note as the title. No overflow.
