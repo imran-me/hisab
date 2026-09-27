@@ -134,6 +134,38 @@ function check(label, condition) {
     check('and moves the taka balance by its taka value, not by 12.99',
       cash.currency === 'USD' || beforeUsd - afterUsd === convert(1299, 'USD', cash.currency, snap));
 
+    // --- the draft survives the sheet being dismissed ------------------------
+    // It was never written: sheet.js removes the sheet before onClose runs,
+    // and the draft's isConnected guard returned every time.
+    {
+      const { storage, KEYS } = await import('../shared/js/core/storage.js');
+      const { openEntrySheet } = await import('../modules/ledger/entry-sheet.js');
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const until = async (sel) => { for (let i = 0; i < 80 && !document.querySelector(sel); i++) await wait(50); };
+      storage.remove(KEYS.DRAFT);
+
+      let sheet = await openEntrySheet({});
+      await until('[data-key="2"]');
+      for (const k of ['2', '5', '0']) document.querySelector(`[data-key="${k}"]`).click();
+      await wait(400);
+      check('draft: typing writes it, before any close', storage.get(KEYS.DRAFT, null)?.amount_minor === 25000);
+
+      sheet.close('backdrop');
+      await wait(600);
+      check('draft: still there after the sheet is dismissed', storage.get(KEYS.DRAFT, null)?.amount_minor === 25000);
+
+      sheet = await openEntrySheet({});
+      await until('[data-key="2"]');
+      check('draft: the reopened sheet shows it', document.querySelector('#entry-amount')?.value === '250');
+
+      // Clearing the amount clears the draft.
+      for (let i = 0; i < 4; i++) document.querySelector('[data-key="back"]').click();
+      await wait(400);
+      check('draft: clearing the amount clears it', storage.get(KEYS.DRAFT, null) === null);
+      sheet.close('closed');
+      await wait(600);
+    }
+
     // --- the entry sheet's number pad ------------------------------------------
     // Pure functions, so they are checked here without opening a sheet. The
     // pad is the only way an amount gets typed on a phone, so what it refuses

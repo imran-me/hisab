@@ -131,6 +131,7 @@ async function open(opts) {
     body: form,
     onClose: (reason) => {
       current = null;
+      document.removeEventListener('visibilitychange', ctx.onHidden);
       // A dismissed NEW entry keeps its draft; a saved or cancelled edit does
       // not. Keeping a draft from an edit would re-open it as a new entry.
       if (!editing && reason !== 'saved') saveDraft(ctx);
@@ -138,6 +139,21 @@ async function open(opts) {
   });
   sheet.el.classList.add('sheet--entry');
   ctx.sheet = sheet;
+
+  // THE DRAFT, written as it is typed. It used to be written only from
+  // onClose, and sheet.js removes the sheet before calling onClose, so the
+  // `form.isConnected` guard returned every time and no draft was ever kept.
+  // Written on every change instead (debounced), and at once when the page is
+  // hidden - a phone call, a switch to bKash to check a balance - because a
+  // hidden tab may be killed without any further event.
+  if (!editing) {
+    let timer = 0;
+    ctx.draftSoon = () => { window.clearTimeout(timer); timer = window.setTimeout(() => saveDraft(ctx), 250); };
+    ctx.onHidden = () => { if (document.visibilityState === 'hidden') saveDraft(ctx); };
+    document.addEventListener('visibilitychange', ctx.onHidden);
+    form.addEventListener('input', () => ctx.draftSoon());
+    form.addEventListener('change', () => ctx.draftSoon());
+  }
 
   await renderForm(ctx, initial);
 
@@ -318,6 +334,7 @@ async function renderForm(ctx, initial) {
     result: qs('[data-result]', form),
     code: () => currencyCode(form),
     initial: bufferFor(initial.amount_minor, cur),
+    onChange: () => ctx.draftSoon?.(),
   });
 
   setCurrency(ctx, cur);
@@ -489,6 +506,7 @@ function chooseCategory(ctx, id) {
   clearError(form, 'category_id');
   clearError(form, 'entry');
   syncNecessityHint(ctx);
+  ctx.draftSoon?.();
 }
 
 function attachHandlers(ctx) {
@@ -739,6 +757,7 @@ async function submit(ctx) {
     return;
   }
 
+  ctx.saved = true;
   storage.remove(KEYS.DRAFT);
   // A light tick under the thumb says "recorded" before the eye finds the
   // toast. Where vibrate is missing (iOS, desktop) nothing happens.
@@ -774,13 +793,18 @@ function clearErrors(form) {
   qsa('[aria-invalid]', form).forEach((node) => node.removeAttribute('aria-invalid'));
 }
 
-function saveDraft({ form, pad }) {
-  if (!form.isConnected || !pad) return;
+function saveDraft(ctx) {
+  const { form, pad } = ctx;
+  // Not after a save: a debounced write landing a moment later would bring
+  // back the entry that was just recorded.
+  if (!pad || ctx.saved || ctx.editing) return;
   const amount = pad.value();
   const note = form.elements.note?.value?.trim();
+  const payee = form.elements.payee?.value?.trim();
   // Only worth keeping if something was actually typed. A draft holding nothing
-  // but a default type would re-open every new entry pre-filled for no reason.
-  if (!amount && !note) return;
+  // but a default type would re-open every new entry pre-filled for no reason;
+  // and clearing the amount clears the draft.
+  if (!amount && !note && !payee) { storage.remove(KEYS.DRAFT); return; }
 
   storage.set(KEYS.DRAFT, {
     type: form.elements.type.value,

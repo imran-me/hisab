@@ -214,3 +214,18 @@ The browser never sends `fx_rate_id` today, so no client change.
 
 **Verified:** php artisan test 149 passed (2 new: another pair refused with
 nothing written; the inverse pair refused).
+
+## B4 — The draft works (review round 3, Medium)
+
+The draft was only written from `onClose`, after `sheet.js` had already removed
+the sheet, so `if (!form.isConnected) return;` returned every time. It is now
+written on every change (debounced 250ms: pad keys, tiles, any field), at once
+on `visibilitychange` → hidden (a phone call; a hidden tab may be killed with
+no further event), and on dismiss. It is never written after a save (a late
+debounced write would resurrect the saved entry) or for a correction. Clearing
+the amount (and payee and note) removes it. The reopened sheet shows the
+amount selected, so the first digit replaces it.
+
+**Verified:** ledger harness 39 (4 new, driving the real sheet: typing writes
+the draft before any close; it survives a dismiss; the reopened sheet shows
+250; clearing the amount clears it).
