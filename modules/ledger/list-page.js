@@ -31,6 +31,17 @@ const filters = { type: '', q: '', includeReversed: false };
    one place. */
 mountCompose({ onSaved: refresh });
 
+/* The day headings stick just under the filter bar, which is itself sticky and
+   changes height (the search field opens inside it). Measured rather than
+   guessed, and handed to the CSS as a custom property. */
+const filterBar = qs('.sticky-bar');
+if (filterBar && 'ResizeObserver' in window) {
+  new ResizeObserver(([entry]) => {
+    const height = entry.borderBoxSize?.[0]?.blockSize ?? filterBar.offsetHeight;
+    document.documentElement.style.setProperty('--ledger-bar-h', `${Math.round(height)}px`);
+  }).observe(filterBar);
+}
+
 delegate(document.body, 'click', '[data-type]', (_event, button) => {
   filters.type = button.dataset.type;
   qsa('[data-type]').forEach((b) => b.classList.toggle('is-active', b === button));
@@ -173,14 +184,23 @@ function drawList(rows, accountRows, display, rates) {
       rates,
     ).amountMinor;
 
+    // One <li> per DAY, holding its heading and its own list. A sticky
+    // heading sticks within its parent, so with each day in its own box the
+    // current day's heading pushes the previous one out instead of every
+    // heading in the month piling up at the same spot over the rows - which
+    // is what hid today's entries when they were all siblings of one <ul>.
     return `
-      <li class="list-group-head">
-        <span>${esc(formatDayLabel(day))}</span>
-        <span class="money money--sm ${net < 0 ? 'money--out' : net > 0 ? 'money--in' : 'money--flat'}">
-          ${formatMoneyHTML(net, display, { sign: 'always', code: false })}
-        </span>
-      </li>
-      ${dayRows.map((row) => entryRow(row, byId, reversedIds)).join('')}`;
+      <li class="ledger-day">
+        <div class="list-group-head">
+          <span>${esc(formatDayLabel(day))}</span>
+          <span class="money money--sm ${net < 0 ? 'money--out' : net > 0 ? 'money--in' : 'money--flat'}">
+            ${formatMoneyHTML(net, display, { sign: 'always', code: false })}
+          </span>
+        </div>
+        <ul class="list">
+          ${dayRows.map((row) => entryRow(row, byId, reversedIds)).join('')}
+        </ul>
+      </li>`;
   }).join('');
 }
 

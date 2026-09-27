@@ -11,6 +11,27 @@
    label is quieter than it is on the dashboard. */
 .ledger-totals .stat { background: var(--surface); }
 
+/* ---- Day headings that do not hide the day ------------------------------
+   .card--flush clips with overflow:hidden, and an overflow:hidden ancestor
+   becomes the box a sticky heading sticks in. Every heading then sat
+   --header-h below the TOP OF THE CARD, on top of the first rows, which is
+   why today's entry vanished the moment it was saved. overflow:clip clips the
+   same corners without making the card a scroll container. */
+.ledger-card { overflow: clip; }
+
+.ledger-day > .list-group-head {
+  top: calc(var(--header-h) + var(--safe-top) + var(--ledger-bar-h, 0px));
+}
+
+/* The day's net in the display face: the mono's minus at this size is short
+   enough to read as a hyphen, and a sign is the one character here that
+   must not be mistaken. It is U+2212 either way (formatMoneyHTML). */
+.ledger-day > .list-group-head .money { font-family: var(--font-display); }
+
+/* The day's own list sits flush under its heading: the heading's bottom rule
+   already separates them. */
+.ledger-day > .list > li:first-child { border-top: 0; }
+
 /* The entry sheet has its own stylesheet, entry-sheet.css, because it also
    opens on pages that do not load this one. */
 

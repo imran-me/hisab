@@ -72,3 +72,29 @@ asks. **Not done:** the client `summary()` in `ledger/backend/api.js` still
 converts at today's rate rather than the snapshot/as-of rate, so Home can
 differ from the server by the rate drift on foreign rows. The fix is for the
 client to read the server's figure when a backend is present; queued after B3.
+
+## Review round 3, High — the entry you just added is visible (B5, part one)
+
+Cause: `.card--flush` has `overflow: hidden`, which makes the card the box a
+sticky heading sticks in. Every day heading sat `--header-h` below the top of
+the CARD, over the first rows, so today's entry was covered the moment it was
+saved. The Ledger's card now uses `overflow: clip` (`.ledger-card`), which
+clips the corners without becoming a scroll container. Each day is its own
+`<li class="ledger-day">` with its own `<ul>`, so one heading sticks at a time
+and pushes the last out; they stick under the filter bar, whose height is
+measured (ResizeObserver → `--ledger-bar-h`).
+
+**For A:** the same `overflow: hidden` on `.card--flush` in `_surfaces.css`
+causes the Overview Recent bug; `overflow: clip` there fixes it everywhere.
+The day net is U+2212 (checked in the DOM); it reads as a hyphen because of
+the face at that size, so the Ledger's day net now uses the display face.
+
+**Verified:** 360×780 signed in: `?compose=1` → 1-6-5 → Save shows TODAY with
+both of today's rows under it and the toast; scrolled, the current day's
+heading sits under the filter bar and the rows scroll beneath it. No overflow.
+Ledger harness still 33.
+
+A2 landed while this was in flight, so the Ledger's FAB markup is removed too
+(B1's pending item). Checked: the tab bar's + opens the entry sheet on the
+Ledger through `mountCompose()` (`EVENTS.COMPOSE` is `'compose:requested'`,
+the same string B1 used as its fallback).
