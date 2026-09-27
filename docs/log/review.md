@@ -15,6 +15,95 @@ and `tools/shoot-mobile.mjs` at 360×780.
 
 ---
 
+## Round 3 — `5b8c310` (Track B: type the amount on a pad in the sheet)
+
+Author and email are correct, with no AI attribution, and every file touched
+is inside Track B's ownership. This is the biggest improvement in the app so
+far. The sheet now opens on a pad, Save sits in the thumb's corner, and the
+system keyboard never appears. Driven in headless Chrome at 360: `+` → 1 2 0
++ 4 5 . 5 5 5 → Save stored **`amount_minor` 16555, BDT, expense**. The third
+decimal was refused as designed, and the toast read "Added ৳165.55".
+
+The numpad maths were checked in node: `12.999` → 12.99, `005` → 5,
+`120+45` → 16500, `.5` → 50, and 13 nines are capped at 12 whole digits. KWD
+keeps 3 places, and pressing `+` then `-` replaces the operator rather than
+stacking it. The whole path is in integers.
+
+### High: the entry you just added cannot be seen. Owner: B (B5)
+
+- After saving, the Ledger shows a **TODAY −165.55** heading with **no row
+  under it** (`r3/saved`). The row is hidden behind the stacked sticky day
+  headers, and a ghost strip at the top of the list shows a clipped icon.
+- DIRECTION.md §1 already names this bug. B1 now makes it the first thing the
+  owner sees after every save. It confirms nothing and looks like a failed
+  save.
+- Pull B5's sticky-header fix forward, ahead of B2/B3.
+
+### Medium: the fast path records "Uncategorised · Discretionary". Owner: B (B2)
+
+- The quick-add path is `+`, digits, Save. With category moved behind
+  **Details**, that path now stores `category_label` **null** and `necessity`
+  **3** (Discretionary). Checked in the database for the entry above.
+- The old form at least showed the dropdown, so the fast path now produces
+  unusable data more reliably than before. It is fine as a step, but B2's
+  category chips, where a tap saves, have to land before this is used for
+  real. Until then, consider showing the top four categories as chips above
+  the pad, with no ranking endpoint needed yet.
+
+### Medium: the draft is still never written. Owner: B (B4)
+
+- `modules/ledger/entry-sheet.js:120` calls `saveDraft(ctx)` from `onClose`.
+  `shared/js/components/sheet.js:88` has already removed the sheet by then, so
+  the guard `if (!form.isConnected …)` at `entry-sheet.js:633` returns every
+  time.
+- This bug is unchanged, as recorded in STATUS. It is logged again because the
+  new sheet makes the amount the only thing typed, and that is exactly what a
+  phone call now loses.
+
+### Low: the currency on the sheet is still "BDT". Owner: B
+
+- The amount display prefixes **BDT** in mono (`r3/sheet-open`), while every
+  figure elsewhere now shows ৳ (A1).
+- Show ৳ for the home currency, still as a button, so tapping it opens the
+  currency picker. Keep the code for any other currency.
+
+### Low: JPY "1.5" from a hardware keyboard becomes 15. Owner: B
+
+- With `places = 0` the `.` is refused but the next digit is still appended,
+  so `1` `.` `5` typed on a hardware keyboard gives ¥15. The on-screen `.` is
+  disabled for a zero-decimal currency, so only a keyboard can reach this.
+- After a refused `.`, refuse the digit that follows too, or flash the display
+  to show the key was ignored.
+
+### Visual
+
+1. **The pad is good.**
+   - Digits are in the display face, the operator column is a step darker,
+     and Save is the only accent. The hierarchy is right.
+   - It already has a `:active` press state (a .97 scale plus a wash) and
+     uses the token radius `--r-2`, so a still screenshot undersells it.
+   - The one step from competent to crafted: add a short haptic on key press
+     for Android (A8's helper, off by default) and a quick tick on the
+     `= ৳165` result line when the sum changes.
+2. **The title bar costs 70px of the sheet for the words "New entry".**
+   - The Out/In/Save/Move segment already says what the sheet is. Fold the
+     title into the drag handle row, or drop it and keep the ×, and give the
+     70px to the amount.
+3. **Details opens upward over the amount.**
+   - The amount scrolls up to the top of the sheet. The "Was it worth it?"
+     chips wrap and cut **Avoidable** at the scroll edge (`r3/sheet-details`).
+   - Keep the amount pinned, and put the four necessity choices on a single
+     4-up segmented row as the type control does. They fit at 360 with the
+     short labels (Must / Need / Want / Waste, or similar; the owner should
+     choose the words).
+4. **The empty amount shows a huge grey `0`.**
+   - It is the largest thing on screen, and it is a placeholder. Use the same
+     size at `--ink-4`, with a blinking caret after it (`@keyframes` on
+     opacity, off under reduced motion), so the display reads as "type here"
+     rather than "you have ৳0".
+
+---
+
 ## Round 2 — `0b934dc` (Track A: make money fit a 360px phone)
 
 Author and email are correct, with no AI attribution. `test-money.mjs` passes
