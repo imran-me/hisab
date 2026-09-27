@@ -129,6 +129,21 @@ function matches(row, f) {
  * about a half-applied transfer.
  */
 export async function create(input) {
+  return record(input, { sync: true });
+}
+
+/**
+ * Build the legs, write them locally, and - when `sync` - send them.
+ *
+ * update() calls this with sync:false. It used to call create(), which POSTed
+ * the replacement as an ordinary new entry, and then PATCHed the original,
+ * which on the server reverses it AND records its own replacement. Every
+ * correction therefore left the server holding the new amount TWICE - once
+ * corrected, once as a stray entry nothing pointed at - and every total
+ * counted it twice. The local replacement is built here; the server builds its
+ * own from the PATCH.
+ */
+async function record(input, { sync }) {
   const errors = await validate(input);
   if (Object.keys(errors).length) return { ok: false, reason: 'invalid', errors };
 
@@ -226,10 +241,17 @@ export async function create(input) {
 
   rows.push(...legs);
   persist(rows);
+  if (!sync) return { ok: true, data: legs[0] };
   emit(EVENTS.TRANSACTION_CREATED, legs[0]);
 
   if (await hasBackend()) {
     const res = await post('/ledger', {
+      // The source leg's own ULID, so the row this device holds and the row
+      // the server holds are the same row. Without it, reversing or undoing
+      // an entry in the same session sent an id the server had never seen.
+      // A retry of the same POST is refused as a duplicate id, not recorded
+      // twice.
+      id: legs[0].id,
       type, amount_minor: amount, currency,
       account_id: input.account_id, to_account_id: input.to_account_id || null,
       category_id: base.category_id, necessity: base.necessity, method: base.method,
@@ -317,7 +339,7 @@ export async function update(id, changes, reason = 'Corrected') {
 
   // The replacement goes through create(), so it is built by exactly the same
   // code as any other entry - including the FX snapshot and the paired leg.
-  const replacement = await create({
+  const replacement = await record({
     type: merged.type,
     account_id: merged.account_id,
     to_account_id: merged.to_account_id ?? row.counter_account_id ?? null,
@@ -330,9 +352,9 @@ export async function update(id, changes, reason = 'Corrected') {
     note: merged.note ?? null,
     occurred_on: merged.occurred_on,
     book: merged.book,
-  });
+  }, { sync: false });
 
-  if (!replacement.ok) return replacement;
+  if (!replacement.ok) { persist(rows.filter((r) => !mirrors.includes(r))); return replacement; }
 
   const after = await load();
   const fresh = after.find((r) => r.id === replacement.data.id);
@@ -342,7 +364,15 @@ export async function update(id, changes, reason = 'Corrected') {
 
   if (await hasBackend()) {
     const res = await patch(`/ledger/${id}`, { ...changes, reason });
-    if (!res.ok && res.reason !== 'offline') return res;
+    if (!res.ok && res.reason !== 'offline') {
+      // Refused by the server: this device must not keep a correction the
+      // server does not have.
+      persist(after.filter((r) => !mirrors.includes(r) && r.id !== replacement.data.id));
+      return res;
+    }
+    // The server minted its own ids for the mirror and the replacement. The
+    // next read takes them, so a later reversal names a row the server knows.
+    if (res.ok) memo = null;
   }
 
   return { ok: true, data: replacement.data };
@@ -376,7 +406,15 @@ export async function reverse(id, reason = 'Reversed') {
 
   if (await hasBackend()) {
     const res = await post(`/ledger/${id}/reverse`, { reason });
-    if (!res.ok && res.reason !== 'offline') return res;
+    if (!res.ok && res.reason !== 'offline') {
+      // Refused (a 409 because the server already holds a reversal, say): the
+      // local mirror goes, or this device shows a cancellation the server
+      // does not have.
+      persist(rows);
+      return res;
+    }
+    // The server minted its own ids for the mirrors; take them on next read.
+    if (res.ok) memo = null;
   }
 
   return { ok: true, data: mirrors };

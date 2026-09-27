@@ -98,3 +98,32 @@ A2 landed while this was in flight, so the Ledger's FAB markup is removed too
 (B1's pending item). Checked: the tab bar's + opens the entry sheet on the
 Ledger through `mountCompose()` (`EVENTS.COMPOSE` is `'compose:requested'`,
 the same string B1 used as its fallback).
+
+## Found and fixed: every correction was recorded twice on the server
+
+`ledger/backend/api.js` `update()` built its replacement by calling
+`create()`, which POSTed it as an ordinary new entry, and then PATCHed the
+original, which on the server reverses it AND records its own replacement.
+So each correction made in the app with a backend left three new rows instead
+of two: the mirror, the linked replacement, and a stray copy of the new amount
+that nothing points at and every total counts. Pre-existing (since the
+reversal rule landed); proved on the throwaway DB: one correction went from
+110 to 113 rows, the extra row `corrects_id: null` with the new amount.
+
+Fixed: the local replacement is built by an internal `record(…, { sync: false })`;
+only the PATCH reaches the server. Also: `create()` now sends the source leg's
+ULID, so this device and the server hold the same id (a same-session reverse
+or undo used to name an id the server had never seen); a refused PATCH or
+reverse rolls the local rows back; a successful one drops the cache so the
+server's mirror ids are read next.
+
+**Verified** against the server: create 777 → correct to 778 → reverse leaves
+exactly four rows (original, mirror, replacement linked by `corrects_id`, the
+replacement's mirror). Ledger harness 33 (local path unchanged).
+
+**For the owner / reviewer:** any correction made in the app against the real
+database before this commit left a stray duplicate. They can be found as
+standing rows with `corrects_id` null whose amount, account and type match a
+`corrects_id` row created within a few seconds of them. Not cleaned up here:
+removing rows is not something this app does, so each needs a reversal, and
+which ones to reverse is the owner's call.
