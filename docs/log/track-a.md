@@ -351,3 +351,11 @@ in one commit. The ones that are real v2 tokens (`--surface-inv`,
 
 Verified: the Ledger, Vault and Home at 360 in both themes look the same as
 before the rename; check-pages passes.
+
+## qa-viewport covers every page
+
+`tools/qa-viewport.html` now lists all thirteen pages, adds 320px, and takes
+`?w=` (widths) and `?only=` (page labels). It waits 2.5s per frame, so
+signed-in data renders before it measures. NOT YET RUN end to end: a full
+13 x 3 run behind the serial `php -S` did not finish in 10 minutes, so it
+needs `?only=` batches. Tracked as a follow-up.

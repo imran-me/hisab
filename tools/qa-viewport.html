@@ -16,6 +16,15 @@
   scrollWidth against clientWidth inside it. That is a number, not an
   impression, and it is the same number at any window size.
 
+  Signed in, so the screens render their real data: sign in first in the same
+  browser (the frames share its cookie), or drive it with shoot-mobile:
+
+    PAGES=tools/qa-viewport.html?w=320,360,390 EMAIL=… PASSWORD=… \
+      PROBE="document.getElementById('summary').innerText" node tools/shoot-mobile.mjs
+
+  ?w= picks the widths (default 320,360,390,414,768,1280) and ?only= a comma
+  list of page labels.
+
   Run it two ways:
 
     · open http://localhost:8000/tools/qa-viewport.html in a browser
@@ -60,19 +69,33 @@
 <script type="module">
 /* The screens under test. A new page is added here, and it is checked from the
    next run onward — there is no separate list to keep in step. */
-const PAGES = [
-  { label: 'Overview',        url: '../index.html' },
-  { label: 'Ledger',          url: '../modules/ledger/list.html' },
-  { label: 'Accounts',        url: '../modules/accounts/list.html' },
+const ALL_PAGES = [
+  { label: 'Home',        url: '../index.html' },
+  { label: 'Ledger',      url: '../modules/ledger/list.html' },
+  { label: 'Accounts',    url: '../modules/accounts/list.html' },
+  { label: 'Account',     url: '../modules/accounts/detail.html' },
+  { label: 'Month',       url: '../modules/reports/insights.html' },
+  { label: 'Vault',       url: '../modules/vault/list.html' },
+  { label: 'Settings',    url: '../modules/settings/index.html' },
+  { label: 'Sign in',     url: '../modules/auth/login.html' },
+  { label: 'Business',    url: '../modules/business/list.html' },
+  { label: 'Investments', url: '../modules/investments/list.html' },
+  { label: 'Budgets',     url: '../modules/budgets/list.html' },
+  { label: 'Categories',  url: '../modules/categories/list.html' },
+  { label: 'Not found',   url: '../404.html' },
 ];
+const params = new URLSearchParams(location.search);
+const only = params.get('only')?.split(',').map((s) => s.trim().toLowerCase());
+const PAGES = only ? ALL_PAGES.filter((p) => only.includes(p.label.toLowerCase())) : ALL_PAGES;
 
 /* The widths that matter, and why each one is here:
+     320  the smallest phone still sold (and a 360 phone at large text)
      360  the narrowest Android in real use — the design width
      390  iPhone 13/14/15
      414  the larger iPhone / Android, where a two-up grid first fits
      768  tablet portrait, just below the 900px rail breakpoint
     1280  desktop, with the rail */
-const WIDTHS = [360, 390, 414, 768, 1280];
+const WIDTHS = (params.get('w') || '320,360,390,414,768,1280').split(',').map(Number).filter(Boolean);
 
 const results = [];
 const frames = document.getElementById('frames');
@@ -131,12 +154,12 @@ function measure(iframe, page, width, caption) {
         caption.textContent = `${page.label} · ${width}px · ${row.overflow === 0 ? 'ok' : row.overflow == null ? 'error' : '+' + row.overflow + 'px'}`;
         caption.className = row.overflow === 0 ? 'pass' : 'fail';
         resolve(row);
-      }, 350);
+      }, 2500);
     };
     iframe.addEventListener('load', done, { once: true });
     /* A frame that never fires load (a 404, a blocked request) must not hang
        the whole run — it is reported as an error instead. */
-    setTimeout(done, 6000);
+    setTimeout(done, 9000);
   });
 }
 
