@@ -45,6 +45,9 @@ import { numpadMarkup, attachNumpad, bufferFor } from './numpad.js';
 /** Tiles on the grid: seven categories and More, a 4 × 2 block. */
 const TILES = 7;
 
+/** Recent-entry chips: enough to cover a week's repeats, few enough to scan. */
+const RECENTS = 8;
+
 /**
  * The sheet's stylesheet, loaded once on first open and awaited, so the sheet
  * never paints unstyled for a frame. Resolved against this file rather than the
@@ -267,6 +270,10 @@ async function renderForm(ctx, initial) {
     <input type="hidden" name="account_id" value="${esc(account.id)}">
     <input type="hidden" name="to_account_id" value="${esc(initial.to_account_id || initial.counter_account_id || '')}">
     <input type="hidden" name="category_id" value="${esc(initial.category_id || '')}">
+    <!-- Recent entries (R#2): most of a month is the same fifteen. A chip
+         fills everything and selects the amount, so repeating yesterday's
+         CNG is + and Save. -->
+    <div class="entry__recents" data-recents role="group" aria-label="Repeat a recent entry" hidden></div>
     <p class="field__error entry__error" data-error="account_id" role="alert" hidden></p>
     <p class="field__error entry__error" data-error="to_account_id" role="alert" hidden></p>
 
@@ -370,6 +377,7 @@ async function syncType(ctx, initial = {}) {
   const isIncome = type === 'income';
 
   qs('[data-category-field]', form).hidden = isTransfer;
+  if (isTransfer) qs('[data-recents]', form).hidden = true;
   qs('[data-cats]', form).hidden = isTransfer;
   qs('[data-necessity-field]', form).hidden = type !== 'expense';
   qs('[data-pick="to"]', form).hidden = !(isTransfer || isDeposit);
@@ -403,6 +411,7 @@ async function syncType(ctx, initial = {}) {
     if (chosen && rows.some((c) => c.id === chosen)) form.elements.category_id.value = chosen;
 
     drawTiles(ctx);
+    await drawRecents(ctx, type);
     qs('[data-category-select]', form).innerHTML = `<option value="">Choose a category</option>` +
       rows.map((c) => `<option value="${esc(c.id)}"${c.id === form.elements.category_id.value ? ' selected' : ''}>${esc(c.label)}</option>`).join('');
   }
@@ -450,6 +459,69 @@ function drawTiles(ctx) {
         <span class="entry-cat__glyph">${icon('grid', { class: 'icon' })}</span>
         <span class="entry-cat__label">More</span>
       </button>`;
+}
+
+/**
+ * The recent strip: the last few DISTINCT entries of this type, newest first.
+ *
+ * Built from the rows the ledger already holds - no request - and made
+ * distinct on payee + category + account, because that is what "the same
+ * thing again" means: the CNG from cash is one chip however many times it was
+ * taken, and the CNG paid by bKash is another. A correction's replacement
+ * counts; a reversed entry and its mirror do not, since they are not in the
+ * standing list.
+ */
+async function drawRecents(ctx, type) {
+  const { form, editing, book } = ctx;
+  const host = qs('[data-recents]', form);
+  if (editing) { host.hidden = true; return; }
+
+  const rows = (await ledger.list({ book, type })).data;
+  if (form.elements.type.value !== type) return;
+
+  const seen = new Set();
+  const picks = [];
+  for (const row of rows) {
+    const key = `${(row.payee || '').toLowerCase()}|${row.category_id || ''}|${row.account_id}`;
+    if (seen.has(key) || !(row.payee || row.category_label)) continue;
+    seen.add(key);
+    picks.push(row);
+    if (picks.length >= RECENTS) break;
+  }
+  ctx.recents = picks;
+
+  host.innerHTML = picks.map((row, i) => `
+    <button type="button" class="entry-recent" data-recent="${i}">
+      <span class="entry-recent__name">${esc(row.payee || shortLabel(row.category_label))}</span>
+      <span class="entry-recent__amount">${esc(moneyLabel(row.amount_minor, row.currency))}</span>
+    </button>`).join('');
+  host.hidden = picks.length === 0;
+}
+
+/**
+ * Fill the sheet from a recent entry: payee, category, account, method, note,
+ * currency and amount - the amount SELECTED, so one keystroke replaces it
+ * when today's fare is different. The date stays today.
+ */
+function repeatEntry(ctx, row) {
+  const { form, accountRows } = ctx;
+  const account = accountRows.find((a) => a.id === row.account_id);
+  if (account) { form.dataset.accountSet = 'true'; pickAccountRow(ctx, account); }
+  if (row.currency && row.currency !== currencyCode(form)) {
+    qs('[data-currency-picker]', form).dataset.userSet = 'true';
+    setCurrency(ctx, row.currency);
+  }
+  form.elements.payee.value = row.payee || '';
+  form.elements.note.value = row.note || '';
+  form.elements.method.value = row.method || '';
+  if (row.type === 'transfer' || row.type === 'deposit') {
+    form.elements.to_account_id.value = row.counter_account_id || form.elements.to_account_id.value;
+  }
+  if (row.category_id) { chooseCategory(ctx, row.category_id); drawTiles(ctx); }
+  ctx.pad.set(row.amount_minor);
+  syncChips(ctx);
+  qsa('[data-recent]', form).forEach((b) => b.setAttribute('aria-pressed', String(ctx.recents[Number(b.dataset.recent)] === row)));
+  qs('#entry-amount', form).focus({ preventScroll: true });
 }
 
 /** "Food & groceries" → "Food", so eight labels fit a 360px row at 11.5px. */
@@ -534,6 +606,11 @@ function attachHandlers(ctx) {
       return;
     }
     form.requestSubmit();
+  });
+
+  delegate(form, 'click', '[data-recent]', (_e, button) => {
+    const row = ctx.recents?.[Number(button.dataset.recent)];
+    if (row) repeatEntry(ctx, row);
   });
 
   delegate(form, 'click', '[data-cat-more]', () => {

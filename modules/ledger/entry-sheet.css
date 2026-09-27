@@ -211,6 +211,49 @@
 .entry-pill--quiet { color: var(--text-2); }
 .entry-pill--quiet[aria-expanded='true'] { border-color: var(--accent); color: var(--text-1); }
 
+/* ---- Recent entries: one scrolling row ----------------------------------
+   Filled chips with no border, so they read as content rather than as
+   settings like the pills above. The row runs to the sheet's edge and fades,
+   which is what says "there is more this way". */
+.entry__recents {
+  display: flex;
+  gap: var(--s-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: calc(-1 * var(--s-4));
+  padding-inline: var(--s-4);
+  scroll-padding-inline: var(--s-4);
+  /* Any opaque colour works as a mask; a token keeps literals out of here. */
+  mask-image: linear-gradient(to right, var(--text-1) calc(100% - var(--s-6)), transparent);
+}
+
+.entry__recents::-webkit-scrollbar { display: none; }
+.entry__recents[hidden] { display: none; }
+
+.entry-recent {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 var(--s-3);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  font-family: var(--font-body);
+  font-size: var(--fs-13);
+  line-height: 34px;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--t-press) var(--ease);
+}
+
+.entry-recent:active { transform: scale(.97); }
+.entry-recent[aria-pressed='true'] { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.entry-recent__name { color: var(--text-1); font-weight: var(--fw-semibold); max-width: 9rem; overflow: hidden; text-overflow: ellipsis; }
+.entry-recent__amount { color: var(--text-2); font-variant-numeric: tabular-nums; }
+
 /* ---- The middle: category tiles, or the details in their place ---------- */
 .entry__middle {
   flex: 0 1 auto;

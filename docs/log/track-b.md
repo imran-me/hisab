@@ -229,3 +229,18 @@ amount selected, so the first digit replaces it.
 **Verified:** ledger harness 39 (4 new, driving the real sheet: typing writes
 the draft before any close; it survives a dismiss; the reopened sheet shows
 250; clearing the amount clears it).
+
+## B3 — Recent and repeat
+
+A row of up to 8 recent-entry chips under the pills ("CNG ৳158"), built from
+the rows the ledger already holds for this type, newest first, distinct on
+payee + category + account. A chip fills payee, category, account, method,
+note and currency, and sets the amount SELECTED (the next digit replaces it);
+the date stays today. So repeating an entry is + → chip → Save. Filled chips
+without a border (§3.7.6), one scrolling row that fades at the edge. Hidden for
+a transfer and when correcting.
+
+**Verified** against the server at 360×780: 8 chips; tapping the first filled
+250 / Transport / Cash in hand, and Save recorded it ("Added ৳250 · Transport
+· Cash in hand"). Looked at the sheet with the strip: it matches the mock.
+Ledger harness 39, check-pages ok.
