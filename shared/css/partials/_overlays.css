@@ -190,7 +190,7 @@
 
 /* ---- Toast -------------------------------------------------------------
    Above the tab bar, never over it — and above the raised +, which stands
-   22px proud of the bar (hence the 28px). Announced through a live region in
+   20px proud of the bar (hence the 28px). Announced through a live region in
    the markup, so a confirmation is not silent for a screen-reader user.
    ------------------------------------------------------------------------ */
 .toast-stack {

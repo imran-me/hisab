@@ -91,15 +91,18 @@
   inset-inline: 0;
   inset-block-end: 0;
   z-index: var(--z-tabbar);
-  display: flex;
+  /* Five columns, the middle one a fixed 76px for + (v2 §3.7.6), so the
+     four tabs share what is left equally at any width. */
+  display: grid;
+  grid-template-columns: 1fr 1fr 76px 1fr 1fr;
   align-items: stretch;
   height: calc(var(--tabbar-h) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
   padding-inline: max(0px, var(--safe-left), var(--safe-right));
   background: var(--glass);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border-top: 1px solid var(--line);
+  backdrop-filter: saturate(1.2) blur(12px);
+  -webkit-backdrop-filter: saturate(1.2) blur(12px);
+  border-top: 1px solid var(--line-soft);
 }
 
 .tab {
@@ -109,12 +112,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: var(--s-1);
   padding: var(--s-1) 2px;
-  color: var(--ink-3);
+  color: var(--text-3);
   text-decoration: none;
-  font-size: var(--fs-10);
+  font-size: var(--t-micro);
   font-weight: var(--fw-medium);
+  line-height: 1;
   letter-spacing: 0.01em;
   position: relative;
   -webkit-tap-highlight-color: transparent;
@@ -133,8 +137,14 @@
 
 /* aria-current is the source of truth for "you are here" — the same attribute
    the screen reader reads, so the visual state cannot disagree with it. */
+/* The current tab is plain --text-1; the marigold is only the 2px mark on
+   the bar's edge, because a marigold label would say "tap me" about the one
+   place you already are. */
 .tab[aria-current='page'],
-.tab[data-current] { color: var(--accent-ink); }
+.tab[data-current] { color: var(--text-1); }
+
+/* 22px icons in the bar, whatever the label size. */
+.tabbar .tab > .icon { width: 22px; height: 22px; }
 
 /* The active marker is a 2px bar at the TOP of the tab, against the border.
    A filled pill behind the icon would put a coloured blob under a thumb that
@@ -143,8 +153,10 @@
 .tab[data-current]::before {
   content: '';
   position: absolute;
-  inset-block-start: 0;
-  inset-inline: 22%;
+  inset-block-start: -1px;
+  inset-inline-start: 50%;
+  width: 20px;
+  margin-inline-start: -10px;
   height: 2px;
   border-radius: 0 0 2px 2px;
   background: var(--accent);
@@ -177,31 +189,31 @@
 
    The whole 72 × 56 slot is the target, not just the square, so a press that
    lands beside it still counts. */
-.tab--compose { color: var(--on-accent); }
+.tab--compose { color: var(--plus-ink); }
 
 .tab__plus {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
-  margin-block-start: -22px;
-  border-radius: var(--r-3);
-  background: var(--accent);
-  color: var(--on-accent);
-  box-shadow: 0 0 0 4px var(--void);
-  transition: transform var(--t-instant) var(--ease), background-color var(--t-fast) var(--ease);
+  width: 54px;
+  height: 54px;
+  margin-block-start: -20px;
+  border-radius: var(--r-plus);
+  background: var(--plus-bg);
+  color: var(--plus-ink);
+  box-shadow: var(--shadow-plus);
+  transition: transform var(--t-press) var(--ease-snap), background-color var(--t-fast) var(--ease);
 }
 
 /* The glyph is drawn heavier than the sprite's 1.5 hairline: at 26px on a
    solid fill, a hairline cross reads as a smudge rather than a command. */
-.tab--compose .tab__plus .icon { width: 26px; height: 26px; stroke-width: 2.25; }
+.tab--compose .tab__plus .icon { width: 26px; height: 26px; stroke-width: 2.2; }
 
 /* The vault's lock screen covers the page at --z-lock; the bar stays above
    it so the raised + is not cut off at the bar's edge. */
 body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
 
 .tab--compose:active .tab__plus { transform: scale(0.94); }
-.tab--compose:active { color: var(--on-accent); }
+.tab--compose:active { color: var(--plus-ink); }
 .tab--compose:focus-visible { outline: none; }
 .tab--compose:focus-visible .tab__plus { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
 

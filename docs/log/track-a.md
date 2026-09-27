@@ -205,3 +205,19 @@ the bar and tab colours differ until A4.4. check-pages passes.
 Verified at 360 in both themes on the Ledger, Accounts and Settings: no
 figure clipped, no row name cut below 18 characters (the one ellipsis is
 "Cash in hand" beside its Default badge, in C's markup); check-pages passes.
+
+## A4.4 — the v2 bottom bar
+
+64px plus the safe area, a grid of `1fr 1fr 76px 1fr 1fr` (tabs measure
+71 × 63 and the + slot 76 × 63 at 360). Tabs: 22px icon, 11px label,
+`--text-3`; the current tab is `--text-1` with a 20 × 2 marigold mark on the
+bar's top edge (the label is no longer marigold: it would say "tap me" about
+where you already are). The bar is `--bg-1` at 94% with a 12px blur and a
+`--line-soft` top rule. + is a 54px square at `--r-plus` (18), raised 20px,
+with a 26px plus at a 2.2 stroke and `--shadow-plus` (the 5px `--bg-0` ring
+that notches it into the bar): marigold with an ink plus at night, ink with
+a marigold plus by day (`--plus-bg` / `--plus-ink`).
+
+Verified at 360 in both themes on Home against
+`docs/visual-v2/shots/home-night.png` and `home-day.png`: the bar, the tab
+states and both + treatments match.
