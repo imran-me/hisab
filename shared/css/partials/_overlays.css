@@ -136,7 +136,7 @@
 
 .dialog[open] { animation: hisab-dialog-in var(--t-base) var(--ease-out) both; }
 .dialog__title { font-size: var(--fs-19); margin-bottom: var(--s-2); }
-.dialog__text { font-size: var(--fs-14); color: var(--ink-2); line-height: var(--lh-normal); }
+.dialog__text { font-size: var(--fs-14); color: var(--text-2); line-height: var(--lh-normal); }
 .dialog__actions { display: flex; gap: var(--s-3); margin-top: var(--s-5); }
 .dialog__actions > .btn { flex: 1 1 auto; }
 
@@ -153,10 +153,10 @@
   min-width: 11rem;
   max-width: min(20rem, calc(100vw - var(--s-4)));
   padding: var(--s-1);
-  background: var(--surface-2);
+  background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: var(--r-2);
-  box-shadow: var(--e-2);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-menu);
   animation: hisab-menu-in var(--t-fast) var(--ease-out) both;
   /* transform-origin follows the flip, so a menu that opened upward animates
      from its bottom edge instead of appearing to fall out of the trigger. */
@@ -174,8 +174,8 @@
   padding: var(--s-2) var(--s-3);
   background: none;
   border: 0;
-  border-radius: var(--r-1);
-  color: var(--ink-2);
+  border-radius: var(--r-xs);
+  color: var(--text-2);
   font-size: var(--fs-14);
   text-align: start;
   text-decoration: none;
@@ -183,9 +183,9 @@
   white-space: nowrap;
 }
 
-.menu__item:hover { background: var(--wash-hover); color: var(--ink); }
-.menu__item--danger { color: var(--flow-out-ink); }
-.menu__item--danger:hover { background: var(--flow-out-wash); }
+.menu__item:hover { background: var(--wash-hover); color: var(--text-1); }
+.menu__item--danger { color: var(--out); }
+.menu__item--danger:hover { background: var(--out-wash); }
 .menu__sep { height: 1px; background: var(--line-soft); margin: var(--s-1) 0; }
 
 /* ---- Toast -------------------------------------------------------------
@@ -218,25 +218,25 @@
   width: 100%;
   max-width: 28rem;
   padding: var(--s-3);
-  background: var(--surface-3);
+  background: var(--bg-3);
   border: 1px solid var(--line-hot);
-  border-radius: var(--r-2);
-  box-shadow: var(--e-2);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-menu);
   font-size: var(--fs-13);
   animation: hisab-toast-in var(--t-base) var(--ease-out) both;
 }
 
 .toast.is-leaving { animation: hisab-toast-out var(--t-fast) var(--ease-in) both; }
-.toast__glyph { flex: none; color: var(--ink-3); }
+.toast__glyph { flex: none; color: var(--text-3); }
 .toast__body { flex: 1 1 auto; min-width: 0; }
 .toast__action { flex: none; }
 
-.toast--good { border-color: var(--flow-in); }
-.toast--good .toast__glyph { color: var(--flow-in-ink); }
-.toast--bad  { border-color: var(--flow-out); }
-.toast--bad  .toast__glyph { color: var(--flow-out-ink); }
+.toast--good { border-color: var(--in); }
+.toast--good .toast__glyph { color: var(--in); }
+.toast--bad  { border-color: var(--out); }
+.toast--bad  .toast__glyph { color: var(--out); }
 .toast--warn { border-color: var(--warn); }
-.toast--warn .toast__glyph { color: var(--warn-ink); }
+.toast--warn .toast__glyph { color: var(--warn); }
 
 /* ---- Lock screen -------------------------------------------------------
    The vault's cover. Above everything including the header, because a locked
@@ -249,7 +249,7 @@
   display: grid;
   place-items: center;
   padding: var(--gutter);
-  background: var(--void);
+  background: var(--bg-0);
   /* No blur here. A blurred screenshot of a secret is still a screenshot of a
      secret, and iOS renders the app switcher's thumbnail from the live view —
      the content is REPLACED, not obscured. */

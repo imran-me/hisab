@@ -32,7 +32,7 @@
    semi-transparent with no blur and the content scrolls through it as an
    unreadable mess, so an opaque background is used wherever it is missing. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .app-header, .sticky-bar, .tabbar { background: var(--surface); }
+  .app-header, .sticky-bar, .tabbar { background: var(--bg-1); }
 }
 
 .app-header__lead { flex: none; display: flex; align-items: center; gap: var(--s-2); }
@@ -58,7 +58,7 @@
   font-size: var(--fs-19);
   font-weight: var(--fw-bold);
   letter-spacing: -0.03em;
-  color: var(--ink);
+  color: var(--text-1);
   text-decoration: none;
   display: inline-flex;
   align-items: baseline;
@@ -78,7 +78,7 @@
   width: var(--scroll-progress, 0%);
   background: var(--accent);
   opacity: 0.9;
-  transition: width var(--t-instant) linear;
+  transition: width var(--t-press) linear;
 }
 
 /* ---- Tab bar (phone) ----------------------------------------------------
@@ -131,9 +131,9 @@
 }
 
 .tab__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tab:active { color: var(--ink-2); }
+.tab:active { color: var(--text-2); }
 .tab:active > .icon { transform: scale(0.94); }
-.tab > .icon { transition: transform var(--t-instant) var(--ease); }
+.tab > .icon { transition: transform var(--t-press) var(--ease); }
 
 /* aria-current is the source of truth for "you are here" — the same attribute
    the screen reader reads, so the visual state cannot disagree with it. */
@@ -170,8 +170,8 @@
   min-width: 16px;
   height: 16px;
   padding-inline: 4px;
-  border-radius: var(--r-full);
-  background: var(--flow-out);
+  border-radius: var(--r-pill);
+  background: var(--out);
   color: #fff;
   font-family: var(--font-mono);
   font-size: 9px;
@@ -215,7 +215,7 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
 .tab--compose:active .tab__plus { transform: scale(0.94); }
 .tab--compose:active { color: var(--plus-ink); }
 .tab--compose:focus-visible { outline: none; }
-.tab--compose:focus-visible .tab__plus { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+.tab--compose:focus-visible .tab__plus { outline: 2px solid var(--accent-text); outline-offset: 3px; }
 
 @media (prefers-reduced-motion: reduce) {
   .tab__plus, .tab > .icon { transition: none; }
@@ -243,7 +243,7 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
     align-self: start;
     height: 100dvh;
     padding: var(--s-4) var(--s-3);
-    background: var(--surface);
+    background: var(--bg-1);
     border-inline-end: 1px solid var(--line);
     overflow-y: auto;
   }
@@ -255,16 +255,16 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
     gap: var(--s-3);
     min-height: var(--tap);
     padding-inline: var(--s-3);
-    border-radius: var(--r-2);
+    border-radius: var(--r-sm);
     font-size: var(--fs-14);
     font-weight: var(--fw-medium);
   }
 
-  .app-rail .tab:hover { background: var(--wash-hover); color: var(--ink); }
+  .app-rail .tab:hover { background: var(--wash-hover); color: var(--text-1); }
 
   .app-rail .tab[aria-current='page'] {
     background: var(--accent-wash);
-    color: var(--accent-ink);
+    color: var(--accent-text);
   }
 
   /* The marker becomes a vertical bar on the leading edge. */
@@ -285,7 +285,7 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
     color: var(--on-accent);
     font-weight: var(--fw-semibold);
   }
-  .app-rail .tab--compose-rail:hover { background: var(--accent-ink); color: var(--on-accent); }
+  .app-rail .tab--compose-rail:hover { background: var(--accent-text); color: var(--on-accent); }
   .app-rail .tab--compose-rail .tab__plus {
     width: auto; height: auto; margin: 0; background: none; box-shadow: none; color: inherit;
   }
@@ -301,14 +301,14 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
   display: inline-flex;
   align-items: center;
   gap: var(--s-1);
-  color: var(--ink-2);
+  color: var(--text-2);
   font-size: var(--fs-13);
   font-weight: var(--fw-medium);
   text-decoration: none;
   min-height: var(--tap-min);
 }
 
-.back:hover { color: var(--ink); }
+.back:hover { color: var(--text-1); }
 
 /* ---- Tab strip (in-page) ------------------------------------------------
    Personal / Business, or the vault's categories. Scrollable, never wrapped
@@ -331,7 +331,7 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
   border: 0;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  color: var(--ink-3);
+  color: var(--text-3);
   font-size: var(--fs-14);
   font-weight: var(--fw-medium);
   cursor: pointer;
@@ -339,10 +339,10 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
   transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
 
-.tabstrip__tab:hover { color: var(--ink-2); }
+.tabstrip__tab:hover { color: var(--text-2); }
 
 .tabstrip__tab[aria-selected='true'] {
-  color: var(--ink);
+  color: var(--text-1);
   border-bottom-color: var(--accent);
 }
 
@@ -353,7 +353,7 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
 .more { display: flex; flex-direction: column; gap: var(--s-4); }
 .more__list { margin-inline: calc(-1 * var(--s-4)); }
 .more__list .row { min-height: 56px; }
-.more__list .row[aria-current='page'] .row__title { color: var(--accent-ink); }
+.more__list .row[aria-current='page'] .row__title { color: var(--accent-text); }
 
 .more__account {
   display: flex;
@@ -366,7 +366,7 @@ body:has(.lock:not([hidden])) .tabbar { z-index: calc(var(--z-lock) + 1); }
 }
 
 .more__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.more__email { font-size: var(--fs-14); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more__email { font-size: var(--fs-14); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .more__account .btn { flex: none; min-height: var(--tap-min); }
 
 /* ---- Month stepper ------------------------------------------------------

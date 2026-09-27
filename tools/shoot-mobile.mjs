@@ -20,7 +20,8 @@
  *   PAGES     comma list of paths, default every screen
  *   WAIT      ms to wait after navigation, default 6000 (php -S is serial)
  *   SCREENS   viewports to capture per page, default 3
- *   THEME     dark | light (prefers-color-scheme)
+ *   THEME     dark | light: prefers-color-scheme AND the app's stored theme
+ *   APP_THEME night | day | system: the stored theme alone
  *   CHROME    path to chrome.exe
  *   BEFORE    a JS expression run on each page before capturing (open a
  *             sheet, tap a button); captures then wait 700ms for it to settle
@@ -124,6 +125,17 @@ if (env.EMAIL && env.PASSWORD) {
     .then((m) => m.signIn(${JSON.stringify(env.EMAIL)}, ${JSON.stringify(env.PASSWORD)}))
     .then((r) => r.ok ? 'signed in' : 'sign-in FAILED')`);
   console.log(result);
+}
+
+// The app opens dark whatever the phone says (a stored choice beats the media
+// query), so THEME alone no longer shows the day palette. THEME=light also
+// stores the app's own 'day' choice; APP_THEME overrides it explicitly.
+{
+  const appTheme = env.APP_THEME || (env.THEME === 'light' ? 'day' : env.THEME === 'dark' ? 'night' : '');
+  if (appTheme) {
+    if (!env.EMAIL) await go('404.html');
+    await evaluate(`localStorage.setItem('hisab:theme', ${JSON.stringify(JSON.stringify(appTheme))})`);
+  }
 }
 
 for (const path of PAGES) {

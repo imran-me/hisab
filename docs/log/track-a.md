@@ -329,3 +329,25 @@ the meta to #F5F3EF, and the hint reads correctly. check-pages passes.
 
 Still in A7: Settings as a grouped list, and the "Reaching hand" hint still
 mentions the old compose button.
+
+## v1 token names: Track A's files moved off them (aliases kept)
+
+All of Track A's CSS and JS (every shared partial, `spark.js`, the vault's
+CSS, `deploy-check.html`) now read the v2 names. That was 281 references,
+rewritten by whole-name mapping, so `--ink` never ate `--ink-inv`. The
+ALIASES STAY in `_variables.css`, because origin/main still has v1 names
+in other tracks' files:
+- `modules/ledger/ledger.css`: `--surface` (line 12), `--ink-3`, `--ink-2`
+  (Dev B).
+- `modules/overview/overview.css`: `--t-slow` (Dev C).
+
+Once those four are gone, the alias block in `_variables.css` can be deleted
+in one commit. The ones that are real v2 tokens (`--surface-inv`,
+`--ink-inv`, `--need-*`) stay.
+
+`shoot-mobile.mjs`: the app now opens dark whatever the phone says, so
+`THEME=light` also stores the app's own 'day' choice, and `APP_THEME`
+(night | day | system) sets that choice on its own.
+
+Verified: the Ledger, Vault and Home at 360 in both themes look the same as
+before the rename; check-pages passes.

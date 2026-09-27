@@ -24,15 +24,15 @@
 -->
 <style>
   :root {
-    --void: #06080B; --surface: #0B0F15; --line: #1D2634;
-    --ink: #E9EEF4; --ink-2: #A3B0BF; --ink-3: #6B7A8B;
+    --bg-0: #06080B; --bg-1: #0B0F15; --line: #1D2634;
+    --text-1: #E9EEF4; --text-2: #A3B0BF; --text-3: #6B7A8B;
     --ok: #3FE3AE; --ok-ink: #5DEEC0; --ok-wash: rgba(63,227,174,.12);
-    --warn-ink: #FFC960; --warn-wash: rgba(242,178,60,.13);
+    --warn: #FFC960; --warn-wash: rgba(242,178,60,.13);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; padding: 6vh 5vw 12vh;
-    background: var(--void); color: var(--ink);
+    background: var(--bg-0); color: var(--text-1);
     font: 16px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
@@ -46,24 +46,24 @@
     margin-bottom: 1.75rem;
   }
   h1 { font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 1.15; margin: 0 0 .75rem; letter-spacing: -.02em; }
-  .lede { font-size: 1.125rem; color: var(--ink-2); margin: 0 0 2.5rem; }
+  .lede { font-size: 1.125rem; color: var(--text-2); margin: 0 0 2.5rem; }
 
   .panel {
-    background: var(--surface); border: 1px solid var(--line);
+    background: var(--bg-1); border: 1px solid var(--line);
     border-radius: 12px; padding: 1.5rem 1.75rem; margin-bottom: 1.5rem;
   }
   .panel h2 {
     font-size: .75rem; text-transform: uppercase; letter-spacing: .09em;
-    color: var(--ink-3); margin: 0 0 1rem; font-weight: 600;
+    color: var(--text-3); margin: 0 0 1rem; font-weight: 600;
   }
 
-  ol.chain { margin: 0; padding-left: 1.35rem; color: var(--ink-2); }
+  ol.chain { margin: 0; padding-left: 1.35rem; color: var(--text-2); }
   ol.chain li { margin-bottom: .5rem; }
   ol.chain li:last-child { margin-bottom: 0; }
-  ol.chain b { color: var(--ink); font-weight: 600; }
+  ol.chain b { color: var(--text-1); font-weight: 600; }
 
   dl { display: grid; grid-template-columns: auto 1fr; gap: .6rem 1.5rem; margin: 0; }
-  dt { color: var(--ink-3); font-size: .9rem; }
+  dt { color: var(--text-3); font-size: .9rem; }
   dd {
     margin: 0; font-family: ui-monospace, SFMono-Regular, "Cascadia Mono", Consolas, monospace;
     font-size: .9rem; word-break: break-all;
@@ -74,12 +74,12 @@
   }
 
   .note {
-    border-left: 3px solid var(--warn-ink); background: var(--warn-wash);
+    border-left: 3px solid var(--warn); background: var(--warn-wash);
     border-radius: 0 8px 8px 0; padding: 1rem 1.25rem;
-    color: var(--ink-2); font-size: .95rem;
+    color: var(--text-2); font-size: .95rem;
   }
-  .note b { color: var(--ink); }
-  footer { margin-top: 2.5rem; color: var(--ink-3); font-size: .85rem; }
+  .note b { color: var(--text-1); }
+  footer { margin-top: 2.5rem; color: var(--text-3); font-size: .85rem; }
 </style>
 </head>
 <body>

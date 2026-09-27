@@ -20,10 +20,10 @@
   height: 72px;
   display: grid;
   place-items: center;
-  border-radius: var(--r-3);
+  border-radius: var(--r-md);
   background: var(--vault-wash);
   border: 1px solid var(--vault);
-  color: var(--vault-ink);
+  color: var(--vault);
   margin-bottom: var(--s-2);
 }
 
@@ -48,8 +48,8 @@
 .strength__bar {
   flex: 1 1 auto;
   height: 4px;
-  border-radius: var(--r-full);
-  background: var(--surface-3);
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
   overflow: hidden;
 }
 
@@ -65,17 +65,17 @@
   flex: none;
   font-size: var(--fs-12);
   font-weight: var(--fw-medium);
-  color: var(--ink-3);
+  color: var(--text-3);
   min-width: 5.5rem;   /* holds "Very strong" without the bar resizing as you type */
 }
 
 .strength[data-score="1"] .strength__fill { background: var(--danger); }
 .strength[data-score="2"] .strength__fill { background: var(--warn); }
-.strength[data-score="3"] .strength__fill { background: var(--flow-in); }
-.strength[data-score="4"] .strength__fill { background: var(--flow-in); }
+.strength[data-score="3"] .strength__fill { background: var(--in); }
+.strength[data-score="4"] .strength__fill { background: var(--in); }
 
 .strength[data-score="3"] .strength__label,
-.strength[data-score="4"] .strength__label { color: var(--flow-in-ink); }
+.strength[data-score="4"] .strength__label { color: var(--in); }
 
 /* ---- Detail: the field list --------------------------------------------- */
 .vault-fields {
@@ -101,7 +101,7 @@
   font-weight: var(--fw-semibold);
   letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--text-3);
 }
 
 .vault-field__value {
@@ -133,12 +133,12 @@
 .vault-note {
   font-size: var(--fs-14);
   line-height: var(--lh-normal);
-  color: var(--ink-2);
+  color: var(--text-2);
   white-space: pre-wrap;      /* a note's own line breaks are content */
   overflow-wrap: anywhere;
   padding: var(--s-3);
-  background: var(--surface-3);
-  border-radius: var(--r-2);
+  background: var(--bg-3);
+  border-radius: var(--r-sm);
 }
 
 /* ---- Edit: a custom field row ------------------------------------------
@@ -155,9 +155,9 @@
   gap: var(--s-2);
   align-items: center;
   padding: var(--s-3);
-  background: var(--surface-3);
+  background: var(--bg-3);
   border: 1px solid var(--line-soft);
-  border-radius: var(--r-2);
+  border-radius: var(--r-sm);
   min-width: 0;
 }
 
@@ -178,9 +178,9 @@
 }
 
 .vault-edit-field__label:hover,
-.vault-edit-field__label:focus { background: var(--surface-2); border-color: var(--line); }
+.vault-edit-field__label:focus { background: var(--bg-2); border-color: var(--line); }
 
-.vault-edit-field .check__text { font-size: var(--fs-12); color: var(--ink-3); }
+.vault-edit-field .check__text { font-size: var(--fs-12); color: var(--text-3); }
 
 @media (min-width: 520px) {
   .vault-edit-field {
@@ -197,7 +197,7 @@
 .choice:has(input:checked) {
   background: var(--vault-wash);
   border-color: var(--vault);
-  color: var(--vault-ink);
+  color: var(--vault);
 }
 
 /* A disabled choice is the kind on an entry being edited: fixed once created,
@@ -205,4 +205,4 @@
 .choice:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
 
 /* ---- The vault's own accent --------------------------------------------- */
-.row__glyph--vault { background: var(--vault-wash); color: var(--vault-ink); border-color: transparent; }
+.row__glyph--vault { background: var(--vault-wash); color: var(--vault); border-color: transparent; }

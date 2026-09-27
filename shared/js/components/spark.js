@@ -131,7 +131,7 @@ export function breakdownBar(parts, opts = {}) {
     if (share < minShare) other += Math.abs(part.value);
     else kept.push({ ...part, share });
   }
-  if (other > 0) kept.push({ name: 'Other', value: other, share: (other / total) * 100, color: 'var(--ink-4)' });
+  if (other > 0) kept.push({ name: 'Other', value: other, share: (other / total) * 100, color: 'var(--text-4)' });
 
   const segs = kept.map((p) => {
     // A label only goes INSIDE a segment wide enough to hold it. Below that it

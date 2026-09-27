@@ -8,18 +8,18 @@
 /* ---- Flow colour --------------------------------------------------------
    The four meanings, as text colour, for anything that is not a .money
    figure — an icon, a label, a heading over a section. */
-.t-in    { color: var(--flow-in-ink); }
-.t-out   { color: var(--flow-out-ink); }
-.t-hold  { color: var(--flow-hold-ink); }
-.t-biz   { color: var(--flow-biz-ink); }
-.t-move  { color: var(--flow-move); }
-.t-accent{ color: var(--accent-ink); }
-.t-warn  { color: var(--warn-ink); }
-.t-danger{ color: var(--danger-ink); }
-.t-vault { color: var(--vault-ink); }
-.t-ink   { color: var(--ink); }
-.t-ink-2 { color: var(--ink-2); }
-.t-ink-3 { color: var(--ink-3); }
+.t-in    { color: var(--in); }
+.t-out   { color: var(--out); }
+.t-hold  { color: var(--saved); }
+.t-biz   { color: var(--biz); }
+.t-move  { color: var(--move); }
+.t-accent{ color: var(--accent-text); }
+.t-warn  { color: var(--warn); }
+.t-danger{ color: var(--danger); }
+.t-vault { color: var(--vault); }
+.t-ink   { color: var(--text-1); }
+.t-ink-2 { color: var(--text-2); }
+.t-ink-3 { color: var(--text-3); }
 
 /* ---- Display ------------------------------------------------------------ */
 .u-hide  { display: none !important; }
@@ -62,8 +62,8 @@
 .mb-4 { margin-bottom: var(--s-4); }
 
 /* ---- Surfaces ----------------------------------------------------------- */
-.u-bordered { border: 1px solid var(--line); border-radius: var(--r-2); }
-.u-sunken   { background: var(--surface-3); border-radius: var(--r-2); }
+.u-bordered { border: 1px solid var(--line); border-radius: var(--r-sm); }
+.u-sunken   { background: var(--bg-3); border-radius: var(--r-sm); }
 
 /* ---- Icons -------------------------------------------------------------
    The sprite is stroked, not filled, so every icon inherits the current text
@@ -104,4 +104,4 @@
    Toggled by tools/qa-viewport.html. Outlines every element so an overflow
    can be traced to the one box that is too wide, instead of guessed at. */
 [data-debug='layout'] * { outline: 1px solid rgba(255, 107, 94, .28); }
-[data-debug='layout'] *:hover { outline-color: var(--flow-out); }
+[data-debug='layout'] *:hover { outline-color: var(--out); }

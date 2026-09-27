@@ -47,8 +47,8 @@ html {
 
 body {
   min-height: 100%;
-  background: var(--void);
-  color: var(--ink);
+  background: var(--bg-0);
+  color: var(--text-1);
   font-family: var(--font-body);
   font-size: var(--fs-16);
   line-height: var(--lh-normal);
@@ -115,9 +115,9 @@ input[type="search"]::-webkit-search-cancel-button {
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--ink);
-  -webkit-box-shadow: 0 0 0 100px var(--surface-3) inset;
-  caret-color: var(--ink);
+  -webkit-text-fill-color: var(--text-1);
+  -webkit-box-shadow: 0 0 0 100px var(--bg-3) inset;
+  caret-color: var(--text-1);
   transition: background-color 100000s ease 0s;
 }
 
@@ -137,7 +137,7 @@ h1, h2, h3, h4, h5, h6 {
 p, li, dd, dt { text-wrap: pretty; }
 
 a {
-  color: var(--accent-ink);
+  color: var(--accent-text);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
   transition: color var(--t-fast) var(--ease);
@@ -168,7 +168,7 @@ hr {
 :focus-visible {
   outline: none;
   box-shadow: var(--e-focus);
-  border-radius: var(--r-2);
+  border-radius: var(--r-sm);
   /* The ring is drawn outside the element; without this it is clipped by any
      ancestor with overflow hidden, which is most scrollable regions. */
   position: relative;
@@ -178,7 +178,7 @@ hr {
 /* ---- Selection ---------------------------------------------------------- */
 ::selection {
   background: var(--accent-wash);
-  color: var(--ink);
+  color: var(--text-1);
 }
 
 /* ---- Scrollbars ---------------------------------------------------------
@@ -194,7 +194,7 @@ hr {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scroll-thumb);
-  border-radius: var(--r-full);
+  border-radius: var(--r-pill);
   /* A transparent border plus background-clip gives the thumb breathing room
      inside the track without a second element. */
   border: 3px solid transparent;
@@ -230,7 +230,7 @@ hr {
   padding: var(--s-2) var(--s-4);
   background: var(--accent);
   color: var(--on-accent);
-  border-radius: var(--r-2);
+  border-radius: var(--r-sm);
   font-size: var(--fs-14);
   font-weight: var(--fw-semibold);
   text-decoration: none;

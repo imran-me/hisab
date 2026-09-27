@@ -87,22 +87,22 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
   font-weight: var(--fw-semibold);
   letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--text-3);
   line-height: var(--lh-snug);
 }
 
-.label--accent { color: var(--accent-ink); }
+.label--accent { color: var(--accent-text); }
 
 /* ---- Supporting copy ---------------------------------------------------- */
 .meta {
   font-size: var(--fs-12);
-  color: var(--ink-3);
+  color: var(--text-3);
   line-height: var(--lh-snug);
 }
 
-.muted     { color: var(--ink-3); }
-.dim       { color: var(--ink-2); }
-.lead      { font-size: var(--fs-19); color: var(--ink-2); line-height: var(--lh-snug); }
+.muted     { color: var(--text-3); }
+.dim       { color: var(--text-2); }
+.lead      { font-size: var(--fs-19); color: var(--text-2); line-height: var(--lh-snug); }
 .prose     { max-width: var(--reading-max); }
 .prose p + p { margin-top: var(--s-4); }
 
@@ -199,8 +199,8 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
    dimmed and marked, and the rate that produced it is in the title attribute.
    Reading a roll-up as an exact balance is the mistake this prevents. */
 .money--converted {
-  color: var(--ink-2);
-  border-bottom: 1px dotted var(--ink-4);
+  color: var(--text-2);
+  border-bottom: 1px dotted var(--text-4);
   cursor: help;
 }
 
@@ -219,7 +219,7 @@ h5, .h5 { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
 .masked {
   font-family: var(--font-mono);
   letter-spacing: 0.14em;
-  color: var(--ink-2);
+  color: var(--text-2);
   /* A masked secret must not be selectable: a triple-click that copies a row of
      bullets and pastes them into a support chat is a confusing bug, and on
      Safari the unprefixed property alone does nothing. */
@@ -234,21 +234,21 @@ code, kbd, samp, pre {
 }
 
 code {
-  background: var(--surface-3);
+  background: var(--bg-3);
   border: 1px solid var(--line-soft);
-  border-radius: var(--r-1);
+  border-radius: var(--r-xs);
   padding: 0.1em 0.35em;
   overflow-wrap: anywhere;
 }
 
 kbd {
-  background: var(--surface-3);
+  background: var(--bg-3);
   border: 1px solid var(--line);
   border-bottom-width: 2px;
-  border-radius: var(--r-2);
+  border-radius: var(--r-sm);
   padding: 0.15em 0.4em;
   font-size: var(--fs-12);
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
 /* ---- Truncation ---------------------------------------------------------

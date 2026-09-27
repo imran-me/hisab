@@ -30,9 +30,9 @@
   white-space: nowrap;
 
   border: 1px solid transparent;
-  border-radius: var(--r-2);
+  border-radius: var(--r-sm);
   background: transparent;
-  color: var(--ink);
+  color: var(--text-1);
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -88,8 +88,8 @@
 
 /* GHOST — a button that is only a label until you touch it. Toolbars, table
    row actions, anything that would otherwise put twenty boxes on a screen. */
-.btn--ghost { color: var(--ink-2); }
-.btn--ghost:hover:not(:disabled) { background: var(--wash-hover); color: var(--ink); }
+.btn--ghost { color: var(--text-2); }
+.btn--ghost:hover:not(:disabled) { background: var(--wash-hover); color: var(--text-1); }
 
 /* DANGER is outlined, not filled. A filled red button is the same visual
    weight as the primary action, and the destructive one should never be the
@@ -98,7 +98,7 @@
    invitation. */
 .btn--danger {
   border-color: var(--danger);
-  color: var(--danger-ink);
+  color: var(--danger);
   background: transparent;
 }
 
@@ -109,33 +109,33 @@
 .btn--vault {
   background: var(--vault-wash);
   border-color: var(--vault);
-  color: var(--vault-ink);
+  color: var(--vault);
 }
 
-.btn--vault:hover:not(:disabled) { background: var(--vault); color: var(--void); }
+.btn--vault:hover:not(:disabled) { background: var(--vault); color: var(--bg-0); }
 
 /* FLOW — the direction of money, in the same two colours the entry sheet uses
    for its type picker and the ledger uses for its amounts. Washed rather than
    filled: these sit in the header next to a title, and two solid blocks of
    coral and mint there read as an alert rather than as two buttons.
 
-   The pair is only ever used as a pair. A lone --flow-in button is a green
+   The pair is only ever used as a pair. A lone --in button is a green
    button, and green means "confirm" everywhere else in this product. */
-.btn--flow-out {
-  background: var(--flow-out-wash);
-  border-color: var(--flow-out);
-  color: var(--flow-out-ink);
+.btn--out {
+  background: var(--out-wash);
+  border-color: var(--out);
+  color: var(--out);
 }
 
-.btn--flow-out:hover:not(:disabled) { background: var(--flow-out); color: var(--void); }
+.btn--out:hover:not(:disabled) { background: var(--out); color: var(--bg-0); }
 
-.btn--flow-in {
-  background: var(--flow-in-wash);
-  border-color: var(--flow-in);
-  color: var(--flow-in-ink);
+.btn--in {
+  background: var(--in-wash);
+  border-color: var(--in);
+  color: var(--in);
 }
 
-.btn--flow-in:hover:not(:disabled) { background: var(--flow-in); color: var(--void); }
+.btn--in:hover:not(:disabled) { background: var(--in); color: var(--bg-0); }
 
 /* ---- Sizes -------------------------------------------------------------- */
 .btn--sm {
@@ -161,10 +161,10 @@
   width: var(--tap-min);
   min-width: var(--tap-min);
   height: var(--tap-min);
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
-.btn--icon:hover:not(:disabled) { background: var(--wash-hover); color: var(--ink); }
+.btn--icon:hover:not(:disabled) { background: var(--wash-hover); color: var(--text-1); }
 .btn--icon.btn--sm { width: 34px; min-width: 34px; height: 34px; }
 
 /* Development guard: an icon button with no accessible name gets a red ring.

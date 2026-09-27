@@ -55,7 +55,7 @@
 /* A live indicator. The dot itself does not move; a ring expands out of it,
    so it stays readable while it pulses. */
 @keyframes hisab-pulse {
-  0%   { box-shadow: 0 0 0 0 var(--flow-in); opacity: 1; }
+  0%   { box-shadow: 0 0 0 0 var(--in); opacity: 1; }
   70%  { box-shadow: 0 0 0 6px transparent; opacity: 0.85; }
   100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
 }
@@ -69,7 +69,7 @@
   100% { transform: translateY(0);   background-color: transparent; }
 }
 
-.is-ticking { animation: hisab-tick var(--t-slow) var(--ease-snap) both; border-radius: var(--r-1); }
+.is-ticking { animation: hisab-tick var(--t-tick) var(--ease-snap) both; border-radius: var(--r-xs); }
 
 /* A row leaving the list. It collapses its own height as it fades, so the
    rows below slide up into the space instead of jumping. */
@@ -91,7 +91,7 @@
 html:not(.no-js) [data-reveal] {
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity var(--t-slow) var(--ease-out), transform var(--t-slow) var(--ease-out);
+  transition: opacity var(--t-tick) var(--ease-out), transform var(--t-tick) var(--ease-out);
 }
 
 html:not(.no-js) [data-reveal].is-revealed {
@@ -115,7 +115,7 @@ html:not(.no-js) [data-reveal].is-revealed {
   flex: none;
   border: 2px solid currentColor;
   border-top-color: transparent;
-  border-radius: var(--r-full);
+  border-radius: var(--r-pill);
   opacity: 0.85;
   animation: hisab-spin 640ms linear infinite;
 }
