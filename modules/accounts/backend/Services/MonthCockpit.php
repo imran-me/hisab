@@ -487,7 +487,7 @@ class MonthCockpit
         if ($soft > 0 && $expense > 0) {
             $out[] = ['code' => 'soft_spend', 'tone' => 'red', 'ico' => 'scissors',
                 'soft_minor' => $soft,
-                'leak_minor' => $breakdown['by_need'][4] + intdiv($breakdown['by_need'][3], 2),
+                'leak_minor' => max(0, $breakdown['by_need'][4] + intdiv($breakdown['by_need'][3], 2)),
                 'share' => round(($soft / $expense) * 100, 1)];
         }
 
@@ -737,14 +737,19 @@ class MonthCockpit
      */
     private function leak(Collection $rows): int
     {
-        $spend = $rows->filter(
-            fn (Transaction $t): bool => $t->type === 'expense' && $t->reverses_id === null,
-        );
+        // Mirrors included and SIGNED, as by_need does. Keeping only rows
+        // with no reverses_id dropped the mirror but kept the original it
+        // cancels, so a corrected ৳12,500 lunch still counted in full
+        // (review round 6, H2).
+        $spend = $rows->filter(fn (Transaction $t): bool => $t->type === 'expense');
 
-        $avoidable = (int) $spend->where('necessity', 4)->sum(fn (Transaction $t): int => $this->amount($t));
-        $discretionary = (int) $spend->where('necessity', 3)->sum(fn (Transaction $t): int => $this->amount($t));
+        $avoidable = (int) $spend->where('necessity', 4)->sum(fn (Transaction $t): int => $this->signed($t));
+        $discretionary = (int) $spend->where('necessity', 3)->sum(fn (Transaction $t): int => $this->signed($t));
 
-        return $avoidable + intdiv($discretionary, 2);
+        // Floored at zero: a correction posted this month for an entry of
+        // last month can leave a band below zero, and "could have kept −৳700"
+        // is not a figure anyone can act on.
+        return max(0, $avoidable + intdiv($discretionary, 2));
     }
 
     /**
@@ -753,20 +758,21 @@ class MonthCockpit
      */
     private function quality(Collection $rows): array
     {
-        $spend = $rows->filter(fn (Transaction $t): bool => $t->type === 'expense' && $t->reverses_id === null);
+        // Signed, mirrors included - the same fix as leak().
+        $spend = $rows->filter(fn (Transaction $t): bool => $t->type === 'expense');
 
         $tagged = $spend->filter(fn (Transaction $t): bool => $t->necessity !== null);
-        $taggedTotal = (int) $tagged->sum(fn (Transaction $t): int => $this->amount($t));
-        $untagged = (int) $spend->sum(fn (Transaction $t): int => $this->amount($t)) - $taggedTotal;
+        $taggedTotal = (int) $tagged->sum(fn (Transaction $t): int => $this->signed($t));
+        $untagged = (int) $spend->sum(fn (Transaction $t): int => $this->signed($t)) - $taggedTotal;
 
-        if ($taggedTotal === 0) {
+        if ($taggedTotal <= 0) {
             // No score rather than a zero. Zero reads as "all avoidable", which
             // is a judgement nobody made.
             return ['score' => null, 'grade' => null, 'tagged_minor' => 0, 'untagged_minor' => $untagged];
         }
 
         $weighted = $tagged->sum(
-            fn (Transaction $t): float => (self::QUALITY_WEIGHT[$t->necessity] ?? 0.0) * $this->amount($t),
+            fn (Transaction $t): float => (self::QUALITY_WEIGHT[$t->necessity] ?? 0.0) * $this->signed($t),
         );
 
         $score = ($weighted / $taggedTotal) * 100;

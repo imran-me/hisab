@@ -701,4 +701,49 @@ class FinanceCockpitTest extends TestCase
         $this->getJson('/api/finance/2026-03')->assertUnauthorized();
         $this->getJson('/api/finance/settings')->assertUnauthorized();
     }
+
+    // ---------------------------------------- review round 6, H2
+
+    /**
+     * A corrected entry counts once in "could have kept" and the grade: the
+     * mirror subtracts, as it does in the necessity mix beside them.
+     */
+    public function test_a_correction_counts_once_in_the_leak_and_the_grade(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow('2026-03-20 12:00:00');
+        $legs = app(LedgerWriter::class)->create($this->owner, [
+            'type' => 'expense', 'account_id' => $this->account->id, 'amount_minor' => 1_250_000,
+            'currency' => 'BDT', 'occurred_on' => '2026-03-09', 'necessity' => 3,
+        ]);
+        app(LedgerWriter::class)->correct($this->owner, $legs->first(), ['amount_minor' => 125_000], 'typo');
+        $this->record('expense', 40_000, '2026-03-10', ['necessity' => 1]);
+
+        $m = $this->month('2026-03');
+        \Illuminate\Support\Carbon::setTestNow();
+
+        // Half of the ৳1,250 discretionary lunch, not half of ৳13,750.
+        $this->assertSame(62_500, $m['leak_minor']);
+        $this->assertSame(165_000, $m['quality']['tagged_minor']);
+    }
+
+    /** The correction made the next month: each month nets its own rows. */
+    public function test_a_correction_in_a_later_month_subtracts_there(): void
+    {
+        \Illuminate\Support\Carbon::setTestNow('2026-04-02 12:00:00');
+        $legs = app(LedgerWriter::class)->create($this->owner, [
+            'type' => 'expense', 'account_id' => $this->account->id, 'amount_minor' => 100_000,
+            'currency' => 'BDT', 'occurred_on' => '2026-03-28', 'necessity' => 4,
+        ]);
+        app(LedgerWriter::class)->reverse($this->owner, $legs->first(), 'never happened');
+        $this->record('expense', 30_000, '2026-04-01', ['necessity' => 4]);
+
+        $april = $this->month('2026-04');
+        \Illuminate\Support\Carbon::setTestNow();
+
+        // April's mirror takes March's ৳1,000 back out, which leaves the
+        // month's avoidable spending below zero. "Could have kept −৳700" is
+        // not a sentence, so the figure stops at nothing.
+        $this->assertSame(-70_000, $april['by_need'][4]);
+        $this->assertSame(0, $april['leak_minor']);
+    }
 }
