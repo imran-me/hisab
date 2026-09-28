@@ -50,6 +50,7 @@
   <link rel="manifest" href="../../site.webmanifest">
 
   <link rel="stylesheet" href="../../shared/css/hisab.css">
+  <link rel="stylesheet" href="settings.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -59,121 +60,147 @@
     <nav class="app-rail" aria-label="Sections"></nav>
 
     <main class="app-main" id="main">
-      <div class="page stack stack--4">
+      <div class="page set">
 
-        <!-- ================= Appearance ================= -->
-        <section class="stack stack--3" aria-labelledby="appearance-h">
-          <h2 class="label" id="appearance-h">Appearance</h2>
-
-          <div class="card stack stack--3">
-
-            <fieldset class="fieldset stack stack--2">
-              <legend class="field__label">Theme</legend>
+        <!-- ================= Look =================
+             One row per setting: a coloured circle, the name and what it does,
+             and the control on the right or underneath. Every choice applies
+             the moment it is tapped: there is no Save on this screen. -->
+        <section class="set__group" aria-labelledby="look-h">
+          <h2 class="set__head" id="look-h">Look</h2>
+          <ul class="card card--flush list set__list">
+            <li class="set__row set__row--stack">
+              <span class="row__glyph cat-mobile"><svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-moon"/></svg></span>
+              <div class="set__main">
+                <span class="set__name" id="theme-l">Theme</span>
+                <span class="set__hint" data-theme-hint></span>
+              </div>
               <!--
-                THREE options, not a two-way switch.
-
-                Dark is the default. "Follow phone" is a real, stored choice
-                ('system'), which the CSS expresses as :root:not([data-theme]).
-                A two-position switch could say dark or light and could not say
-                "whatever my phone is doing".
+                THREE options, not a two-way switch. Dark is the default;
+                "Phone" is a real, stored choice ('system'), which the CSS
+                expresses as :root:not([data-theme]).
               -->
-              <div class="choices" data-theme-choices role="radiogroup" aria-label="Theme">
-                <label class="choice">
-                  <input type="radio" name="theme" value="system">
-                  <span>Follow phone</span>
-                </label>
-                <label class="choice">
-                  <input type="radio" name="theme" value="night">
-                  <span>Dark</span>
-                </label>
-                <label class="choice">
-                  <input type="radio" name="theme" value="day">
-                  <span>Light</span>
-                </label>
+              <div class="set__seg" data-theme-choices role="radiogroup" aria-labelledby="theme-l">
+                <label><input type="radio" name="theme" value="night"><span>Dark</span></label>
+                <label><input type="radio" name="theme" value="day"><span>Light</span></label>
+                <label><input type="radio" name="theme" value="system"><span>Phone</span></label>
               </div>
-              <p class="field__hint" data-theme-hint></p>
-            </fieldset>
-
-            <fieldset class="fieldset stack stack--2">
-              <legend class="field__label">Density</legend>
-              <div class="choices" data-density-choices role="radiogroup" aria-label="Density">
-                <label class="choice">
-                  <input type="radio" name="density" value="default">
-                  <span>Comfortable</span>
-                </label>
-                <label class="choice">
-                  <input type="radio" name="density" value="compact">
-                  <span>Compact</span>
-                </label>
+            </li>
+            <li class="set__row set__row--stack">
+              <span class="row__glyph cat-shopping"><svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-list"/></svg></span>
+              <div class="set__main">
+                <span class="set__name" id="density-l">Density</span>
+                <span class="set__hint">Compact fits more rows on a screen.</span>
               </div>
-              <p class="field__hint">Compact fits more rows on screen.</p>
-            </fieldset>
-
-            <fieldset class="fieldset stack stack--2">
-              <legend class="field__label">Reaching hand</legend>
-              <div class="choices" data-hand-choices role="radiogroup" aria-label="Reaching hand">
-                <label class="choice">
-                  <input type="radio" name="hand" value="right">
-                  <span>Right</span>
-                </label>
-                <label class="choice">
-                  <input type="radio" name="hand" value="left">
-                  <span>Left</span>
-                </label>
+              <div class="set__seg" data-density-choices role="radiogroup" aria-labelledby="density-l">
+                <label><input type="radio" name="density" value="default"><span>Comfortable</span></label>
+                <label><input type="radio" name="density" value="compact"><span>Compact</span></label>
               </div>
-              <p class="field__hint">Moves the compose button to the reachable side.</p>
-            </fieldset>
-
-          </div>
+            </li>
+            <li class="set__row set__row--stack">
+              <span class="row__glyph cat-food"><svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-globe"/></svg></span>
+              <div class="set__main">
+                <span class="set__name" id="digits-l">Digits</span>
+                <span class="set__hint" data-digits-preview></span>
+              </div>
+              <div class="set__seg" data-digits-choices role="radiogroup" aria-labelledby="digits-l">
+                <label><input type="radio" name="digits" value="latin"><span>123</span></label>
+                <label><input type="radio" name="digits" value="bangla"><span lang="bn">১২৩</span></label>
+              </div>
+            </li>
+          </ul>
         </section>
 
-        <!-- ================= Account ================= -->
-        <!--
-          Only rendered when there is a server. On a static deployment there is
-          nobody signed in and nothing to sign out of, so an account panel would
-          be a section about a feature that is not present.
-        -->
-        <section class="stack stack--3" data-account-section hidden aria-labelledby="account-h">
-          <h2 class="label" id="account-h">Account</h2>
-          <div class="card stack stack--3">
-            <div class="split split--base">
-              <span class="meta" data-account-email></span>
-              <button type="button" class="btn btn--ghost btn--sm" data-sign-out>Sign out</button>
-            </div>
-          </div>
+        <!-- ================= Money ================= -->
+        <section class="set__group" aria-labelledby="money-h">
+          <h2 class="set__head" id="money-h">Money</h2>
+          <ul class="card card--flush list set__list">
+            <li class="set__row">
+              <span class="row__glyph cat-utilities"><svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-coins"/></svg></span>
+              <label class="set__main" for="set-currency">
+                <span class="set__name">Home currency</span>
+                <span class="set__hint" data-currency-hint></span>
+              </label>
+              <select class="select set__select" id="set-currency" data-currency></select>
+            </li>
+          </ul>
+        </section>
+
+        <!-- ================= Touch ================= -->
+        <section class="set__group" aria-labelledby="touch-h">
+          <h2 class="set__head" id="touch-h">Touch</h2>
+          <ul class="card card--flush list set__list">
+            <li class="set__row">
+              <span class="row__glyph cat-home"><svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-user"/></svg></span>
+              <div class="set__main">
+                <span class="set__name" id="hand-l">Reaching hand</span>
+                <span class="set__hint">Moves what you reach for to this side.</span>
+              </div>
+              <div class="set__seg set__seg--end" data-hand-choices role="radiogroup" aria-labelledby="hand-l">
+                <label><input type="radio" name="hand" value="left"><span>Left</span></label>
+                <label><input type="radio" name="hand" value="right"><span>Right</span></label>
+              </div>
+            </li>
+            <li class="set__row" data-haptics-row>
+              <span class="row__glyph cat-health"><svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-fingerprint"/></svg></span>
+              <label class="set__main" for="set-haptics">
+                <span class="set__name">Vibrate on tap</span>
+                <span class="set__hint" data-haptics-hint>A light tick on +, Save and a finished drag.</span>
+              </label>
+              <span class="switch">
+                <input type="checkbox" id="set-haptics" data-haptics>
+                <span class="switch__track" aria-hidden="true"></span>
+              </span>
+            </li>
+          </ul>
         </section>
 
         <!-- ================= Demo data =================
              Only rendered when there is a server, because that is the only
-             place the generator runs. On a static deployment the buttons would
-             be two controls that cannot do anything. -->
-        <section class="stack stack--3" data-demo-section hidden aria-labelledby="demo-h">
-          <h2 class="label" id="demo-h">Demo data</h2>
-          <div class="card stack stack--3">
-            <p class="field__hint" data-demo-note>Checking…</p>
-
-            <div class="form-actions">
-              <button type="button" class="btn btn--secondary btn--sm" data-demo-add>
-                Add 3 months of demo data
-              </button>
-              <button type="button" class="btn btn--danger btn--sm" data-demo-remove hidden>
-                Remove demo data
-              </button>
-            </div>
-
-            <p class="field__hint">
-              Generated entries are marked, so removing them leaves anything you
-              recorded yourself untouched.
-            </p>
-          </div>
+             place the generator runs. -->
+        <section class="set__group" data-demo-section hidden aria-labelledby="demo-h">
+          <h2 class="set__head" id="demo-h">Demo data</h2>
+          <ul class="card card--flush list set__list">
+            <li class="set__row">
+              <span class="row__glyph cat-transport"><svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-inbox"/></svg></span>
+              <div class="set__main">
+                <span class="set__name" data-demo-title>Demo entries</span>
+                <span class="set__hint" data-demo-note>Checking…</span>
+              </div>
+              <button type="button" class="btn btn--secondary btn--sm" data-demo-add hidden>Add</button>
+              <button type="button" class="btn btn--danger btn--sm" data-demo-remove hidden>Remove</button>
+            </li>
+          </ul>
         </section>
 
-        <!-- ================= Storage ================= -->
-        <section class="stack stack--3" aria-labelledby="storage-h">
-          <h2 class="label" id="storage-h">Where your data is</h2>
-          <div class="card stack stack--2">
-            <p class="field__hint" data-storage-note></p>
-          </div>
+        <!-- ================= Account =================
+             Only rendered when someone is signed in to a server. -->
+        <section class="set__group" data-account-section hidden aria-labelledby="account-h">
+          <h2 class="set__head" id="account-h">Account</h2>
+          <ul class="card card--flush list set__list">
+            <li class="set__row">
+              <span class="row__glyph cat-work"><svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-user"/></svg></span>
+              <div class="set__main">
+                <span class="set__name" data-account-email></span>
+                <span class="set__hint">Signed in on this device</span>
+              </div>
+              <button type="button" class="btn btn--ghost btn--sm set__danger" data-sign-out>Sign out</button>
+            </li>
+          </ul>
+        </section>
+
+        <!-- ================= About ================= -->
+        <section class="set__group" aria-labelledby="about-h">
+          <h2 class="set__head" id="about-h">About</h2>
+          <ul class="card card--flush list set__list">
+            <li class="set__row">
+              <span class="row__glyph row__glyph--vault"><svg class="icon" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-shield-lock"/></svg></span>
+              <div class="set__main">
+                <span class="set__name">Where your data is</span>
+                <span class="set__hint" data-storage-note></span>
+              </div>
+            </li>
+          </ul>
         </section>
 
       </div>

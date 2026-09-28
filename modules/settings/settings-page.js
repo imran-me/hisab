@@ -12,7 +12,9 @@
 
 import { qs, qsa } from '../../shared/js/core/dom.js';
 import { mountShell } from '../../shared/js/components/shell.js';
-import { getState, setTheme, setDensity, setHand } from '../../shared/js/core/state.js';
+import { getState, setTheme, setDensity, setHand, setDigits, setHaptics, setCurrency } from '../../shared/js/core/state.js';
+import { CURRENCIES, moneyLabel } from '../../shared/js/core/money.js';
+import { haptic } from '../../shared/js/components/haptics.js';
 import { session, signOut } from '../../shared/js/core/session.js';
 import { siteURL } from '../../shared/js/core/paths.js';
 import { toast } from '../../shared/js/components/toast.js';
@@ -32,6 +34,7 @@ function select(group, value) {
 select('theme', state.theme ?? 'night');
 select('density', state.density ?? 'default');
 select('hand', state.hand ?? 'right');
+select('digits', state.digits ?? 'latin');
 
 /**
  * What the current theme setting actually means right now.
@@ -70,6 +73,45 @@ qsa('[data-density-choices] input').forEach((input) => {
 qsa('[data-hand-choices] input').forEach((input) => {
   input.addEventListener('change', () => setHand(input.value));
 });
+
+/* Digits: a live sample, so the choice is seen before it is made. */
+function previewDigits() {
+  qs('[data-digits-preview]').textContent = `Figures read ${moneyLabel(12345050, getState().currency)}`;
+}
+previewDigits();
+qsa('[data-digits-choices] input').forEach((input) => {
+  input.addEventListener('change', () => { setDigits(input.value); previewDigits(); });
+});
+
+/* Home currency: the registry's currencies, the home one first. */
+{
+  const pick = qs('[data-currency]');
+  const codes = Object.keys(CURRENCIES);
+  const hint = qs('[data-currency-hint]');
+  const describe = () => { hint.textContent = `${CURRENCIES[pick.value].name}. Totals across currencies convert to it.`; };
+  pick.innerHTML = codes.map((c) => `<option value="${c}">${c}</option>`).join('');
+  pick.value = codes.includes(state.currency) ? state.currency : 'BDT';
+  describe();
+  pick.addEventListener('change', () => {
+    setCurrency(pick.value);
+    describe();
+    previewDigits();
+    toast(`Figures now show in ${pick.value}.`, { tone: 'good' });
+  });
+}
+
+/* Haptics: offered only where the phone can vibrate (not iOS Safari). */
+{
+  const box = qs('[data-haptics]');
+  const canBuzz = typeof navigator.vibrate === 'function';
+  box.checked = canBuzz && getState().haptics !== 'off';
+  box.disabled = !canBuzz;
+  if (!canBuzz) qs('[data-haptics-hint]').textContent = 'This browser cannot vibrate.';
+  box.addEventListener('change', () => {
+    setHaptics(box.checked ? 'on' : 'off');
+    if (box.checked) haptic('success');
+  });
+}
 
 // The phone changing its mind while this page is open. Only meaningful on
 // "Follow phone", and describeTheme() already checks which setting is active.
@@ -144,11 +186,10 @@ async function wireDemo() {
     add.hidden = demo > 0;
     remove.hidden = demo === 0;
 
+    qs('[data-demo-title]').textContent = demo > 0 ? `${demo} demo entries` : 'No demo entries';
     note.textContent = demo > 0
-      ? `${demo} demo entries are in your ledger${real ? `, alongside ${real} of your own` : ''}.`
-      : real > 0
-        ? `You have ${real} entries of your own. Demo data would be added alongside them and marked as demo.`
-        : 'Your ledger is empty. Demo data fills it with a few months of plausible entries so the screens have something to show.';
+      ? `Marked as demo${real ? `, beside ${real} of your own` : ''}. Removing them leaves yours untouched.`
+      : 'Adds 3 months of plausible entries, marked so they can be removed.';
   }
 
   async function refreshStatus() {
@@ -166,7 +207,7 @@ async function wireDemo() {
     const res = await post('/ledger/demo', { months: 3 });
 
     add.disabled = false;
-    add.textContent = 'Add 3 months of demo data';
+    add.textContent = 'Add';
 
     if (!res.ok) { toast(res.message || 'Could not add demo data.'); return; }
 
@@ -193,7 +234,7 @@ async function wireDemo() {
     const res = await del('/ledger/demo');
 
     remove.disabled = false;
-    remove.textContent = 'Remove demo data';
+    remove.textContent = 'Remove';
 
     if (!res.ok) { toast('Could not remove demo data.'); return; }
 
