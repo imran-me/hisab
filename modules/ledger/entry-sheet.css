@@ -146,7 +146,13 @@
 .entry__display::placeholder { color: var(--text-4); opacity: 1; }
 .entry__display[data-size='m'] { font-size: calc(var(--t-entry) * .78); }
 .entry__display[data-size='s'] { font-size: calc(var(--t-entry) * .6); }
-.entry__display.is-selected { background: var(--accent-wash); border-radius: var(--r-sm); }
+.entry__display.is-selected {
+  /* Selected (the next digit replaces it): a faint underline, not a box. A
+     filled box behind a 60px figure read as a highlight bug. */
+  background: none;
+  text-decoration: underline 2px color-mix(in srgb, var(--accent) 55%, transparent);
+  text-underline-offset: 6px;
+}
 .entry__display.is-negative { color: var(--danger); }
 
 .entry__sum {
@@ -263,9 +269,15 @@
   height: 48px;
   border-radius: 50%;
   color: var(--tint, var(--text-2));
-  background: color-mix(in srgb, var(--tint, var(--text-3)) 18%, transparent);
+  /* Saturated enough to read as the category's colour at a glance, not a
+     grey dot; the chosen one is the full tint. */
+  background: color-mix(in srgb, var(--tint, var(--text-3)) 30%, transparent);
   transition: transform var(--t-press) var(--ease-snap), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
+
+/* The glyph at half the circle, on a 2px stroke: at the sprite's default
+   size it was a 14px mark in a 48px disc and read as a dot. */
+.entry-cat__glyph .icon { width: 24px; height: 24px; stroke-width: 2; }
 
 /* The placeholder before the categories load: the same box, no content. */
 .entry-cat--ghost { pointer-events: none; }

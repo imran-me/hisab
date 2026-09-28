@@ -120,6 +120,18 @@ function check(label, condition) {
     const again = await ledger.reverse(second.data.id, 'again');
     check('reversing twice is refused', again.ok === false);
 
+    // --- a reversed reversal restores the entry in the totals ----------------
+    {
+      const { toPeriodKey } = await import('../shared/js/core/dates.js');
+      const period = toPeriodKey(new Date());
+      const before = (await ledger.summary({ period, currency: cash.currency })).data.expense_minor;
+      const e = await ledger.create({ type: 'expense', account_id: cash.id, amount_minor: 7700, currency: cash.currency, payee: 'Undo test' });
+      const m1 = await ledger.reverse(e.data.id);
+      await ledger.reverse(m1.data[0].id);
+      const after = (await ledger.summary({ period, currency: cash.currency })).data.expense_minor;
+      check('a reversed reversal counts the entry once, not minus once', after - before === 7700);
+    }
+
     // --- repeat (swipe right, and the Undo after a reversal) -------------------
     const copy = await ledger.repeat(made.data.id);
     check('repeat records a new entry', copy.ok === true && copy.data.id !== made.data.id);

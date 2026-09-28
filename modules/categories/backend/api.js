@@ -13,6 +13,7 @@
 import { moduleStore, session as sessionCache } from '../../../shared/js/core/storage.js';
 import { get, post, patch, del, hasBackend } from '../../../shared/js/core/http.js';
 import { session as currentSession } from '../../../shared/js/core/session.js';
+import { on, EVENTS } from '../../../shared/js/core/bus.js';
 import { siteURL } from '../../../shared/js/core/paths.js';
 import { ulid, slugify } from '../../../shared/js/core/id.js';
 
@@ -379,3 +380,7 @@ function forget() { memo = null; owner = null; store.clear(); sessionCache.remov
  * signed in, and never serves a copy stamped with another owner.
  */
 export function reset() { forget(); }
+
+// Signing out anywhere (the More sheet, Settings) drops this device's copies
+// at once, not on the next read.
+on(EVENTS.SIGNED_OUT, reset);

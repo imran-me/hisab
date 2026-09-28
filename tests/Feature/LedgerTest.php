@@ -535,6 +535,43 @@ class LedgerTest extends TestCase
         $this->assertSame(4500, $summary["expense_minor"]);
     }
 
+    public function test_a_reversed_reversal_restores_the_entry_in_every_total(): void
+    {
+        $cash = $this->account("Cash", ["opening_balance_minor" => 100000]);
+        $savings = $this->account("Savings", ["type" => "savings"]);
+        $category = $this->category();
+
+        $id = $this->entry([
+            "type" => "expense", "account_id" => $cash->id, "category_id" => $category->id,
+            "amount_minor" => 45000, "currency" => "BDT", "occurred_on" => "2026-09-05",
+        ])->json("data.id");
+        $deposit = $this->entry([
+            "type" => "deposit", "account_id" => $cash->id, "to_account_id" => $savings->id,
+            "amount_minor" => 20000, "currency" => "BDT", "occurred_on" => "2026-09-06",
+        ])->json("data.id");
+
+        // Reverse each, then reverse the reversal: the undo of a wrong undo.
+        foreach ([$id, $deposit] as $original) {
+            $mirror = $this->actingAs($this->owner)->postJson("/api/ledger/{$original}/reverse")
+                ->assertCreated()->json("data.id");
+            $this->actingAs($this->owner)->postJson("/api/ledger/{$mirror}/reverse")->assertCreated();
+        }
+
+        $summary = $this->actingAs($this->owner)
+            ->getJson("/api/ledger/summary?from=2026-01-01&to=2099-12-31")->json("data");
+
+        // It used to subtract the restoring row as well: 45000 − 45000 − 45000.
+        $this->assertSame(45000, $summary["expense_minor"]);
+        $this->assertSame(20000, $summary["deposit_minor"]);
+        $this->assertSame(45000, collect($summary["by_category"])->firstWhere("key", $category->label)["total_minor"] ?? null);
+        $this->assertSame(1, collect($summary["by_category"])->firstWhere("key", $category->label)["count"] ?? null);
+
+        // And the balance agrees with the totals.
+        $balances = $this->actingAs($this->owner)->getJson("/api/ledger/balances")->json("data");
+        $this->assertSame(100000 - 45000 - 20000, $balances[$cash->id]);
+        $this->assertSame(20000, $balances[$savings->id]);
+    }
+
     public function test_deleting_reverses_instead_of_destroying(): void
     {
         $account = $this->account("Cash");

@@ -158,6 +158,17 @@ class BalanceSheet
         // reverses_id is what separates a mirror from an ordinary leg, and it
         // has to be reverses_id rather than direction: a paired deposit already
         // has one leg of each direction without any reversal involved.
+        //
+        // And a mirror can itself be reversed - LedgerWriter::reverse() allows
+        // it, as the way a wrong correction is undone. So the sign is not "a
+        // mirror subtracts" but the PARITY of the chain: an original adds, its
+        // mirror subtracts, the mirror's mirror adds again. Signing every
+        // mirror -1 took the undone amount off a second time.
+        $depth = $this->depths($rows);
+        foreach ($rows as $t) {
+            $t->setAttribute('sign', ($depth[$t->id] ?? 0) % 2 === 0 ? 1 : -1);
+        }
+
         $counted = $rows->filter(function (Transaction $t): bool {
             if ($t->type === 'transfer') {
                 return false;
@@ -167,10 +178,10 @@ class BalanceSheet
                 return true;
             }
 
-            // A deposit is counted ONCE, on the leg that takes money out of the
-            // spendable account - and its mirror is the leg that puts it back,
-            // which is the `in` one.
-            return $t->reverses_id === null
+            // A deposit is counted ONCE, on the chain that starts at the leg
+            // taking money out of the spendable account: that leg is `out`, its
+            // mirror `in`, the mirror's mirror `out` again.
+            return $t->sign === 1
                 ? $t->direction === 'out'
                 : $t->direction === 'in';
         });
@@ -215,8 +226,7 @@ class BalanceSheet
         $totals = ['income' => 0, 'expense' => 0, 'deposit' => 0];
 
         foreach ($counted as $row) {
-            $sign = $row->reverses_id === null ? 1 : -1;
-            $totals[$row->type] = ($totals[$row->type] ?? 0) + ($sign * $row->converted_minor);
+            $totals[$row->type] = ($totals[$row->type] ?? 0) + ($row->sign * $row->converted_minor);
         }
 
         return [
@@ -243,6 +253,49 @@ class BalanceSheet
     }
 
     /**
+     * How many reversals deep each row is: 0 for an entry, 1 for its mirror,
+     * 2 for the mirror of that mirror. Walked through reverses_id, fetching
+     * ancestors outside the period in batches (a reversal made in October of
+     * a September entry has its parent in another month).
+     *
+     * @param  \Illuminate\Support\Collection<int, Transaction>  $rows
+     * @return array<string, int>
+     */
+    private function depths($rows): array
+    {
+        $parent = [];
+        foreach ($rows as $t) {
+            $parent[$t->id] = $t->reverses_id;
+        }
+
+        // Ancestors not in the set, a level at a time. A chain is a handful of
+        // rows at most; the guard is against a cycle that cannot happen.
+        $missing = array_values(array_unique(array_filter(
+            $parent, fn ($p) => $p !== null && ! array_key_exists($p, $parent),
+        )));
+        for ($i = 0; $missing && $i < 16; $i++) {
+            $found = DB::table('transactions')->whereIn('id', $missing)->pluck('reverses_id', 'id');
+            foreach ($missing as $id) {
+                $parent[$id] = $found[$id] ?? null;
+            }
+            $missing = array_values(array_unique(array_filter(
+                $found->all(), fn ($p) => $p !== null && ! array_key_exists($p, $parent),
+            )));
+        }
+
+        $depth = [];
+        foreach ($rows as $t) {
+            $d = 0;
+            for ($at = $t->reverses_id; $at !== null && $d < 32; $at = $parent[$at] ?? null) {
+                $d++;
+            }
+            $depth[$t->id] = $d;
+        }
+
+        return $depth;
+    }
+
+    /**
      * @param  \Illuminate\Support\Collection<int, Transaction>  $rows
      * @return array<int, array<string, mixed>>
      */
@@ -256,11 +309,12 @@ class BalanceSheet
                 // to the same category as the entry it cancels, so adding it
                 // would double that category's share instead of clearing it.
                 'total_minor' => $group->sum(
-                    fn (Transaction $t): int => ($t->reverses_id === null ? 1 : -1) * (int) $t->converted_minor,
+                    fn (Transaction $t): int => (int) $t->sign * (int) $t->converted_minor,
                 ),
                 // Entries that still stand, so a corrected entry counts once
-                // rather than three times.
-                'count' => $group->filter(fn (Transaction $t): bool => $t->reverses_id === null)->count(),
+                // rather than three times: each row by its sign, so an entry
+                // reversed and restored is one, and one reversed is none.
+                'count' => max(0, (int) $group->sum(fn (Transaction $t): int => (int) $t->sign)),
             ])
             // A category whose entries all cancelled out is not a row worth
             // showing - it would read as spending that did not happen.

@@ -15,7 +15,7 @@ import { moduleStore } from '../../../shared/js/core/storage.js';
 import { get, post, patch, del, hasBackend } from '../../../shared/js/core/http.js';
 import { ulid } from '../../../shared/js/core/id.js';
 import { today, toPeriodKey, periodBounds, isWithin } from '../../../shared/js/core/dates.js';
-import { emit, EVENTS } from '../../../shared/js/core/bus.js';
+import { emit, on, EVENTS } from '../../../shared/js/core/bus.js';
 import { convert, convertAndSum } from '../../../shared/js/core/money.js';
 import * as accounts from '../../accounts/backend/api.js';
 import * as fx from '../../fx/backend/api.js';
@@ -560,12 +560,14 @@ export async function summary({ book = 'personal', period = toPeriodKey(new Date
   const rows = (await list({ book, period, includeBothLegs: true, includeReversed: true })).data;
   const rates = await fx.rates();
   const accountCurrency = await accountCurrencies();
+  const sign = signer(await load());
 
   // A REVERSAL IS STILL type = expense. Summing by type alone reports a
   // corrected 45,000 expense as 94,500 spent - wrong, and plausible enough that
-  // nobody would question it. The mirror subtracts.
+  // nobody would question it. The mirror subtracts - and the mirror of a
+  // mirror adds back (signer()), the server's rule in BalanceSheet.
   const signed = (set) => set.map(
-    (r) => (r.reverses_id ? { ...r, amount_minor: -r.amount_minor } : r),
+    (r) => (sign(r) < 0 ? { ...r, amount_minor: -r.amount_minor } : r),
   );
 
   const income = signed(rows.filter((r) => r.type === 'income'));
@@ -576,7 +578,7 @@ export async function summary({ book = 'personal', period = toPeriodKey(new Date
   // one leg of each direction with no reversal involved.
   const held = signed(rows.filter(
     (r) => r.type === 'deposit'
-      && (r.reverses_id ? r.direction === 'in' : r.direction === 'out'),
+      && (sign(r) < 0 ? r.direction === 'in' : r.direction === 'out'),
   ));
 
   const total = (set) => sumIn(set, currency, rates, accountCurrency).amountMinor;
@@ -627,6 +629,7 @@ export async function series(periods, { book = 'personal', type = 'expense', cur
   const rates = await fx.rates();
   const rows = await load();
   const accountCurrency = await accountCurrencies();
+  const sign = signer(rows);
   return periods.map((period) => {
     const { from, to } = periodBounds(period);
     // The same counting as summary(): a reversal mirror SUBTRACTS (it is still
@@ -635,10 +638,28 @@ export async function series(periods, { book = 'personal', type = 'expense', cur
     // in leg.
     const set = rows
       .filter((r) => r.book === book && r.type === type && isWithin(r.occurred_on, from, to))
-      .filter((r) => type !== 'deposit' || (r.reverses_id ? r.direction === 'in' : r.direction === 'out'))
-      .map((r) => (r.reverses_id ? { ...r, amount_minor: -r.amount_minor } : r));
+      .filter((r) => type !== 'deposit' || (sign(r) < 0 ? r.direction === 'in' : r.direction === 'out'))
+      .map((r) => (sign(r) < 0 ? { ...r, amount_minor: -r.amount_minor } : r));
     return { label: period, value: sumIn(set, currency, rates, accountCurrency).amountMinor };
   });
+}
+
+/**
+ * +1 or −1 for a row: the parity of its reversal chain. An entry adds, its
+ * mirror subtracts, and the mirror of that mirror (a wrong undo, undone) adds
+ * again. Signing every mirror −1 subtracted a restored entry twice.
+ */
+function signer(allRows) {
+  const parent = new Map(allRows.map((r) => [r.id, r.reverses_id || null]));
+  const memoDepth = new Map();
+  const depth = (id) => {
+    if (memoDepth.has(id)) return memoDepth.get(id);
+    let d = 0;
+    for (let at = parent.get(id); at && d < 32; at = parent.get(at)) d += 1;
+    memoDepth.set(id, d);
+    return d;
+  };
+  return (row) => (depth(row.id) % 2 === 0 ? 1 : -1);
 }
 
 /** account id → its currency, for reading a row's snapshot. */
@@ -851,3 +872,6 @@ function persist(rows) {
 }
 
 export function reset() { memo = null; store.clear(); }
+
+// The previous person's rows must not outlive their session on this device.
+on(EVENTS.SIGNED_OUT, reset);

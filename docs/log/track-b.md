@@ -499,3 +499,25 @@ the row's own figure. Days with two or more keep the sticky heading and its
 net. **Measured** at 360×780 with demo data: 11 rows fully visible between
 the filter bar and the tab bar (was 5). Dark and day checked; the list's own
 indented rule separates folded days, no overflow (scroll width 360).
+
+## Fixed: a reversed reversal was subtracted twice
+
+Both summaries (`BalanceSheet::summary()` and the browser's `summary()` /
+`series()`) signed a row `reverses_id ? −1 : +1`. A mirror of a mirror,
+which `LedgerWriter::reverse()` allows as the undo of a wrong undo, was
+subtracted again: an entry of 45,000 reversed and restored read as −45,000.
+The sign is now the parity of the reversal chain (walked through
+`reverses_id`, ancestors outside the period fetched in batches on the
+server), and a deposit is counted on the chain that starts at its `out`
+leg. `by_category` counts standing entries by the same sign, so a reversed
+entry counts 0 and a restored one 1.
+
+**Tests:** `test_a_reversed_reversal_restores_the_entry_in_every_total`
+(expense and paired deposit, totals, category total and count, balances);
+harness +1. **For C:** `MonthCockpit` has its own copy of the old sign rule if
+it still sums rows itself (round 6 M on the "second engine").
+
+Folded in, from the coordinator: the category chip glyphs are 24px on a 2px
+stroke (were ~14px) on a 30% tint (was 18%), and the selected amount is a
+faint marigold underline instead of a filled box. From A: both modules reset
+their copies on `EVENTS.SIGNED_OUT`.
