@@ -231,7 +231,8 @@ export async function openPersonSheet(personId, { book = 'personal', people = []
     const acct = byId.get(e.account_id);
     return `
       <li class="${e.reversed ? 'is-reversed' : ''}">
-        <div class="row row--static">
+        <button type="button" class="row" ${e.reversed ? 'disabled' : `data-entry="${esc(e.id)}"`}
+                aria-label="${esc(`${k.verb} ${label(e.amount_minor)} on ${formatDate(e.occurred_on)}${e.reversed ? ', undone' : '. Change or undo'}`)}">
           <span class="row__glyph row__glyph--${k.tone}">${icon(k.sign > 0 ? 'arrow-out' : 'arrow-in', { class: 'icon' })}</span>
           <span class="row__main">
             <span class="row__title">${esc(k.verb)}${e.note ? ` · ${esc(e.note)}` : ''}</span>
@@ -241,7 +242,7 @@ export async function openPersonSheet(personId, { book = 'personal', people = []
             <span class="money money--md">${formatMoneyHTML(k.sign > 0 ? -e.amount_minor : e.amount_minor, CODE, { minor: 'never', sign: 'always' })}</span>
             <span class="meta">bal ${esc(label(e.balance_after_minor))}</span>
           </span>
-        </div>
+        </button>
       </li>`;
   }).join('');
 
@@ -300,6 +301,16 @@ export async function openPersonSheet(personId, { book = 'personal', people = []
     onChanged?.();
   });
 
+  // Change or undo one entry. The ONLY way to correct a due: the Ledger
+  // refuses a Dues leg, because a correction there left the person's balance
+  // behind (review round 8, H4).
+  delegate(root, 'click', '[data-entry]', (_e, b) => {
+    const entry = entries.find((x) => x.id === b.dataset.entry);
+    if (!entry) return;
+    sheet.close('entry');
+    openEntryEdit(p, entry, { onChanged });
+  });
+
   qs('[data-share]', root)?.addEventListener('click', async () => {
     const text = reminderText(p, oldest);
     // The phone's own share sheet (WhatsApp, SMS, Messenger) when there is
@@ -309,5 +320,56 @@ export async function openPersonSheet(personId, { book = 'personal', people = []
       await navigator.clipboard.writeText(text);
       toastOk('Reminder copied. Paste it into a message.');
     } catch { /* the person closed the share sheet: nothing to report */ }
+  });
+}
+
+/**
+ * One due, changed or undone. Change reverses the old transfer and records
+ * the new one in a single request; Undo reverses it and keeps the entry as
+ * history. Either way both balances - the account's and the person's - move
+ * together, because the server does both in one transaction.
+ */
+function openEntryEdit(person, entry, { onChanged } = {}) {
+  const k = dues.KINDS[entry.kind];
+  const body = `
+    <form class="dues-form" data-entry-form novalidate>
+      <p class="dues-hint">${esc(k.verb)} on ${esc(formatDate(entry.occurred_on))}${entry.note ? ` · ${esc(entry.note)}` : ''}</p>
+      <label class="field">
+        <span class="field__label">Amount</span>
+        <span class="amount-field">
+          <span class="amount-field__currency">৳</span>
+          <input class="amount-field__input" data-amount inputmode="decimal" autocomplete="off" data-autofocus
+                 value="${esc(label(entry.amount_minor).replace(/[^0-9.,]/g, ''))}">
+        </span>
+      </label>
+      <p class="dues-hint">The old entry is reversed and the new amount recorded, so the Ledger keeps the trail.</p>
+      <div class="dues-card__actions">
+        <button type="button" class="btn btn--secondary" data-undo>Undo it</button>
+        <button type="submit" class="btn btn--primary">Change amount</button>
+      </div>
+    </form>`;
+
+  const sheet = openSheet({ title: person.name, body });
+  const form = qs('[data-entry-form]', sheet.el);
+  const input = qs('[data-amount]', form);
+  input.select?.();
+
+  const done = (message) => { sheet.close('saved'); toastOk(message); onChanged?.(); };
+
+  qs('[data-undo]', form).addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    const res = await dues.undoEntry(entry.id);
+    if (!res.ok) { event.currentTarget.disabled = false; toastFailure(res, 'Could not undo that.'); return; }
+    done(`${k.verb} ${label(entry.amount_minor)} undone`);
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const amount = parseAmount(input.value, CODE);
+    if (!amount || amount <= 0) { input.focus(); return; }
+    if (amount === entry.amount_minor) { sheet.close('same'); return; }
+    const res = await dues.changeEntry(entry.id, amount);
+    if (!res.ok) { toastFailure(res, 'Could not change that.'); return; }
+    done(`Changed to ${label(amount)}`);
   });
 }

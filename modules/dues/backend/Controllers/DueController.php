@@ -3,6 +3,7 @@
 namespace Hisab\Dues\Controllers;
 
 use App\Http\Controllers\Controller;
+use Hisab\Dues\Models\DueEntry;
 use Hisab\Dues\Models\DuePerson;
 use Hisab\Dues\Requests\PersonRequest;
 use Hisab\Dues\Requests\RecordDueRequest;
@@ -67,6 +68,28 @@ class DueController extends Controller
         $this->dues->settle($request->user(), $person, $data['account_id'], $data['occurred_on'] ?? null);
 
         return response()->json(['data' => $this->dues->person($request->user(), $person->refresh())], 201);
+    }
+
+    public function change(Request $request, string $id): JsonResponse
+    {
+        $data = $request->validate(['amount_minor' => ['required', 'integer', 'min:1', 'max:9000000000000000']]);
+        $entry = $this->entry($request, $id);
+        $this->dues->change($request->user(), $entry, (int) $data['amount_minor']);
+
+        return response()->json(['data' => $this->dues->person($request->user(), $this->person($request, $entry->person_id))]);
+    }
+
+    public function undo(Request $request, string $id): JsonResponse
+    {
+        $entry = $this->entry($request, $id);
+        $this->dues->undo($request->user(), $entry);
+
+        return response()->json(['data' => $this->dues->person($request->user(), $this->person($request, $entry->person_id))]);
+    }
+
+    private function entry(Request $request, string $id): DueEntry
+    {
+        return DueEntry::query()->where('user_id', $request->user()->id)->where('id', $id)->firstOrFail();
     }
 
     /** Through the owner, so someone else's person is a 404 like a missing one. */

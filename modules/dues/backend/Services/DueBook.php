@@ -122,6 +122,77 @@ class DueBook
     }
 
     /**
+     * Change a due's amount: reverse its transfer and record the new one, and
+     * move the entry onto the new Dues leg - one database transaction.
+     *
+     * This is the ONLY way to correct a due (review round 8, H4). A
+     * correction made in the Ledger wrote a mirror that cancelled the
+     * person's leg and a replacement that belonged to no one, so ৳5,000 lent
+     * and corrected to ৳6,000 read as "settled" while the Dues account held
+     * ৳6,000. The ledger now refuses to correct a Dues leg (Track B) and
+     * sends the person here.
+     */
+    public function change(User $user, DueEntry $entry, int $amount): DueEntry
+    {
+        return DB::transaction(function () use ($user, $entry, $amount): DueEntry {
+            $leg = $this->standingLeg($user, $entry);
+
+            if ($amount === $entry->amount_minor) {
+                return $entry;
+            }
+
+            $this->writer->reverse($user, $leg, 'Amount changed on the Dues screen');
+
+            $person = DuePerson::query()->findOrFail($entry->person_id);
+            $intoDues = DueEntry::KINDS[$entry->kind] > 0;
+
+            $legs = $this->writer->create($user, [
+                'type' => 'transfer',
+                'account_id' => $intoDues ? $entry->account_id : $leg->account_id,
+                'to_account_id' => $intoDues ? $leg->account_id : $entry->account_id,
+                'amount_minor' => $amount,
+                'currency' => $entry->currency,
+                'payee' => $person->name,
+                'note' => $entry->note ?? self::describe($entry->kind, $person->name),
+                'occurred_on' => $entry->occurred_on,
+                'book' => $person->book,
+                'is_demo' => $entry->is_demo,
+            ]);
+
+            $entry->forceFill([
+                'amount_minor' => $amount,
+                'transaction_id' => $legs->firstWhere('account_id', $leg->account_id)->id,
+            ])->save();
+
+            return $entry;
+        });
+    }
+
+    /**
+     * Undo a due: reverse its transfer. The entry stays, shown as reversed,
+     * and the mirror nets the person's balance - the same trail a reversal
+     * leaves anywhere else in the ledger.
+     */
+    public function undo(User $user, DueEntry $entry): void
+    {
+        DB::transaction(function () use ($user, $entry): void {
+            $this->writer->reverse($user, $this->standingLeg($user, $entry), 'Undone on the Dues screen');
+        });
+    }
+
+    /** The entry's Dues leg, refusing one already reversed. */
+    private function standingLeg(User $user, DueEntry $entry): Transaction
+    {
+        $leg = Transaction::query()->where('user_id', $user->id)->findOrFail($entry->transaction_id);
+
+        if (Transaction::query()->where('reverses_id', $leg->id)->exists()) {
+            throw ValidationException::withMessages(['entry' => __('This due was already undone.')])->status(409);
+        }
+
+        return $leg;
+    }
+
+    /**
      * Settle the whole balance in one real entry, whichever way it runs.
      */
     public function settle(User $user, DuePerson $person, string $accountId, ?string $on = null): DueEntry

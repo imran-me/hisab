@@ -162,6 +162,45 @@ class DuesTest extends TestCase
         $this->assertTrue($person['entries'][0]['reversed']);
     }
 
+    /** Review round 8, H4: lend 5,000, change it to 6,000, the balance is 6,000. */
+    public function test_changing_an_amount_moves_the_entry_onto_the_new_transfer(): void
+    {
+        $rahim = $this->person();
+        $entry = $this->due($rahim, 'lent', 5_000_00)['entries'][0];
+        $cashBefore = $this->balance($this->cash->id);
+
+        $data = $this->patchJson("/api/dues/entries/{$entry['id']}", ['amount_minor' => 6_000_00])
+            ->assertOk()->json('data');
+
+        $this->assertSame(6_000_00, $data['person']['balance_minor']);
+        $this->assertSame(6_000_00, $data['entries'][0]['amount_minor']);
+        $this->assertFalse($data['entries'][0]['reversed']);
+        $this->assertNotSame($entry['transaction_id'], $data['entries'][0]['transaction_id']);
+
+        // The ledger agrees: 1,000 more left the wallet, the Dues account
+        // holds 6,000, and the old transfer is reversed, not edited.
+        $this->assertSame($cashBefore - 1_000_00, $this->balance($this->cash->id));
+        $dues = $this->getJson('/api/dues')->json('data');
+        $this->assertSame(6_000_00, $this->balance($dues['account_id']));
+        $this->assertSame(6_000_00, $dues['net_minor']);
+        $this->assertTrue(Transaction::query()->where('reverses_id', $entry['transaction_id'])->exists());
+    }
+
+    public function test_undo_reverses_the_transfer_and_nets_the_person(): void
+    {
+        $rahim = $this->person();
+        $this->due($rahim, 'lent', 8_000_00);
+        $entry = $this->due($rahim, 'got_back', 3_000_00)['entries'][0];
+
+        $data = $this->postJson("/api/dues/entries/{$entry['id']}/undo")->assertOk()->json('data');
+        $this->assertSame(8_000_00, $data['person']['balance_minor']);
+        $this->assertTrue($data['entries'][0]['reversed']);
+
+        // Once undone, it cannot be undone or changed again.
+        $this->postJson("/api/dues/entries/{$entry['id']}/undo")->assertStatus(409);
+        $this->patchJson("/api/dues/entries/{$entry['id']}", ['amount_minor' => 1])->assertStatus(409);
+    }
+
     public function test_refusals(): void
     {
         $rahim = $this->person();

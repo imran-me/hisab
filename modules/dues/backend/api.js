@@ -66,6 +66,22 @@ export async function settle(id, { account_id, occurred_on }) {
   return res.ok ? { ok: true, data: res.data?.data } : res;
 }
 
+/** Change a due's amount: the server reverses the old transfer and records the new one. */
+export async function changeEntry(entryId, amountMinor) {
+  if (!(await hasBackend())) return offline();
+  const res = await patch(`/dues/entries/${encodeURIComponent(entryId)}`, { amount_minor: Math.trunc(amountMinor) });
+  if (res.ok) moved();
+  return res.ok ? { ok: true, data: res.data?.data } : res;
+}
+
+/** Undo a due: its transfer is reversed, and the entry stays as history. */
+export async function undoEntry(entryId) {
+  if (!(await hasBackend())) return offline();
+  const res = await post(`/dues/entries/${encodeURIComponent(entryId)}/undo`);
+  if (res.ok) moved();
+  return res.ok ? { ok: true, data: res.data?.data } : res;
+}
+
 /** The server wrote ledger legs: drop the ledger's cached copy and say so. */
 function moved() {
   ledger.reset();

@@ -358,3 +358,18 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
 - Demo: Umrah on the DPS account, an emergency fund on the Shares deposits.
 - Verified: `artisan test` 185 passed (4 new in GoalsTest); screen and sheet
   at 360 (scratchpad `c/g1`, `c/g2`).
+
+### Settings demo button, and review round 8 (H4)
+
+- `90eedeb`: the budgets and dues providers also listen for POST / DELETE
+  `/api/ledger/demo` succeeding (`RequestHandled`), so Settings' button adds
+  and removes demo budgets, goals and dues. No file outside the two modules
+  changed. 2 tests (`DemoExtrasTest`).
+- H4, my half: a due is corrected ONLY from the Dues sheet. Tap an entry:
+  "Change amount" reverses its transfer, records the new one and moves the
+  entry onto the new Dues leg in one DB transaction (`PATCH
+  /api/dues/entries/{id}`); "Undo it" reverses the transfer and keeps the
+  entry as history (`POST …/undo`, 409 once undone). Tested: lend ৳5,000,
+  change to ৳6,000 → person ৳6,000, Dues account ৳6,000, cash −৳1,000 more.
+  **Track B:** the Ledger refusing correct / repeat on a Dues leg is yours,
+  as agreed; point the person to the Dues screen.
