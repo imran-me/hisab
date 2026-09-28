@@ -25,6 +25,7 @@
 
 import { get, post, hasBackend } from './http.js';
 import { siteURL, currentPath } from './paths.js';
+import { emit, EVENTS } from './bus.js';
 
 /** Where the login screen lives. One constant, because two would disagree. */
 export const LOGIN_PATH = 'modules/auth/login.html';
@@ -117,5 +118,6 @@ export async function signIn(email, password, remember = true) {
 export async function signOut() {
   const res = await post('/auth/logout');
   forgetSession();
+  if (res.ok || res.reason === 'offline') emit(EVENTS.SIGNED_OUT);
   return res;
 }

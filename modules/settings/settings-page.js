@@ -15,6 +15,7 @@ import { mountShell } from '../../shared/js/components/shell.js';
 import { getState, setTheme, setDensity, setHand, setDigits, setHaptics, setCurrency } from '../../shared/js/core/state.js';
 import { CURRENCIES, moneyLabel } from '../../shared/js/core/money.js';
 import { haptic } from '../../shared/js/components/haptics.js';
+import { reset as resetCategories } from '../categories/backend/api.js';
 import { session, signOut } from '../../shared/js/core/session.js';
 import { siteURL } from '../../shared/js/core/paths.js';
 import { toast } from '../../shared/js/components/toast.js';
@@ -152,6 +153,9 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', des
       toast('Could not sign out. Try again.');
       return;
     }
+
+    // The cached categories belong to the owner who just left.
+    resetCategories();
 
     // replace(), not assign(): signing out and then pressing Back should not
     // return to a page rendered while signed in.

@@ -49,6 +49,13 @@ export const EVENTS = {
   VAULT_LOCKED:   'vault:locked',
   VAULT_CHANGED:  'vault:changed',
 
+  // Session. Emitted by session.signOut() once the server has ended the
+  // session, before the page moves to the login screen: a module holding a
+  // cached copy of the owner's data (categories, accounts) drops it here, so
+  // the next person to sign in on this device never sees it. shared/ cannot
+  // import a module, so this is how sign-out reaches them.
+  SIGNED_OUT: 'session:signed-out',
+
   // Connectivity
   ONLINE:  'net:online',
   OFFLINE: 'net:offline',
