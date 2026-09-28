@@ -259,3 +259,29 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
 - Screens: scratchpad `c/k1d` (list, night), `c/k2l` (detail, day).
 - Not done (deadline): step 3, red/green across Home, Accounts, detail and
   Month.
+
+## 2026-09-28
+
+### Budgets, the server half
+
+- New module `modules/budgets/` (`Hisab\Budgets`): a `budgets` table holding
+  ONLY the limit per expense category (one per category, cascade with it);
+  `GET /api/budgets` computes spent, left, a floored per-day pace and a state
+  (ok < 75% ≤ warn < 100% ≤ over) on every read; `PUT` / `DELETE
+  /api/budgets/{categoryId}`. Contract first in `backend/endpoints.md`.
+- Spent is summed here, not read from `BalanceSheet::summary()`, because the
+  summary groups by the category's snapshot LABEL and a budget belongs to the
+  category. Same rule (expense only, converted per row with the snapshot rule,
+  mirror subtracts); a test pins Σ rows + `other_minor` to the summary's
+  `expense_minor` for three demo months. **For Track B:** a `category_id` on
+  the summary's `by_category` rows would let this read it instead.
+- Each row carries last month, a three-month average and a round suggested
+  limit, so setting a budget from a category is one tap.
+- Demo: the provider listens for `hisab:demo` finishing (`CommandFinished`)
+  instead of editing the ledger's command; `--clear` / `--fresh` purge exactly
+  the `is_demo` budgets. **Not covered:** the Settings demo button, which
+  calls `DemoData` directly — a hook there is Track B's call.
+- Registration is the two permitted lines: the PSR-4 entry in
+  `composer.json` and the provider in `bootstrap/providers.php` (Dev A's
+  files; one line each, like the `SECONDARY` exception).
+- Verified: `artisan test` 166 passed (10 new in `BudgetsTest`).
