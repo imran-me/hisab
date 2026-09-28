@@ -10,12 +10,12 @@
 import { qs, icon, esc, delegate } from '../../shared/js/core/dom.js';
 import { formatMoneyHTML, moneyLabel } from '../../shared/js/core/money.js';
 import { formatDayLabel, currentPeriod, periodBounds, isWithin } from '../../shared/js/core/dates.js';
-import { on, EVENTS } from '../../shared/js/core/bus.js';
+import { on, emit, EVENTS } from '../../shared/js/core/bus.js';
 import { mountShell } from '../../shared/js/components/shell.js';
 import * as accounts from './backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
 import { openEntrySheet, mountCompose } from '../ledger/entry-sheet.js';
-import { openAccountSheet, postAdjustment } from './account-form.js';
+import { openAccountSheet, gapText } from './account-form.js';
 import { accountCard } from './account-card.js';
 import { applyStyleVars } from './style-vars.js';
 import { formatDate, today } from '../../shared/js/core/dates.js';
@@ -98,7 +98,7 @@ function drawHero(account, balance) {
   const host = qs('[data-card]');
   host.innerHTML = accountCard(account, balance, { size: 'hero' });
   applyStyleVars(host);
-  drawStatement(account, balance);
+  drawStatement(account);
 
   const note = qs('[data-note]');
   note.hidden = true;
@@ -122,28 +122,31 @@ function drawHero(account, balance) {
  * to post the difference. The statement is an input the owner typed in; the
  * balance stays the ledger's own derived figure.
  */
-function drawStatement(account, balance) {
+async function drawStatement(account) {
   const box = qs('[data-recon]');
   const said = account.statement_balance_minor;
   box.hidden = said == null;
   if (said == null) return;
 
-  const gap = said - balance;
-  const on = account.statement_on || today();
-  const label = (v) => esc(moneyLabel(v, account.currency));
-  qs('[data-recon-text]').innerHTML = gap === 0
-    ? `${icon('check', { class: 'icon icon--sm' })} Matches the statement of ${esc(formatDate(on))}.`
-    : `The statement of ${esc(formatDate(on))} says <strong>${label(said)}</strong>: the ledger is
-       <strong>${label(Math.abs(gap))} ${gap > 0 ? 'short' : 'over'}</strong>.`;
+  // Against the balance on the statement's own date, from the server; an
+  // entry after the statement is not part of the gap (review round 6, H1).
+  const query = { statement_minor: said, on: account.statement_on || today() };
+  const res = await accounts.reconcileCheck(account.id, query);
+  if (!res.ok) { box.hidden = true; return; }
+
+  qs('[data-recon-text]').innerHTML = gapText(res.data, account.currency);
 
   const button = qs('[data-recon-adjust]');
-  button.hidden = gap === 0;
+  button.hidden = res.data.gap_minor === 0;
   button.disabled = false;
-  button.textContent = `Post a ${moneyLabel(Math.abs(gap), account.currency)} adjustment`;
+  button.textContent = 'Match the statement';
   button.onclick = async () => {
     button.disabled = true;
-    const res = await postAdjustment(account, gap, on);
-    if (!res.ok) button.disabled = false;
+    const done = await accounts.reconcile(account.id, query);
+    if (!done.ok) { button.disabled = false; return; }
+    // The opening balance moved, so every balance on this page did too.
+    ledger.reset();
+    emit(EVENTS.ACCOUNT_UPDATED, done.data.account);
   };
 }
 

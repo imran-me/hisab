@@ -41,6 +41,8 @@ Route::prefix('accounts')->middleware('auth')->group(function (): void {
     Route::patch('/reorder', [AccountController::class, 'reorder']);
 
     Route::get('/{id}', [AccountController::class, 'show']);
+    Route::get('/{id}/reconcile', [AccountController::class, 'reconcileCheck']);
+    Route::post('/{id}/reconcile', [AccountController::class, 'reconcile']);
     Route::patch('/{id}', [AccountController::class, 'update']);
     Route::delete('/{id}', [AccountController::class, 'destroy']);
 });

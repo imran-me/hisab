@@ -69,8 +69,22 @@ a business account that becomes personal is a real financial event
 - Fields a type has no use for are nulled, not refused (a branch on cash, a
   network on a wallet).
 - **The statement is not a balance.** It is what a statement said on a date.
-  The balance stays derived (`/api/ledger/balances`); the client shows the gap
-  and can post an ordinary adjustment entry to close it.
+  The balance stays derived (`/api/ledger/balances`).
+
+### `GET /api/accounts/{id}/reconcile?statement_minor=&on=`
+
+Compares a statement with the balance **as of its own date** (opening + every
+leg on or before `on`), never today's. A card's statement is the amount due,
+typed positive, and is read as owed (−due). Returns `{ on, currency,
+statement_minor, balance_on_minor, gap_minor }`; a positive gap means the
+ledger is short of the statement.
+
+### `POST /api/accounts/{id}/reconcile` `{ statement_minor, on }`
+
+Closes the gap by moving `opening_balance_minor` by it and records the
+statement. Not an income or an expense: nothing was earned or spent, so no
+month's figures move. Idempotent: a second call finds a gap of 0. Returns the
+check after the fix-up, `adjusted_minor` and the account.
 
 ### `opening_balance_minor`
 
@@ -159,8 +173,8 @@ Stated here rather than left to look like an oversight:
 
 - **Bank feed import.** No OFX/CSV ingestion. Every transaction is entered by
   hand or imported from a backup file.
-- **Reconciliation against a statement.** There is no "cleared" flag and no
-  statement-balance comparison. The ledger is trusted as written.
+- **A "cleared" flag per entry.** Reconciliation is one figure per statement
+  date; entries are not ticked off one by one.
 - **Shared accounts.** One owner per account. Splitting a household budget
   between two logins is not modelled.
 - **Interest accrual.** A savings account does not grow on its own; interest is

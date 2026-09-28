@@ -7,6 +7,7 @@ use Hisab\Accounts\Models\Account;
 use Hisab\Accounts\Requests\StoreAccountRequest;
 use Hisab\Accounts\Requests\UpdateAccountRequest;
 use Hisab\Accounts\Services\AccountBook;
+use Hisab\Accounts\Services\Reconciler;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -94,6 +95,34 @@ class AccountController extends Controller
         $this->book->delete($this->find($request, $id));
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * What a dated statement says against the balance ON THAT DATE.
+     * See Reconciler for why not today's balance.
+     */
+    public function reconcileCheck(Request $request, string $id, Reconciler $reconciler): JsonResponse
+    {
+        $q = $request->validate([
+            'statement_minor' => ['required', 'integer'],
+            'on' => ['required', 'date_format:Y-m-d'],
+        ]);
+
+        return response()->json(['data' => $reconciler->check($this->find($request, $id), (int) $q['statement_minor'], $q['on'])]);
+    }
+
+    /** Bring the ledger to the statement, by the opening balance - never an income or expense. */
+    public function reconcile(Request $request, string $id, Reconciler $reconciler): JsonResponse
+    {
+        $q = $request->validate([
+            'statement_minor' => ['required', 'integer'],
+            'on' => ['required', 'date_format:Y-m-d'],
+        ]);
+
+        $account = $this->find($request, $id);
+        $result = $reconciler->apply($account, (int) $q['statement_minor'], $q['on']);
+
+        return response()->json(['data' => $result + ['account' => $this->shape($account->refresh())]]);
     }
 
     private function find(Request $request, string $id): Account

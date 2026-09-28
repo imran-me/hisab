@@ -303,6 +303,33 @@ export async function financeArchive({ book = 'personal', currency = 'BDT' } = {
   return res.ok ? { ok: true, data: res.data?.data } : res;
 }
 
+/* ---- Reconciling to a statement ----------------------------------------- */
+
+/**
+ * A dated statement against the balance ON ITS DATE, as the server works it
+ * out (Reconciler). Server-only: the gap is a derived figure, and the browser
+ * copy compared with today's balance, which turned every later entry into an
+ * "adjustment" (review round 6, H1).
+ *
+ * `statement_minor` is what was typed: for a card, the amount due.
+ */
+export async function reconcileCheck(id, { statement_minor, on }) {
+  if (!(await hasBackend())) return { ok: false, reason: 'offline' };
+  const res = await get(`/accounts/${id}/reconcile`, { statement_minor, on });
+  return res.ok ? { ok: true, data: res.data?.data } : res;
+}
+
+/** Close the gap. Moves the opening balance, never an income or expense (M1). */
+export async function reconcile(id, { statement_minor, on }) {
+  if (!(await hasBackend())) return { ok: false, reason: 'offline' };
+  const res = await post(`/accounts/${id}/reconcile`, { statement_minor, on });
+  if (!res.ok) return res;
+  const rows = await load();
+  const row = rows.find((a) => a.id === id);
+  if (row && res.data?.data?.account) adopt(rows, row, res.data.data.account);
+  return { ok: true, data: res.data?.data };
+}
+
 /* ---- Details ------------------------------------------------------------- */
 
 /** The detail fields an account carries, as they are kept on this device. */

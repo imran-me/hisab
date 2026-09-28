@@ -20,7 +20,6 @@ import * as state from '../../shared/js/core/state.js';
 import { openSheet } from '../../shared/js/components/sheet.js';
 import { toastOk, toastFailure } from '../../shared/js/components/toast.js';
 import * as accounts from './backend/api.js';
-import * as ledger from '../ledger/backend/api.js';
 import { banks, wallets, findInstitution, bankLogo, COLOURS } from './brand.js';
 
 /** The five kinds the form starts with, and the account type each files as. */
@@ -78,26 +77,23 @@ const field = (id, label, input, hint = '') => `
 const money = (minor, code) => (minor ? esc(formatMoney(minor, code, { minor: 'auto' })) : '');
 
 /**
- * Post the one entry that brings the ledger to a statement's figure.
+ * The words for a statement gap.
  *
- * An ordinary entry, so it shows in the ledger and in the month like any
- * other: the ledger stays the one source of the balance, and nothing about
- * it is hidden.
+ * The gap is the server's: the statement against the balance ON ITS DATE
+ * (accounts.reconcileCheck), never today's balance. Closing it moves the
+ * opening balance, so no month's income or spending changes (review round
+ * 6, H1 and M1).
  *
- * @param {object} account
- * @param {number} gap   statement minus derived balance, in minor units
- * @param {string} on    the statement's date
+ * @returns {string} markup
  */
-export function postAdjustment(account, gap, on) {
-  return ledger.create({
-    type: gap > 0 ? 'income' : 'expense',
-    account_id: account.id,
-    amount_minor: Math.abs(gap),
-    currency: account.currency,
-    occurred_on: on,
-    payee: 'Balance adjustment',
-    note: `Reconciled to the statement of ${formatDate(on)}`,
-  });
+export function gapText(check, code) {
+  const label = (v) => esc(moneyLabel(v, code));
+  const on = esc(formatDate(check.on));
+  if (check.gap_minor === 0) {
+    return `${icon('check', { class: 'icon icon--sm' })} Matches the ledger on ${on}: ${label(check.balance_on_minor)}.`;
+  }
+  return `On ${on} the ledger says <strong>${label(check.balance_on_minor)}</strong>, so it is
+    <strong>${label(Math.abs(check.gap_minor))} ${check.gap_minor > 0 ? 'short' : 'over'}</strong>.`;
 }
 
 /**
@@ -214,7 +210,7 @@ export async function openAccountSheet(account = null, { balance = null } = {}) 
       <fieldset class="fieldset acc-reconcile">
         <legend class="field__label">Closing balance on a statement</legend>
         <div class="grid grid--pair">
-          ${field('acc-statement', 'Statement says', `<input class="input" id="acc-statement" name="statement" value="${current.statement_balance_minor != null ? esc(formatMoney(current.statement_balance_minor, current.currency, { minor: 'auto' })) : ''}" inputmode="decimal" autocomplete="off">`)}
+          ${field('acc-statement', current.type === 'card' ? 'Amount due' : 'Statement says', `<input class="input" id="acc-statement" name="statement" value="${current.statement_balance_minor != null ? esc(formatMoney(current.statement_balance_minor, current.currency, { minor: 'auto' })) : ''}" inputmode="decimal" autocomplete="off">`)}
           ${field('acc-statement-on', 'On', `<input class="input" id="acc-statement-on" name="statement_on" type="date" value="${esc(current.statement_on || today())}">`)}
         </div>
         <p class="acc-reconcile__gap" data-gap hidden></p>
@@ -282,28 +278,32 @@ export async function openAccountSheet(account = null, { balance = null } = {}) 
 
   /* ---- The statement gap ------------------------------------------------ */
   const gapNode = qs('[data-gap]', form);
-  let gap = 0;
-  function showGap() {
-    if (!gapNode || balance === null) return;
-    const said = parseAmount(form.elements.statement?.value || '', current.currency);
-    gap = said === null ? 0 : said - balance;
-    gapNode.hidden = said === null;
-    if (said === null) return;
-    gapNode.innerHTML = gap === 0
-      ? `${icon('check', { class: 'icon icon--sm' })} Matches the ledger: ${esc(moneyLabel(balance, current.currency))}.`
-      : `The ledger says <strong>${esc(moneyLabel(balance, current.currency))}</strong>, so it is
-         <strong>${esc(moneyLabel(Math.abs(gap), current.currency))} ${gap > 0 ? 'short' : 'over'}</strong>.
-         <button type="button" class="btn btn--secondary btn--sm" data-adjust>Post a ${esc(moneyLabel(Math.abs(gap), current.currency))} adjustment</button>`;
+  const statement = () => ({
+    statement_minor: parseAmount(form.elements.statement?.value || '', current.currency),
+    on: form.elements.statement_on?.value || today(),
+  });
+  let asked = 0;
+  async function showGap() {
+    if (!gapNode) return;
+    const s = statement();
+    gapNode.hidden = s.statement_minor === null;
+    if (s.statement_minor === null) return;
+    const ticket = ++asked;
+    const res = await accounts.reconcileCheck(current.id, s);
+    if (ticket !== asked) return;   // a later keystroke already asked again
+    if (!res.ok) { gapNode.hidden = true; return; }
+    gapNode.innerHTML = gapText(res.data, current.currency) + (res.data.gap_minor === 0 ? '' : `
+      <button type="button" class="btn btn--secondary btn--sm" data-adjust>Match the statement</button>`);
   }
   form.elements.statement?.addEventListener('input', showGap);
+  form.elements.statement_on?.addEventListener('change', showGap);
+  if (editing) showGap();
 
   delegate(form, 'click', '[data-adjust]', async (_e, button) => {
-    if (!gap) return;
     button.disabled = true;
-    const res = await postAdjustment(current, gap, form.elements.statement_on.value || today());
-    if (!res.ok) { button.disabled = false; toastFailure(res, 'Could not post the adjustment.'); return; }
-    balance += gap;
-    toastOk('Adjustment posted. The ledger now matches the statement.');
+    const res = await accounts.reconcile(current.id, statement());
+    if (!res.ok) { button.disabled = false; toastFailure(res, 'Could not match the statement.'); return; }
+    toastOk(`Opening balance moved by ${moneyLabel(res.data.adjusted_minor, current.currency)}. The ledger now matches the statement.`);
     showGap();
   });
 
