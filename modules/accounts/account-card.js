@@ -12,6 +12,7 @@
 
 import { esc, icon } from '../../shared/js/core/dom.js';
 import { formatMoneyHTML } from '../../shared/js/core/money.js';
+import { siteURL } from '../../shared/js/core/paths.js';
 import * as accounts from './backend/api.js';
 import { cardLook, bankLogo } from './brand.js';
 
@@ -56,9 +57,13 @@ export function accountCard(account, balance, { size = 'list', href = null } = {
        data-vars="${esc(look.vars)}">
       <span class="acc-card__sheen" aria-hidden="true"></span>
       <span class="acc-card__top">
-        <span class="acc-card__logo">${bankLogo(look.inst, size === 'hero' ? 40 : 32)}</span>
+        ${look.inst.wordmark
+          // A bank with a wide logo shows it whole on a white plate, which
+          // names the bank better than the square mark and its name in text.
+          ? `<span class="acc-card__wordmark"><img src="${esc(siteURL(`assets/banks/${look.inst.wordmark}`))}" alt="${esc(issuer)}" height="${size === 'hero' ? 26 : 22}" decoding="async"></span>`
+          : `<span class="acc-card__logo">${bankLogo(look.inst, size === 'hero' ? 40 : 32)}</span>`}
         <span class="acc-card__issuer">
-          <span class="acc-card__bank">${esc(issuer)}</span>
+          ${look.inst.wordmark ? '' : `<span class="acc-card__bank">${esc(issuer)}</span>`}
           ${account.branch ? `<span class="acc-card__branch">${esc(account.branch)}</span>` : ''}
         </span>
         ${kind.toLowerCase() !== issuer.toLowerCase() ? `<span class="acc-card__kind">${esc(kind)}</span>` : ''}

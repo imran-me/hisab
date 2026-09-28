@@ -44,3 +44,21 @@ PNGs were scaled to 160 px on the long side and quantised to 64 colours.
 
 To add one: put an optimised square-ish file here, set `logo:` in
 `institutions.js`, add a row above, and check `tools/institutions.html`.
+
+## Added 2026-09-28
+
+Square marks (96px PNG, transparent) and, where one exists, a wide
+`<id>-wordmark.png` (≤240px) shown on the account card.
+
+- Wordmarks and most square marks: the English Wikipedia article for each
+  bank (its logo file; many are non-free logos used under fair use there).
+  Square marks for bKash, Prime, Southeast and Trust are cropped from those
+  wordmarks.
+- city, pubali, hsbc, mtb, dhaka, ucb, jamuna, premier, community, brac,
+  bankasia, ific, ebl, agrani, abbank, nrb, one, midland, surecash: each
+  bank's own site icon, via the site or Google's favicon service.
+- ibbl, nagad: the bank's own site favicon.
+
+These are trademarks of their owners, used here only to identify the
+owner's own accounts in a private app. Mercantile, Tap and SureCash's
+wordmark had no usable source and keep the brand-colour monogram.

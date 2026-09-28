@@ -121,6 +121,18 @@ a.acc-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px
 .acc-cards__item .acc-card__top { padding-inline-end: 40px; }
 .acc-card__logo { display: inline-flex; flex: none; border-radius: var(--r-md); box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 22%, transparent); }
 
+.acc-card__wordmark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  max-width: 62%;
+  padding: 5px 9px;
+  border-radius: var(--r-md);
+  background: #FFFFFF; /* the logo's own ground, not a theme colour */
+}
+.acc-card__wordmark img { display: block; height: 22px; width: auto; max-width: 100%; object-fit: contain; }
+.acc-card--hero .acc-card__wordmark img { height: 26px; }
+
 .acc-card__issuer { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
 .acc-card__bank {
   font-family: var(--font-display);
@@ -186,6 +198,18 @@ a.acc-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px
 .acc-card__figure .money__code,
 .acc-card__figure .money__minor { color: inherit; opacity: 0.75; }
 
+/* On a card the figure is the card's own ink, never the red/green of a list:
+   red on bKash pink or City red cannot be read, and "Below zero" already
+   says it. */
+.acc-card__figure,
+.acc-card__figure [class*="money--"],
+.acc-card__figure .money-dir { color: inherit; }
+
+/* A generic mark (Cash, a bank with no logo) is drawn in the card's ink on a
+   faint plate, so it shows on every brand colour in both themes. */
+.acc-card .inst-logo--generic .inst-logo__ground { fill: color-mix(in srgb, currentColor 18%, transparent); }
+.acc-card .inst-logo--generic .inst-logo__glyph { color: currentColor; }
+
 .acc-card--hero { min-height: 132px; }
 .acc-card--hero .acc-card__figure { font-size: var(--fs-34); }
 
@@ -218,8 +242,8 @@ a.acc-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px
   height: 36px;
   border: 0;
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--bg-0) 45%, transparent);
-  color: var(--text-1);
+  background: rgba(0, 0, 0, 0.22); /* on a brand colour, not a theme ground */
+  color: #FFFFFF;
   cursor: pointer;
 }
 

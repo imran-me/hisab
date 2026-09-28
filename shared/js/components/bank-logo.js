@@ -95,7 +95,10 @@ export function bankLogo(idOrInstitution, size = 40, { label = null } = {}) {
   // brand colour is an SVG fill attribute, which is not style.
 
   if (inst.logo) {
-    return `<img class="inst-logo inst-logo--img" src="${esc(siteURL(`assets/banks/${inst.logo}`))}"`
+    // Padding by size class, not a percentage: a percentage padding resolves
+    // against the PARENT's width, which in a wide row ate the whole tile.
+    const pad = s <= 24 ? 'xs' : s <= 36 ? 'sm' : 'md';
+    return `<img class="inst-logo inst-logo--img inst-logo--pad-${pad}" src="${esc(siteURL(`assets/banks/${inst.logo}`))}"`
       + ` width="${s}" height="${s}" alt="${label ? esc(label) : ''}"${label ? '' : ' aria-hidden="true"'}`
       + ` loading="lazy" decoding="async">`;
   }

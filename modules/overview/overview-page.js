@@ -18,6 +18,7 @@ import { formatPeriod, currentPeriod, daysInPeriod, periodProgress, today } from
 import { on, EVENTS } from '../../shared/js/core/bus.js';
 import * as state from '../../shared/js/core/state.js';
 import { mountShell } from '../../shared/js/components/shell.js';
+import { accountLogo } from '../../shared/js/components/bank-logo.js';
 import { segmentColor } from '../../shared/js/components/spark.js';
 import * as accounts from '../accounts/backend/api.js';
 import * as ledger from '../ledger/backend/api.js';
@@ -289,7 +290,7 @@ function drawAccounts(accountRows, balances) {
       <li class="home-account${flagged ? ' is-negative' : ''}">
         <a href="modules/accounts/detail.html?id=${encodeURIComponent(account.id)}">
           <span class="home-account__name">
-            ${icon(type.icon, { class: 'icon icon--sm' })}
+            ${accountLogo(account, 22)}
             <span>${esc(account.name)}</span>
           </span>
           <span class="money home-account__balance">${listFigure(balance, account.currency)}</span>
