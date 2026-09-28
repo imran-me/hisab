@@ -164,3 +164,19 @@ mCash, CellFin and dmoney (no usable icon).
   logo (`surecash.net/wp-content/uploads/2016/12/logo.png.png`).
 - Checked and kept: Union Bank's "6" swirl and Shohoz's green pin are the
   brands' own marks.
+
+## Last pass for the monograms, 2026-09-29
+
+Each brand's homepage was read for every `<link rel=icon>`,
+`apple-touch-icon`, `og:image` and logo `<img>`, and Google's favicon
+service was asked at 128 px.
+
+- `tap.png`: Tap's own 80 px logo from its site
+  (`tapbd.com/assets/70x70-TapLogo.png`, reached via trustaxiatapay.com).
+- Kept as monograms, because nothing clean exists:
+  - Bengal Commercial Bank: every candidate domain is parked or a
+    different company.
+  - mCash: its site serves Islami Bank's own crest, which is IBBL's mark,
+    not mCash's.
+  - CellFin and dmoney: their domains do not resolve, and the favicon
+    service has only the generic globe for them.

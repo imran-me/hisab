@@ -31,7 +31,7 @@ export const MERCHANTS = [
   { id: 'chaldal',    name: 'Chaldal',      short: 'C',    color: '#F5B400', logo: 'chaldal.png',    match: ['chaldal'] },
   { id: 'aarong',     name: 'Aarong',       short: 'A',    color: '#8B1D1D', logo: 'aarong.png',     match: ['aarong'] },
   { id: 'shwapno',    name: 'Shwapno',      short: 'S',    color: '#E31E25', logo: 'shwapno.png',    match: ['shwapno', 'swapno'] },
-  { id: 'agora',      name: 'Agora',        short: 'A',    color: '#00A651', logo: null,             match: ['agora'] },
+  { id: 'agora',      name: 'Agora',        short: 'A',    color: '#00A651', logo: null, wordmark: 'agora-wordmark.png', match: ['agora'] },
   { id: 'meenabazar', name: 'Meena Bazar',  short: 'MB',   color: '#D71920', logo: 'meenabazar.png', match: ['meena bazar', 'meena bazaar', 'meenabazar'] },
   { id: 'unimart',    name: 'Unimart',      short: 'U',    color: '#005BAA', logo: 'unimart.png',    match: ['unimart'] },
   { id: 'bata',       name: 'Bata',         short: 'B',    color: '#E4002B', logo: 'bata.png',       match: ['bata'] },

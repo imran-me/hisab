@@ -115,7 +115,7 @@ export const INSTITUTIONS = [
   { id: 'nagad',       name: 'Nagad',                     short: 'N',    kind: 'mfs',  color: '#F26722', logo: 'nagad.png', match: ['nagad'] },
   { id: 'rocket',      name: 'Rocket',                    short: 'R',    kind: 'mfs',  color: '#8C3494', logo: 'rocket.svg', match: ['rocket wallet', 'dbbl rocket'], exact: ['rocket'] },
   { id: 'upay',        name: 'Upay',                      short: 'U',    kind: 'mfs',  color: '#0054A6', logo: 'upay.svg', match: ['upay'] },
-  { id: 'tap',         name: 'Tap',                       short: 'tap',  kind: 'mfs',  color: '#6C2D82', logo: null, match: ['tap wallet', 'trust axiata pay'], exact: ['tap'] },
+  { id: 'tap',         name: 'Tap',                       short: 'tap',  kind: 'mfs',  color: '#E5202E', logo: 'tap.png', match: ['tap wallet', 'trust axiata pay'], exact: ['tap'] },
   { id: 'surecash',    name: 'SureCash',                  short: 'SC',   kind: 'mfs',  color: '#1561B0', logo: null, wordmark: 'surecash-wordmark.png', match: ['surecash', 'sure cash'] },
   { id: 'okwallet',   name: 'OK Wallet',                 short: 'OK',   kind: 'mfs',  color: '#F6C700', logo: 'okwallet.png', match: ['ok wallet', 'okwallet'] },
   { id: 'mcash',      name: 'mCash',                     short: 'mC',   kind: 'mfs',  color: '#0B7A3E', logo: null, match: ['mcash', 'm cash'] },

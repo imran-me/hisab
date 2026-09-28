@@ -85,3 +85,12 @@ and Dhaka WASA (their sites serve the government emblem).
 
 Replaced 2026-09-29 (review): `apex.png` was a blurry 30 px favicon; it is
 now the 250 px icon from Apex's own site (`apex4u.com/favicon.ico`).
+
+Last pass for the monograms, 2026-09-29 (the same method as the banks'):
+
+- `agora-wordmark.png` comes from the Wikipedia logo file
+  (Agora Super Stores Logo.png, fair use). Its only square source is a
+  mascot, which is unreadable at 40 px, so the tile stays a monogram.
+- DESCO, DPDC and Dhaka WASA: every icon on their sites, and their
+  `og:image`, is the government portal's national emblem, which is the same
+  for every ministry and so identifies none of them. They stay monograms.
