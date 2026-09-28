@@ -470,3 +470,23 @@ replaced in place. **Measured** on a cold tab with 400ms added latency: the
 pad's top sits at 554px from the moment the sheet settles, and stays there
 when the chips land 1.8s later (before: it moved by the row's height).
 Ledger harness 54.
+
+## Review round 7 (3): the next person never sees the last one's categories
+
+Nothing called `categories.reset()` on sign-out, and the sign-out buttons
+are A's (`shell.js`, `settings-page.js`). So the modules now protect
+themselves:
+
+- the first read after a real server says nobody is signed in drops every
+  copy: categories' memory, offline copy and tab copy, and the ledger's
+  offline copy of the previous person's rows (a network failure is not
+  taken for a sign-out and keeps them);
+- the categories offline copy is stamped with the owner id, and a copy
+  stamped with someone else's is never served.
+
+**Verified** in Chrome against the server: signed in (offline copy stamped
+with the owner, 119 ledger rows cached) → `signOut()` → the next read returns
+nothing and both stores are empty → signed in again → fresh copies, rows
+drawn. **For A:** call `categories.reset()` and `ledger.reset()` from both
+sign-out handlers too, so the copies go at the click rather than on the next
+read.

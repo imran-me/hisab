@@ -225,6 +225,11 @@ async function fetchAll() {
   if (await hasBackend()) {
     const who = await ownerId();
 
+    // Nobody signed in, on a real server: whatever this device holds belongs
+    // to whoever was here before. Dropped, not merely skipped, so the next
+    // person to sign in on this browser never starts from it.
+    if (!who && await signedOut()) forget();
+
     // Kept for the tab's session: categories change a few times a year, and
     // every page needs them before it can draw a row. Keyed to the signed-in
     // owner, so a tab that signs out and in as someone else never shows the
@@ -244,11 +249,14 @@ async function fetchAll() {
 
     const res = await refreshFromServer(who);
     if (res) return res;
-    // Offline or a 500: the last copy below is better than nothing.
+    // Offline or a 500: the last copy below is better than nothing - if it
+    // is this owner's. A copy stamped with someone else's id is not used.
+    const saved = store.read(null);
+    if (saved?.books && (!saved.owner || saved.owner === who)) { memo = saved; owner = who; return memo; }
   }
 
   const saved = store.read(null);
-  if (saved?.books) { memo = saved; return memo; }
+  if (saved?.books && !saved.owner) { memo = saved; return memo; }
 
   // First run. The seed is fetched rather than inlined so the starting set can
   // be edited as data by anyone, without touching a JS file.
@@ -306,6 +314,7 @@ async function refreshFromServer(who) {
 
   // A 401 must not fall through to this device's data (api-contract.md §1).
   if (!res.ok && res.reason === 'auth') {
+    forget();
     const base = await seedReference();
     memo = { necessity: base.necessity, methods: base.methods, books: { personal: {}, business: {} } };
     return memo;
@@ -321,6 +330,14 @@ async function refreshFromServer(who) {
   const all = { necessity: base.necessity, methods: base.methods, books };
   persist(all, who);
   return all;
+}
+
+/** A real server said nobody is signed in (not: the question could not be asked). */
+async function signedOut() {
+  try {
+    const state = await currentSession();
+    return state?.backend === true && state.authenticated === false;
+  } catch { return false; }
 }
 
 /** The signed-in owner's id, from the page's one session probe (no request of its own). */
@@ -346,9 +363,19 @@ let owner = null;
 function persist(all, who = owner) {
   memo = all;
   owner = who ?? owner;
-  store.write(all);
+  // Stamped with the owner, so an offline fallback never serves one
+  // person's categories to another on a shared browser.
+  store.write(owner ? { ...all, owner } : all);
   if (owner) sessionCache.set(SESSION_KEY, { owner, at: Date.now(), all });
 }
 
-/** For the settings screen's "reset categories to defaults". */
-export function reset() { memo = null; store.clear(); sessionCache.remove(SESSION_KEY); }
+/** Drop every copy this device holds: memory, the offline copy, the tab's. */
+function forget() { memo = null; owner = null; store.clear(); sessionCache.remove(SESSION_KEY); }
+
+/**
+ * For sign-out, and the settings screen's "reset categories to defaults".
+ * Sign-out should call it (shell.js / settings-page.js, Dev A); until then the
+ * module drops its copies itself the first time a real server says nobody is
+ * signed in, and never serves a copy stamped with another owner.
+ */
+export function reset() { forget(); }

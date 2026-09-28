@@ -812,7 +812,9 @@ async function readAll() {
       });
 
       if (!res.ok) {
-        if (res.reason === 'auth') { memo = []; return memo; }
+        // Signed out on a real server: this device's copy is the previous
+        // person's ledger. Dropped, so the next sign-in never falls back to it.
+        if (res.reason === 'auth') { store.clear(); memo = []; return memo; }
         // A partial read is worse than a stale one: half a ledger produces
         // totals that look plausible and are wrong. Fall through to the cache.
         rows.length = 0;
