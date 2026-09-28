@@ -55,7 +55,7 @@ export const PRIMARY = [
  */
 export const SECONDARY = [
   { id: 'month',     label: 'Month',    icon: 'chart',       href: 'modules/reports/insights.html', match: 'modules/reports/', note: 'Where it went, and what you could keep' },
-  { id: 'budgets',   label: 'Budgets',  icon: 'target',      href: 'modules/budgets/list.html',   match: 'modules/budgets/',  note: 'A limit per category, and what is left' },
+  { id: 'budgets',   label: 'Budgets & goals', icon: 'target', href: 'modules/budgets/list.html',   match: 'modules/budgets/',  note: 'Limits per category, and what you are saving for' },
   { id: 'dues',      label: 'Dues',     icon: 'users',       href: 'modules/dues/list.html',      match: 'modules/dues/',     note: 'Lent and borrowed, per person' },
   { id: 'vault',     label: 'Vault',  icon: 'shield-lock', href: 'modules/vault/list.html',     match: 'modules/vault/',    note: 'Cards, logins, keys — encrypted' },
   { id: 'settings',  label: 'Settings', icon: 'sliders',     href: 'modules/settings/index.html', match: 'modules/settings/', note: 'Theme, currency, demo data' },

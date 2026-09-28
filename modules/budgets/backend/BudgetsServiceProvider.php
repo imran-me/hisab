@@ -42,6 +42,7 @@ class BudgetsServiceProvider extends ServiceProvider
             }
             if (! $fresh) {
                 BudgetDemo::generate($owner);
+                BudgetDemo::goals($owner);
             }
         });
     }

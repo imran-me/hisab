@@ -11,7 +11,7 @@
  * is "none" rather than a failure, and Home simply shows no rings.
  */
 
-import { get, put, del, hasBackend } from '../../../shared/js/core/http.js';
+import { get, put, post, patch, del, hasBackend } from '../../../shared/js/core/http.js';
 import { currentPeriod } from '../../../shared/js/core/dates.js';
 import { emit } from '../../../shared/js/core/bus.js';
 
@@ -54,5 +54,29 @@ export async function remove(categoryId) {
   if (!(await hasBackend())) return { ok: false, reason: 'offline' };
   const res = await del(`/budgets/${encodeURIComponent(categoryId)}`);
   if (res.ok) emit(BUDGET_CHANGED, { category_id: categoryId });
+  return res.ok ? { ok: true, data: null } : res;
+}
+
+/* ---- Goals ---------------------------------------------------------------- */
+
+/** Every goal with its progress, read from the ledger by the server. */
+export async function goals() {
+  if (!(await hasBackend())) return { ok: true, data: { goals: [], saved_minor: 0, target_minor: 0 }, meta: { offline: true } };
+  const res = await get('/goals');
+  return res.ok ? { ok: true, data: res.data?.data } : res;
+}
+
+/** Create (no id) or change a goal. There is no progress field to send. */
+export async function saveGoal(id, fields) {
+  if (!(await hasBackend())) return { ok: false, reason: 'offline' };
+  const res = id ? await patch(`/goals/${encodeURIComponent(id)}`, fields) : await post('/goals', fields);
+  if (res.ok) emit(BUDGET_CHANGED, { goal: true });
+  return res.ok ? { ok: true, data: res.data?.data } : res;
+}
+
+export async function removeGoal(id) {
+  if (!(await hasBackend())) return { ok: false, reason: 'offline' };
+  const res = await del(`/goals/${encodeURIComponent(id)}`);
+  if (res.ok) emit(BUDGET_CHANGED, { goal: true });
   return res.ok ? { ok: true, data: null } : res;
 }

@@ -327,3 +327,34 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
 - Verified: `artisan test` 175 passed (8 new in DuesTest); Dues screen,
   person sheet and record sheet at 360 in both themes (scratchpad
   `c/d1-*`, `c/d2-person`, `c/d3-record`).
+
+### Review rounds 6 and 7 — Track C's money fixes
+
+- H1 (`8b4ba99`): a statement is compared with the balance ON its date, by
+  the server (`Reconciler`, `GET/POST /api/accounts/{id}/reconcile`); a card
+  statement is the amount due, read as owed. M1: closing the gap moves the
+  opening balance, never an income or an expense. 4 tests.
+- H2 (`494cf5b`): `leak()` and `quality()` net a correction's mirror, like
+  `by_need`; the leak is floored at zero. 2 tests.
+- M8 (`c1f09c1`): the Budgets hero shows room left in the budgets under
+  their limit and the overrun in the others side by side, never netted;
+  archived categories refuse a budget; a failed `/api/budgets` is returned
+  as a failure, not as "offline".
+
+### Goals
+
+- In the budgets module (context.md §5 gives it "savings goals"): a `goals`
+  table holding only the target, the date and ONE link — an account (its
+  derived balance) or a deposit category (deposits since the goal began,
+  once each, a mirror subtracting). Linking both is refused: a DPS
+  instalment would count twice.
+- `GET /api/goals` adds left, whole months to the date, needed per month,
+  the average that went in over the last three whole months, an ETA at that
+  rate and a state (achieved / on_track / behind / no_date / unlinked).
+- The Budgets screen (More: "Budgets & goals") gains a Goals section: each
+  goal as a card with a violet bar, saved of target, and one line that
+  answers "will I make it?"; the sheet takes name, icon, target, month and
+  what feeds it, with a live "৳X a month for N months".
+- Demo: Umrah on the DPS account, an emergency fund on the Shares deposits.
+- Verified: `artisan test` 185 passed (4 new in GoalsTest); screen and sheet
+  at 360 (scratchpad `c/g1`, `c/g2`).

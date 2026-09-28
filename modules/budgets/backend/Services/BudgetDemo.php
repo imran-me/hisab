@@ -4,6 +4,8 @@ namespace Hisab\Budgets\Services;
 
 use App\Models\User;
 use Hisab\Budgets\Models\Budget;
+use Hisab\Budgets\Models\Goal;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -57,6 +59,39 @@ class BudgetDemo
 
     public static function purge(User $owner): int
     {
+        Goal::query()->where('user_id', $owner->id)->where('is_demo', true)->delete();
+
         return Budget::query()->where('user_id', $owner->id)->where('is_demo', true)->delete();
+    }
+
+    /**
+     * Two demo goals: one fed by the demo DPS account's balance, one by the
+     * share-purchase deposits, so both kinds of link show on the screen.
+     */
+    public static function goals(User $owner): int
+    {
+        if (Goal::query()->where('user_id', $owner->id)->where('is_demo', true)->exists()) {
+            return 0;
+        }
+
+        $dps = DB::table('accounts')->where('user_id', $owner->id)->where('name', 'DPS')->value('id');
+        $shares = DB::table('categories')->where('user_id', $owner->id)
+            ->where('type', 'deposit')->where('key', 'shares')->value('id');
+        $start = Carbon::now()->subMonths(3)->startOfMonth()->toDateString();
+        $made = 0;
+
+        foreach ([
+            ['Umrah', 300_000, Carbon::now()->addMonths(18)->startOfMonth()->toDateString(), $dps, null, 'globe'],
+            ['Emergency fund', 150_000, null, null, $shares, 'shield-lock'],
+        ] as [$name, $taka, $on, $account, $category, $icon]) {
+            Goal::query()->create([
+                'user_id' => $owner->id, 'name' => $name, 'target_minor' => $taka * 100,
+                'currency' => 'BDT', 'target_on' => $on, 'account_id' => $account,
+                'category_id' => $category, 'icon' => $icon, 'started_on' => $start, 'is_demo' => true,
+            ]);
+            $made++;
+        }
+
+        return $made;
     }
 }

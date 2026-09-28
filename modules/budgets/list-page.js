@@ -22,6 +22,7 @@ import { mountPeriodTop, drawPeriodTop } from '../reports/period-top.js';
 import * as budgets from './backend/api.js';
 import { ring, animateRings, percent } from './ring.js';
 import { openBudgetSheet, setSuggested } from './budget-sheet.js';
+import { goalCard, animateGoals, openGoalSheet } from './goals.js';
 
 mountShell({ title: 'Budgets' });
 mountCompose({ onSaved: () => refresh() });
@@ -55,6 +56,13 @@ delegate(document.body, 'click', '[data-budget-set]', (event, node) => {
 
 qs('[data-offer-more]').addEventListener('click', () => { showAll = !showAll; drawOffers(); });
 
+let goalRows = [];
+qs('[data-goal-new]').addEventListener('click', () => openGoalSheet(null, { onSaved: refresh }));
+delegate(document.body, 'click', '[data-goal]', (_e, node) => {
+  const goal = goalRows.find((g) => g.id === node.dataset.goal);
+  if (goal) openGoalSheet(goal, { onSaved: refresh });
+});
+
 refresh();
 
 async function refresh() {
@@ -71,6 +79,21 @@ async function refresh() {
   drawHero();
   drawBudgeted();
   drawOffers();
+  drawGoals(await budgets.goals());
+}
+
+/* ---- Goals --------------------------------------------------------------- */
+
+function drawGoals(res) {
+  const sec = qs('[data-goals-sec]');
+  sec.hidden = !res.ok || Boolean(res.meta?.offline);
+  if (sec.hidden) return;
+  goalRows = res.data.goals;
+  const host = qs('[data-goals]');
+  host.innerHTML = goalRows.length
+    ? goalRows.map(goalCard).join('')
+    : `<li class="goal-empty">Save towards something: Umrah, an emergency fund, a car. Link a DPS or an FDR and it fills itself.</li>`;
+  animateGoals(host);
 }
 
 /** Today's share of the month, for the tick; none for a month not in progress. */

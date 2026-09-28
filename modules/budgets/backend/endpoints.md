@@ -80,9 +80,51 @@ Returns `{ "data": { "id", "category_id", "book", "amount_minor", "currency" } }
 
 Removes the budget. 204, or 404 when there is none.
 
+## Goals
+
+A savings goal: a name, a target, an optional date, and ONE thing that feeds
+it. Progress is never stored.
+
+| Linked to | Saved so far |
+|---|---|
+| an account (a DPS, an FDR, a savings account) | that account's derived balance |
+| a deposit category ("Shares", "DPS") | deposits under it since the goal began, once per deposit, a mirror subtracting |
+
+Not both: a DPS instalment is a deposit AND lands in the DPS, and linking
+both would count it twice (422).
+
+### GET /api/goals
+
+```json
+{ "data": { "saved_minor": 9500000, "target_minor": 45000000, "goals": [ {
+  "id": "01J…", "name": "Umrah", "icon": "globe", "currency": "BDT",
+  "target_minor": 30000000, "target_on": "2028-03-01", "started_on": "2026-06-01",
+  "account": { "id": "01J…", "name": "DPS", "type": "savings", … }, "category_id": null,
+  "saved_minor": 2000000, "left_minor": 28000000, "ratio": 0.0667,
+  "months_left": 18, "needed_per_month_minor": 1555556,
+  "recent_per_month_minor": 500000, "eta": "2031-06",
+  "state": "behind"
+} ] } }
+```
+
+- `needed_per_month_minor`: what is left over the whole months to the date,
+  this one included; `null` with no date.
+- `recent_per_month_minor`: the average that went in over the last three
+  whole months (this month excluded, so the 3rd does not read as a collapse).
+- `eta`: the month the goal is reached at that rate; `null` when nothing is
+  going in.
+- `state`: `achieved`, `on_track` (recent ≥ needed), `behind`, `no_date`, or
+  `unlinked` (nothing feeds it yet).
+
+### POST /api/goals · PATCH /api/goals/{id} · DELETE /api/goals/{id}
+
+`name`, `target_minor`, `target_on`, `account_id` or `category_id` (the
+owner's; a category must be a deposit category, else 404), `icon`.
+
 ## Demo data
 
-`php artisan hisab:demo` also sets six budgets (groceries, transport,
+`php artisan hisab:demo` also adds two goals (Umrah on the DPS account,
+an emergency fund on the Shares deposits) and sets six budgets (groceries, transport,
 dining, utilities, internet, subscriptions), sized so the demo month shows
 all three states. `--clear` / `--fresh` remove exactly those (`is_demo`).
 

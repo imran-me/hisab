@@ -41,7 +41,7 @@
     } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
   </script>
 
-  <title>Budgets — Hisab</title>
+  <title>Budgets and goals — Hisab</title>
   <meta name="description" content="A monthly limit per category: what is left, and at what pace.">
   <meta name="theme-color" content="#0C0F14">
   <meta name="color-scheme" content="dark light">
@@ -96,6 +96,20 @@
           <div class="card card--flush">
             <ul class="list" data-budgeted></ul>
           </div>
+        </section>
+
+        <!-- Savings goals: a target and what feeds it, progress from the
+             ledger. After the budgets because the month's question comes
+             first; before the offers because a goal is already a decision. -->
+        <section class="bud-sec" data-goals-sec hidden aria-labelledby="bud-goals-h">
+          <div class="bud-sec__head">
+            <h2 class="bud-sec__title" id="bud-goals-h">Goals</h2>
+            <button type="button" class="bud-add" data-goal-new>
+              <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-plus"/></svg>
+              <span>New goal</span>
+            </button>
+          </div>
+          <ul class="goals" data-goals></ul>
         </section>
 
         <!-- Every other expense category, the costly ones first, each with a
