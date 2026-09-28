@@ -29,6 +29,10 @@ export const TYPES = [
   { key: 'wallet',     label: 'Wallet',      icon: 'wallet', spendable: true },
   { key: 'savings',    label: 'Savings',     icon: 'coins',  spendable: false },
   { key: 'investment', label: 'Investment',  icon: 'trend-up', spendable: false },
+  // Made by the Dues module on first use, never from the form: what people
+  // owe you net of what you owe them. Held, because a loan to a cousin is
+  // yours but is not money for lunch (modules/dues/backend/endpoints.md).
+  { key: 'dues',       label: 'Dues',        icon: 'users',  spendable: false },
 ];
 
 export const typeOf = (key) => TYPES.find((t) => t.key === key) || TYPES[0];

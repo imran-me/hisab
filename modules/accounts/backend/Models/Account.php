@@ -13,7 +13,7 @@ class Account extends Model
 {
     use HasHisabUlid;
 
-    public const TYPES = ['cash', 'bank', 'mfs', 'card', 'wallet', 'savings', 'investment'];
+    public const TYPES = ['cash', 'bank', 'mfs', 'card', 'wallet', 'savings', 'investment', 'dues'];
 
     /**
      * Types whose money is yours but is NOT money you can spend today.
@@ -23,7 +23,7 @@ class Account extends Model
      * then find is not there — CONVENTIONS.md makes the same point about
      * `deposit` not being an expense, and this is the account-shaped half of it.
      */
-    public const HELD_TYPES = ['savings', 'investment'];
+    public const HELD_TYPES = ['savings', 'investment', 'dues'];
 
     /** What a bank account is, as the bank calls it. FDR and DPS are held, not spendable. */
     public const BANK_ACCOUNT_TYPES = ['savings', 'current', 'salary', 'fdr', 'dps'];
