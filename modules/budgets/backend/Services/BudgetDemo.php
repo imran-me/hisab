@@ -11,18 +11,18 @@ use Illuminate\Support\Facades\DB;
  *
  * Sized against the ledger's demo month (modules/ledger/backend/Services/
  * DemoData.php) so all three states appear: groceries and dining run close,
- * transport is comfortable, subscriptions is over because the demo's dollar
- * hosting charge lands in it too.
+ * transport and internet are comfortable, subscriptions is over because the
+ * demo's dollar hosting charge lands in it too.
  */
 class BudgetDemo
 {
     /** category key => whole taka */
     private const LIMITS = [
-        'groceries' => 12_000,
-        'transport' => 3_500,
-        'dining' => 3_000,
+        'groceries' => 15_000,
+        'transport' => 4_000,
+        'dining' => 4_000,
         'utilities' => 2_500,
-        'internet' => 1_500,
+        'internet' => 2_000,
         'subscriptions' => 1_500,
     ];
 

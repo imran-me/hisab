@@ -42,7 +42,7 @@
   </script>
 
   <title>Budgets — Hisab</title>
-  <meta name="description" content="Per-category budgets, savings goals and the month close.">
+  <meta name="description" content="A monthly limit per category: what is left, and at what pace.">
   <meta name="theme-color" content="#0C0F14">
   <meta name="color-scheme" content="dark light">
   <meta name="robots" content="noindex, nofollow">
@@ -50,44 +50,72 @@
   <link rel="manifest" href="../../site.webmanifest">
 
   <link rel="stylesheet" href="../../shared/css/hisab.css">
+  <link rel="stylesheet" href="../reports/period-top.css">
+  <link rel="stylesheet" href="budgets.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <!--
-    THIS PAGE IS A DESTINATION WITHOUT A FEATURE, AND SAYS SO.
-
-    Budgets is one of the rail destinations, so the link existed before
-    the screen did.
-
-    A nav link that 404s is the fastest way to make a working app feel broken,
-    and the styled 404 is worse here than an honest page: it says the address is
-    wrong when the address is right and the feature is simply not written. So
-    this is a real page in the shell — the rail lights, the navigation works,
-    and the empty state names what is missing and what to use instead today.
-
-    It is replaced wholesale when the module is built. Nothing here is
-    scaffolding to build on.
-  -->
   <div class="app">
     <header class="app-header"></header>
     <nav class="app-rail" aria-label="Sections"></nav>
 
     <main class="app-main" id="main">
-      <div class="page stack stack--4">
+      <div class="page budgets">
 
-        <div class="empty" style="min-height:70dvh; justify-content:center">
+        <div class="period-top">
+          <button type="button" class="period-top__month" data-month-open aria-haspopup="dialog">
+            <span data-month-name>This month</span>
+            <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-chevron-down"/></svg>
+          </button>
+          <button type="button" class="period-top__book" data-book-toggle disabled>
+            <span data-book-name>Personal</span>
+          </button>
+        </div>
+
+        <!-- The screen's question: how much is left in my budgets, and at
+             what pace can I spend it? One ring for all of them, the figure
+             beside it. -->
+        <section class="bud-hero" data-hero aria-labelledby="bud-left-h">
+          <div class="bud-dial" data-hero-dial>
+            <span class="skeleton skeleton--glyph"></span>
+          </div>
+          <div class="bud-hero__text">
+            <h2 class="bud-hero__label" id="bud-left-h" data-hero-label>Left in your budgets</h2>
+            <div class="bud-hero__figure money" data-hero-left><span class="skeleton skeleton--fig"></span></div>
+            <p class="bud-hero__pace" data-hero-pace></p>
+            <p class="bud-hero__meta" data-hero-meta></p>
+          </div>
+        </section>
+
+        <section class="bud-sec" data-budgeted-sec hidden aria-labelledby="bud-list-h">
+          <div class="bud-sec__head">
+            <h2 class="bud-sec__title" id="bud-list-h">Your budgets</h2>
+            <span class="bud-sec__aside" data-budgeted-aside></span>
+          </div>
+          <div class="card card--flush">
+            <ul class="list" data-budgeted></ul>
+          </div>
+        </section>
+
+        <!-- Every other expense category, the costly ones first, each with a
+             one-tap "Set" at the server's round suggestion. -->
+        <section class="bud-sec" data-offer-sec hidden aria-labelledby="bud-offer-h">
+          <div class="bud-sec__head">
+            <h2 class="bud-sec__title" id="bud-offer-h" data-offer-title>Not budgeted yet</h2>
+          </div>
+          <div class="card card--flush">
+            <ul class="list" data-offer></ul>
+            <button type="button" class="bud-more" data-offer-more hidden></button>
+          </div>
+        </section>
+
+        <div class="empty" data-offline hidden>
           <span class="empty__glyph">
             <svg class="icon icon--lg" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-target"/></svg>
           </span>
-          <span class="empty__title">Budgets are not built yet</span>
-          <p class="empty__text">
-            A limit per category, savings goals and a month you can close will live here. Until then the Overview shows what each category actually took this month, which is the half of a budget that has to be true first.
-          </p>
-          <a class="btn btn--ghost" href="../../index.html">
-            <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-grid"/></svg>
-            <span>Go to Overview</span>
-          </a>
+          <span class="empty__title">Budgets need the server</span>
+          <p class="empty__text">A budget is checked against every entry on the server, so it can only be set while this device is connected and signed in.</p>
         </div>
 
       </div>

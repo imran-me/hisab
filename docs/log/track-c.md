@@ -285,3 +285,25 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
   `composer.json` and the provider in `bootstrap/providers.php` (Dev A's
   files; one line each, like the `SECONDARY` exception).
 - Verified: `artisan test` 166 passed (10 new in `BudgetsTest`).
+
+### Budgets, the screens
+
+- `modules/budgets/list.html` is real (the stub is gone) and listed in More:
+  one ring for every budget with what is left and the pace beside it; each
+  budget most-used first as a ring (green → amber at 75% → red at 100%, the
+  overrun drawn as a brighter second lap) with "৳X left · ৳Y/day"; then every
+  other expense category with a one-tap "+ ৳7,500" at the server's
+  suggestion, and Undo in the toast.
+- Tapping any budget opens `budget-sheet.js`: the amount (current or
+  suggested), three quick picks (suggested, last month, usual) and a live
+  line of what it would leave and at what pace.
+- Home: a Budgets section after Accounts with the three closest to their
+  limit as ring tiles ("৳522 left" / "৳174/day"), each opening the same sheet;
+  with none set, one line offers the costliest category ("Budget it").
+- Rings carry a marigold tick at today's share of the month, so a fill past
+  it is spending ahead of the calendar.
+- Fixed while there: Home's Where-it-went legend swatches were always grey;
+  only the bar was run through `applyStyleVars`.
+- Verified at 360 in both themes: Home 901px, Budgets 1010px, the sheet over
+  the list, no OVERFLOW. Shots: scratchpad `c/b1-dark`, `c/b1-light`,
+  `c/b2-sheet`.

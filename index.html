@@ -63,6 +63,7 @@
 
   <link rel="stylesheet" href="shared/css/hisab.css">
   <link rel="stylesheet" href="modules/reports/period-top.css">
+  <link rel="stylesheet" href="modules/budgets/budgets.css">
   <link rel="stylesheet" href="modules/overview/overview.css">
 </head>
 <body>
@@ -156,6 +157,19 @@
             <li class="home-account home-account--loading"><span class="skeleton skeleton--line"></span></li>
             <li class="home-account home-account--loading"><span class="skeleton skeleton--line"></span></li>
           </ul>
+        </section>
+
+        <!-- ================= Budgets =================
+             The three budgets closest to their limit, each as a ring that
+             goes green, amber, red, with what is left and at what pace. With
+             no budgets yet, one line offers the category worth one. -->
+        <section class="home-sec" data-budgets hidden aria-labelledby="bud-h">
+          <div class="home-sec__head">
+            <h2 class="home-sec__title" id="bud-h">Budgets</h2>
+            <a class="home-sec__link" href="modules/budgets/list.html" data-budgets-all>All</a>
+          </div>
+          <ul class="bud-tiles" data-budget-tiles></ul>
+          <div data-budget-prompt></div>
         </section>
 
         <!-- ================= Where it went ================= -->

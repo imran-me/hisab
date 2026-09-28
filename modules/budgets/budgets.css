@@ -1,0 +1,282 @@
+/* =========================================================================
+   Budgets · module styles
+   The ring, the Budgets screen, Home's ring strip and the set-a-budget
+   sheet. Loaded by the Budgets page and by Home. Tokens only.
+
+   The three states are the owner's rule: green while there is room, amber
+   from 75% used, red at the limit and past it.
+   ========================================================================= */
+
+/* ---- The ring ----------------------------------------------------------- */
+.ring { display: block; overflow: visible; }
+
+.ring circle { fill: none; }
+.ring__track { stroke: var(--bg-3); }
+
+.ring__fill {
+  stroke: var(--ring-tone, var(--text-3));
+  stroke-linecap: round;
+  transition: stroke-dashoffset 800ms var(--ease-out);
+}
+
+/* The overrun lap sits on the full red ring, brighter, so "a little over"
+   and "twice the budget" read differently at a glance. */
+.ring__over {
+  stroke: color-mix(in srgb, var(--danger) 55%, var(--text-1));
+  stroke-linecap: round;
+  transition: stroke-dashoffset 800ms var(--ease-out) 300ms;
+}
+
+.ring__today { stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
+
+.ring--ok   { --ring-tone: var(--in); }
+.ring--warn { --ring-tone: var(--warn); }
+.ring--over { --ring-tone: var(--danger); }
+
+.bud-tone--ok   { color: var(--in); }
+.bud-tone--warn { color: var(--warn); }
+.bud-tone--over { color: var(--danger); }
+
+/* A ring with a figure in its middle. */
+.bud-dial {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.bud-dial > .ring { grid-area: 1 / 1; }
+
+.bud-dial__pct {
+  grid-area: 1 / 1;
+  font-family: var(--font-display);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-fig);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring__fill, .ring__over { transition: none; }
+}
+
+/* ---- The Budgets screen: the hero -------------------------------------- */
+.page.budgets { padding-block-start: 6px; }
+
+.bud-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding-block: var(--s-2) var(--s-3);
+}
+
+.bud-hero .bud-dial__pct {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--fs-23);
+  line-height: 1;
+}
+
+.bud-hero .bud-dial__pct small {
+  margin-block-start: 2px;
+  font-family: var(--font-body);
+  font-size: var(--fs-11);
+  font-weight: var(--fw-medium);
+  color: var(--text-3);
+}
+
+.bud-hero__text { min-width: 0; display: flex; flex-direction: column; gap: var(--s-1); }
+
+.bud-hero__label {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  color: var(--text-2);
+}
+
+.bud-hero__figure {
+  font-family: var(--font-display);
+  font-size: var(--fs-34);
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-hero);
+  line-height: var(--lh-flush);
+  letter-spacing: var(--track-figure);
+}
+
+.bud-hero__figure .money__sym { font-size: 0.55em; color: var(--text-3); margin-inline-end: 0.08em; }
+.bud-hero__figure.is-over { color: var(--danger); }
+
+.bud-hero__pace { margin: 0; font-size: var(--fs-13); color: var(--text-2); }
+.bud-hero__pace strong { color: var(--text-1); font-weight: var(--fw-semibold); }
+.bud-hero__meta { margin: 0; font-size: var(--fs-12); color: var(--text-3); }
+
+/* ---- Rows --------------------------------------------------------------- */
+.bud-sec { margin-block-start: var(--s-3); }
+
+.bud-sec__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-block-end: var(--s-2);
+}
+
+.bud-sec__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--t-section);
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-title);
+}
+
+.bud-sec__aside { font-size: var(--fs-13); color: var(--text-3); }
+
+.bud-row .row__sub .bud-left { font-weight: var(--fw-medium); }
+
+.bud-row__of {
+  display: block;
+  margin-block-start: 2px;
+  font-size: var(--fs-12);
+  color: var(--text-3);
+  text-align: end;
+}
+
+/* The unbudgeted rows: a glyph tile, and a one-tap "Set ৳X" at the end. */
+.bud-offer { display: flex; align-items: center; }
+.bud-offer > .row { flex: 1 1 auto; min-width: 0; }
+
+.bud-set {
+  flex: none;
+  margin-inline-end: var(--s-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 36px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform var(--t-press) var(--ease), background var(--t-fast) var(--ease);
+}
+
+.bud-set:active { transform: scale(0.97); background: var(--wash-press); }
+
+.bud-more {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: var(--fs-14);
+  cursor: pointer;
+}
+
+/* ---- Home: the ring strip ---------------------------------------------- */
+.bud-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bud-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--s-2) var(--s-1);
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform var(--t-press) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bud-tile:active { transform: scale(0.97); }
+
+.bud-tile .bud-dial { margin-block-end: var(--s-1); }
+
+.bud-tile__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-13);
+  color: var(--text-2);
+}
+
+.bud-tile__left { font-size: var(--fs-13); font-weight: var(--fw-semibold); }
+.bud-tile__day { font-size: var(--fs-12); color: var(--text-3); }
+
+/* No budgets yet: one line with the category worth one and a one-tap set. */
+.bud-prompt {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) 0 var(--s-2) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--bg-1);
+  font-size: var(--fs-13);
+  color: var(--text-2);
+}
+
+.bud-prompt > span { flex: 1 1 auto; min-width: 0; }
+.bud-prompt strong { color: var(--text-1); font-weight: var(--fw-semibold); }
+
+/* ---- The set-a-budget sheet -------------------------------------------- */
+.bud-sheet { display: flex; flex-direction: column; gap: var(--s-3); }
+
+.bud-sheet__spent { margin: 0; font-size: var(--fs-14); color: var(--text-2); }
+.bud-sheet__spent strong { color: var(--text-1); }
+
+.bud-sheet__picks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.bud-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: var(--tap);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: transform var(--t-press) var(--ease);
+}
+
+.bud-pick:active { transform: scale(0.97); }
+.bud-pick__name { font-size: var(--fs-11); color: var(--text-3); }
+.bud-pick__value { font-size: var(--fs-14); font-weight: var(--fw-semibold); }
+
+.bud-sheet__preview { margin: 0; min-height: 1.4em; font-size: var(--fs-13); color: var(--in); }
+.bud-sheet__preview.is-warn { color: var(--warn); }
+.bud-sheet__preview.is-over { color: var(--danger); }
+
+.bud-sheet__actions { display: flex; gap: var(--s-2); }

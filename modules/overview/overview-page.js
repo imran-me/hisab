@@ -26,6 +26,9 @@ import * as fx from '../fx/backend/api.js';
 import { mountPeriodTop, drawPeriodTop } from '../reports/period-top.js';
 import { applyStyleVars } from '../accounts/style-vars.js';
 import { openEntrySheet, mountCompose } from '../ledger/entry-sheet.js';
+import * as budgets from '../budgets/backend/api.js';
+import { ring, animateRings, percent } from '../budgets/ring.js';
+import { openBudgetSheet, setSuggested } from '../budgets/budget-sheet.js';
 
 // Adding is the tab bar's + (A2), which emits EVENTS.COMPOSE; mountCompose()
 // answers it here, so the sheet opens over Home and Home refreshes on save.
@@ -45,6 +48,19 @@ delegate(document.body, 'click', '[data-edit]', async (_event, button) => {
   if (res.ok) openEntrySheet({ transaction: res.data, onSaved: refresh });
 });
 
+let budgetMonth = null;
+const budgetRow = (id) => budgetMonth?.rows.find((r) => r.category_id === id);
+
+delegate(document.body, 'click', '[data-budget-open]', (_event, node) => {
+  const row = budgetRow(node.dataset.budgetOpen);
+  if (row) openBudgetSheet(row, budgetMonth, { onSaved: refresh });
+});
+
+delegate(document.body, 'click', '[data-budget-set]', (_event, node) => {
+  const row = budgetRow(node.dataset.budgetSet);
+  if (row) setSuggested(row, { onSaved: refresh });
+});
+
 refresh();
 
 async function refresh() {
@@ -52,12 +68,13 @@ async function refresh() {
   const display = state.currency();
   const day = today();
 
-  const [accountRes, balanceRes, summaryRes, todayRes, settingsRes] = await Promise.all([
+  const [accountRes, balanceRes, summaryRes, todayRes, settingsRes, budgetRes] = await Promise.all([
     accounts.list({ book }),
     ledger.balances({ book }),
     ledger.summary({ book, period: state.period(), currency: display }),
     ledger.list({ book, from: day, to: day }),
     accounts.financeSettings(),
+    budgets.month({ month: state.period(), book, currency: display }),
   ]);
 
   const summary = summaryRes.data;
@@ -69,6 +86,7 @@ async function refresh() {
   drawHero(summary, budget, display);
   await drawToday(todayRes.data, accountRes.data, display);
   drawAccounts(accountRes.data, balanceRes.data);
+  drawBudgets(budgetRes.ok ? budgetRes.data : null, budgetRes.meta?.offline);
   drawBreakdown(summary, display);
   drawNotes(summary, budget, display);
 }
@@ -301,6 +319,60 @@ function drawAccounts(accountRows, balances) {
 }
 
 /* =========================================================================
+   Budgets
+   ========================================================================= */
+
+/**
+ * The three budgets closest to their limit, as rings.
+ *
+ * Most used first (the server's order), because the budget about to run out
+ * is the one worth a glance. Each says what is left and the pace, "৳1,850
+ * left" over "৳610/day". Tapping one opens its sheet over Home. With no
+ * budget set, one line offers the costliest category at its usual amount,
+ * set in one tap.
+ */
+function drawBudgets(month, offline) {
+  budgetMonth = month;
+  const sec = qs('[data-budgets]');
+  const tiles = qs('[data-budget-tiles]');
+  const prompt = qs('[data-budget-prompt]');
+  const rows = month ? month.rows.filter((r) => r.budget) : [];
+  const offer = month?.rows.find((r) => !r.budget && r.suggested_minor > 0 && r.spent_minor > 0);
+
+  sec.hidden = Boolean(offline) || !month || (!rows.length && !offer);
+  if (sec.hidden) return;
+
+  qs('[data-budgets-all]').textContent = rows.length > 3 ? `All ${rows.length}` : 'All';
+  const today = month.month === currentPeriod() ? periodProgress(month.month) : null;
+
+  tiles.hidden = !rows.length;
+  tiles.innerHTML = rows.slice(0, 3).map((r) => {
+    const over = r.left_minor < 0;
+    const left = over ? `${inline(-r.left_minor, r.currency)} over` : `${inline(r.left_minor, r.currency)} left`;
+    const day = !over && r.per_day_minor !== null ? `${inline(r.per_day_minor, r.currency)}/day` : '';
+    return `
+      <li>
+        <button type="button" class="bud-tile" data-budget-open="${esc(r.category_id)}"
+                aria-label="${esc(`${r.label}: ${percent(r.ratio)} used, ${left}${day ? `, ${day}` : ''}`)}">
+          <span class="bud-dial">${ring(r.ratio, r.state, { size: 52, stroke: 5, today })}<span class="bud-dial__pct">${esc(percent(r.ratio))}</span></span>
+          <span class="bud-tile__name">${esc(r.label)}</span>
+          <span class="bud-tile__left bud-tone--${r.state}">${esc(left)}</span>
+          <span class="bud-tile__day">${esc(day || (over ? 'limit reached' : 'this month'))}</span>
+        </button>
+      </li>`;
+  }).join('');
+  animateRings(tiles);
+
+  prompt.innerHTML = !rows.length && offer ? `
+    <p class="bud-prompt">
+      <span><strong>${esc(offer.label)}</strong> costs about ${esc(inline(offer.suggested_minor, offer.currency))} a month.</span>
+      <button type="button" class="bud-set" data-budget-set="${esc(offer.category_id)}">
+        ${icon('plus', { class: 'icon icon--sm' })}Budget it
+      </button>
+    </p>` : '';
+}
+
+/* =========================================================================
    Where it went
    ========================================================================= */
 
@@ -334,10 +406,14 @@ function drawBreakdown(summary, display) {
     <i data-vars="seg-share:${share(b.value).toFixed(2)};seg-color:${b.color}"></i>`).join('');
   applyStyleVars(bar);
 
-  qs('[data-breakdown-legend]').innerHTML = bands.slice(0, 3).map((b) => `
+  const legend = qs('[data-breakdown-legend]');
+  legend.innerHTML = bands.slice(0, 3).map((b) => `
     <span class="home-legend__name" data-vars="seg-color:${b.color}">${esc(b.name)}</span>
     <span class="home-legend__value money">${listFigure(b.value, display)}</span>
     <span class="home-legend__pct">${Math.round(share(b.value))}%</span>`).join('');
+  // The swatches read the same --seg-color as the bar, but only the bar was
+  // run through applyStyleVars, so every swatch drew as the grey fallback.
+  applyStyleVars(legend);
 }
 
 /* =========================================================================
