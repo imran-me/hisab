@@ -47,6 +47,8 @@ import { glyphOf } from '../categories/glyphs.js';
 import { numpadMarkup, attachNumpad, bufferFor } from './numpad.js';
 import { pickAccount, logoFor, maskedTail } from './account-picker.js';
 import { loadStyles } from './styles.js';
+import { suggest, amountMemory, rememberAmount } from './smart-entry.js';
+import { merchantLogo } from '../../shared/js/components/merchant-logo.js';
 
 /** The three words on the type control, and the ledger type each writes. */
 const KINDS = [
@@ -268,6 +270,7 @@ async function renderForm(ctx, initial) {
     <!-- The note, always visible, and the date as a small chip beside it. -->
     <div class="entry__note-row">
       <label class="sr-only" for="entry-note">Note</label>
+      <span class="entry__note-logo" data-note-logo aria-hidden="true" hidden></span>
       <input class="entry__note" id="entry-note" name="note" autocomplete="off"
              enterkeyhint="done" maxlength="2000" placeholder="Add a note"
              value="${esc(initial.note || '')}">
@@ -278,6 +281,11 @@ async function renderForm(ctx, initial) {
              value="${esc(initial.occurred_on || today())}" max="${esc(nextYear())}">
     </div>
     <p class="field__error entry__error" data-error="occurred_on" role="alert" hidden></p>
+
+    <!-- What the note already tells us: the merchant, and last time's
+         amount to fill with one tap. It takes the recent strip's place while
+         it shows, so nothing below moves. -->
+    <div class="entry__suggest" data-suggest aria-live="polite" hidden></div>
 
     <!-- Repeat a recent entry: one slim row, only when there is history. -->
     <div class="entry__recents" data-recents role="group" aria-label="Repeat a recent entry" hidden></div>
@@ -299,12 +307,16 @@ async function renderForm(ctx, initial) {
     ${numpadMarkup({ places })}
   `;
 
+  // A category that came with the entry (a draft, a correction) was chosen
+  // by a person; the note's suggestion never overrides one.
+  if (initial.category_id) form.dataset.catSet = 'true';
+
   ctx.pad = attachNumpad(form, {
     display: qs('#entry-amount', form),
     result: qs('[data-result]', form),
     code: () => currencyCode(form),
     initial: bufferFor(initial.amount_minor, cur),
-    onChange: () => { syncAccounts(ctx); ctx.draftSoon?.(); },
+    onChange: () => { syncAccounts(ctx); ctx.draftSoon?.(); drawSuggestion(ctx); },
   });
 
   setCurrency(ctx, cur);
@@ -381,6 +393,7 @@ async function syncKind(ctx, initial = {}) {
   await drawRecents(ctx, kind);
   syncAccounts(ctx);
   syncDate(ctx);
+  runSuggest(ctx);
 }
 
 /**
@@ -486,6 +499,7 @@ async function drawRecents(ctx, kind) {
 
   const rows = (await ledger.list({ book, type: kind })).data;
   if (form.elements.kind.value !== kind) return;
+  ctx.history = rows;
 
   const seen = new Set();
   const picks = [];
@@ -518,10 +532,87 @@ function repeatEntry(ctx, row) {
   form.elements.payee.value = row.payee || '';
   form.elements.method.value = row.method || '';
   form.elements.note.value = row.note || '';
-  if (row.category_id) chooseCategory(ctx, row.category_id, { auto: false });
+  if (row.category_id) { form.dataset.catSet = 'true'; chooseCategory(ctx, row.category_id, { auto: false }); }
   ctx.pad.set(row.amount_minor);
   syncAccounts(ctx);
   qs('#entry-amount', form).focus({ preventScroll: true });
+}
+
+/**
+ * Read the note and act on it (smart-entry.js decides; this only shows).
+ *
+ * · the merchant's mark appears inside the note field;
+ * · the category is filed for the person when they have not chosen one by
+ *   hand, and the account follows it unless one was picked by hand - the
+ *   card flashes, so the change is seen rather than discovered;
+ * · last time's amount waits in a chip while the pad is empty: one tap.
+ */
+function runSuggest(ctx) {
+  const { form, editing } = ctx;
+  const kind = form.elements.kind.value;
+  const s = (editing || kind === 'transfer') ? null : suggest({
+    text: form.elements.note.value,
+    history: ctx.history || [],
+    categories: ctx.categoryRows || [],
+    memory: amountMemory(),
+  });
+  ctx.suggestion = s;
+
+  const logo = qs('[data-note-logo]', form);
+  logo.innerHTML = s?.merchant ? merchantLogo(s.merchant, 24) : '';
+  logo.hidden = !s?.merchant;
+  form.classList.toggle('has-note-logo', Boolean(s?.merchant));
+
+  if (s?.category && form.dataset.catSet !== 'true' && form.elements.category_id.value !== s.category.id) {
+    chooseCategory(ctx, s.category.id, { auto: !s.account_id });
+  }
+  if (s?.account_id && form.dataset.accountSet !== 'true' && s.account_id !== form.elements.account_id.value) {
+    const account = ctx.accountRows.find((a) => a.id === s.account_id);
+    if (account) {
+      setAccount(ctx, 'from', account);
+      qs('.acct-card', form)?.classList.add('is-switched');
+    }
+  }
+  drawSuggestion(ctx);
+}
+
+/** The chip: who it is, what it is filed under, and the amount to fill. */
+function drawSuggestion(ctx) {
+  const { form } = ctx;
+  const host = qs('[data-suggest]', form);
+  const recents = qs('[data-recents]', form);
+  const s = ctx.suggestion;
+  const empty = !ctx.pad?.value();
+  const show = Boolean(s && s.amount_minor && empty);
+
+  if (show) {
+    const account = ctx.accountRows.find((a) => a.id === (s.account_id || form.elements.account_id.value));
+    const what = [s.merchant?.name, s.category?.label, account?.name].filter(Boolean).join(' · ');
+    host.innerHTML = `
+      <button type="button" class="entry-suggest" data-suggest-fill>
+        ${s.merchant ? `<span class="entry-suggest__logo">${merchantLogo(s.merchant, 22)}</span>` : icon('clock', { class: 'icon icon--sm' })}
+        <span class="entry-suggest__what">${esc(what || 'Last time')}</span>
+        <span class="entry-suggest__amount">${esc(moneyLabel(s.amount_minor, s.currency || currencyCode(form), { minor: 'never' }))}</span>
+        <span class="entry-suggest__use">Use</span>
+      </button>`;
+  }
+  host.hidden = !show;
+  // The recent strip gives way while the suggestion is up, so nothing moves.
+  if (recents) recents.classList.toggle('is-yielding', show);
+}
+
+/** Fill last time's amount (and its currency) from the chip. */
+function applyAmount(ctx) {
+  const s = ctx.suggestion;
+  if (!s?.amount_minor) return;
+  if (s.currency && s.currency !== currencyCode(ctx.form)) {
+    qs('[data-currency-picker]', ctx.form).dataset.userSet = 'true';
+    setCurrency(ctx, s.currency);
+  }
+  ctx.pad.set(s.amount_minor);
+  syncAccounts(ctx);
+  drawSuggestion(ctx);
+  ctx.draftSoon?.();
 }
 
 function syncDate(ctx) {
@@ -580,14 +671,17 @@ function attachHandlers(ctx) {
 
   delegate(form, 'change', '[name="kind"]', () => syncKind(ctx));
 
-  delegate(form, 'click', '[data-cat]', (_e, button) => chooseCategory(ctx, button.dataset.cat));
+  delegate(form, 'click', '[data-cat]', (_e, button) => {
+    form.dataset.catSet = 'true';
+    chooseCategory(ctx, button.dataset.cat);
+  });
 
   delegate(form, 'click', '[data-cat-more]', (_e, button) => {
     import('../../shared/js/components/menu.js').then(({ menu }) => {
       menu(button, ctx.categoryRows.map((c) => ({
         label: c.label,
         icon: glyphOf(c).icon,
-        onClick: () => chooseCategory(ctx, c.id),
+        onClick: () => { form.dataset.catSet = 'true'; chooseCategory(ctx, c.id); },
       })), { align: 'end' });
     });
   });
@@ -631,6 +725,17 @@ function attachHandlers(ctx) {
     });
   });
   form.elements.occurred_on.addEventListener('change', () => syncDate(ctx));
+
+  // The note is read as it is typed: "uber" files the entry under Transport
+  // from the account the last Uber came out of. Short debounce, because the
+  // answer should arrive while the thumb is still over the keyboard.
+  let suggestTimer = 0;
+  form.elements.note.addEventListener('input', () => {
+    window.clearTimeout(suggestTimer);
+    suggestTimer = window.setTimeout(() => runSuggest(ctx), 140);
+  });
+
+  delegate(form, 'click', '[data-suggest-fill]', () => applyAmount(ctx));
 
   // Enter in the note is "done", not "submit": the keyboard goes away and the
   // pad is back, with Save where the thumb is.
@@ -769,6 +874,7 @@ async function submit(ctx) {
   ctx.saved = true;
   storage.remove(KEYS.DRAFT);
   if (categoryId) prefs.write({ ...prefs.read({}), [categoryId]: payload.account_id });
+  rememberAmount(payload.note || payload.payee, { amount_minor: amount, currency: code, account_id: payload.account_id });
 
   // THE SAVE, felt: a tick under the thumb, the Save key turns into a check
   // and the figure drops into the account it came from, then the sheet goes.

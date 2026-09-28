@@ -303,6 +303,23 @@
 }
 
 .entry__note::placeholder { color: var(--text-3); }
+
+/* The merchant the note names, inside the field on the left (smart-entry). */
+.entry__note-logo {
+  position: absolute;
+  inset-inline-start: 10px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  pointer-events: none;
+  line-height: 0;
+}
+.entry__note-logo > * { width: 100%; height: 100%; border-radius: 50%; }
+.entry__note-logo[hidden] { display: none; }
+.has-note-logo .entry__note { padding-inline-start: 42px; }
 .entry__note:focus { outline: none; border-color: var(--accent); }
 
 .entry__date {
@@ -349,6 +366,40 @@
 
 .entry__recents::-webkit-scrollbar { display: none; }
 .entry__recents[hidden] { display: none; }
+.entry__recents.is-yielding { display: none; }
+
+/* Last time's amount for this note: one tap fills it. Same height as the
+   recent strip it replaces, so the pad never moves. */
+.entry__suggest[hidden] { display: none; }
+.entry-suggest {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  height: 30px;
+  padding: 0 4px 0 6px;
+  border: 1px solid var(--accent-wash);
+  border-radius: var(--r-pill);
+  background: var(--accent-wash);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--t-meta);
+  text-align: start;
+  cursor: pointer;
+}
+.entry-suggest__logo { flex: none; width: 22px; height: 22px; border-radius: 50%; overflow: hidden; line-height: 0; }
+.entry-suggest__logo > * { width: 100%; height: 100%; border-radius: 50%; }
+.entry-suggest__what { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+.entry-suggest__amount { flex: none; font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.entry-suggest__use {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: var(--fw-semibold);
+}
+.entry-suggest:active { transform: scale(.98); }
 .entry__recents-label { flex: none; font-size: var(--t-meta); color: var(--text-3); }
 
 .entry-recent {

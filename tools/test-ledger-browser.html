@@ -140,6 +140,33 @@ function check(label, condition) {
       check('a transfer repeats as a transfer, both legs', legs.length === 2 && legs.some((l) => l.account_id === others[0].id && l.direction === 'in'));
     }
 
+    // --- smart entry: the note suggests category, account and amount -------
+    {
+      const smart = await import('../modules/ledger/smart-entry.js');
+      const cats = [
+        { id: 'c-tr', key: 'transport', label: 'Transport' },
+        { id: 'c-din', key: 'dining', label: 'Dining out' },
+        { id: 'c-gro', key: 'groceries', label: 'Food & groceries' },
+      ];
+      const history = [
+        { id: 'h1', note: 'Uber to office', category_id: 'c-tr', account_id: 'acc-bk', amount_minor: 28500, currency: 'BDT' },
+        { id: 'h2', note: 'Foodpanda', category_id: 'c-gro', account_id: 'acc-cash', amount_minor: 64000, currency: 'BDT' },
+      ];
+      const uber = smart.suggest({ text: 'uber', history, categories: cats });
+      check('smart: "uber" finds the Uber merchant', uber?.merchant?.id === 'uber');
+      check('smart: and files it as last time, from the same account', uber?.category?.id === 'c-tr' && uber?.account_id === 'acc-bk');
+      check('smart: with last time\'s amount', uber?.amount_minor === 28500);
+      const panda = smart.suggest({ text: 'foodpanda', history, categories: cats });
+      check('smart: the owner\'s own filing beats the merchant\'s usual', panda?.category?.id === 'c-gro');
+      const kfc = smart.suggest({ text: 'KFC', history, categories: cats });
+      check('smart: a first-time merchant gets its usual category', kfc?.category?.id === 'c-din' && kfc.amount_minor === null);
+      check('smart: a word that names nothing suggests nothing', smart.suggest({ text: 'zzqx', history, categories: cats }) === null);
+      check('smart: prefix of a past note matches while typing', smart.suggest({ text: 'uber to', history, categories: cats })?.account_id === 'acc-bk');
+      smart.rememberAmount('Uber to office', { amount_minor: 31000, currency: 'BDT' });
+      const later = smart.suggest({ text: 'Uber  to Office', history, categories: cats, memory: smart.amountMemory() });
+      check('smart: the remembered amount is the LAST one, whatever the spacing and case', later?.amount_minor === 31000);
+    }
+
     // --- a foreign-currency row moves its account by its converted value ---
     // A USD 12.99 charge on a taka account used to move it by ৳12.99.
     const beforeUsd = (await ledger.balances({})).data[cash.id];

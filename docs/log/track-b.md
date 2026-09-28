@@ -418,3 +418,29 @@ once they use `entryRowHTML()`.
 **Verified** at 360×780, dark and day: four seeded entries show the
 Foodpanda, Uber, Daraz and Netflix marks; "local bazar" keeps its tinted
 food circle. No overflow.
+
+## Smart entry: the note files the entry
+
+`modules/ledger/smart-entry.js` reads the note as it is typed (140ms
+debounce) and the sheet acts on it:
+
+- the merchant's mark appears inside the note field (A's `findMerchant()`, so
+  a row's logo and a suggestion agree about who "Uber" is);
+- the category is chosen, unless one was chosen by hand (a tile, More, a
+  recent chip, a draft or a correction), and the account follows it unless
+  one was picked by hand; the card flashes;
+- last time's amount waits in one chip ("Uber · Transport · Cash in hand
+  ৳444  Use") while the pad is empty. It takes the recent strip's place, so
+  the pad never moves.
+
+Trust order: the owner's own history (same note, then same merchant, then a
+note that starts with what is typed), then `MERCHANT_CATEGORY` (42
+merchants → seed category keys, first one the book has). If their Foodpanda
+goes under Groceries, it goes under Groceries. The amount is the per-note
+memory (`hisab:m:ledger-notes`, written on every save, capped at 300 notes),
+else the matched entry's.
+
+**Verified:** ledger harness 54 (8 new, on the matcher). At 360×780 against
+the server, dark and day: "uber" → Uber mark, Transport, Cash in hand,
+chip ৳444; Use fills 444 and the card shows the balance after; "KFC" → Dining
+out by the merchant map with no chip; "local baz" → Food by history.
