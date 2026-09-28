@@ -15,6 +15,252 @@ and `tools/shoot-mobile.mjs` at 360×780.
 
 ---
 
+## Round 6 — `f34fa9e..bf8f7c8` (17 commits: A ×7, B ×4, C ×4, no track ×2)
+
+**What was run**
+
+- 360×780 screenshots of all ten screens in both themes, plus the entry
+  sheet (open, and with ৳200 typed) and the bKash account page.
+- `php artisan test`: **167 passed, 680 assertions** at `bf8f7c8`
+  (156 / 610 at `4fdb218`).
+- `test-money`: 97 assertions. `test-crypto`: 41. `check-pages`: ok.
+  `check-sprite`: ok. No `OVERFLOW` on any page.
+- MonthCockpit and BudgetBook called directly in tinker against the demo
+  data, to check the figures on the Month screen.
+- Every `var(--x)` without a fallback resolves to a defined property.
+
+**Identity.** All 17 commits are authored and committed as
+`Md Imran Hossain <me.imran.personal@gmail.com>`. No AI attribution in any
+message or trailer.
+
+**Ownership.**
+
+- `c302dc8` (C) adds one line to `SECONDARY` in `shell.js`. That is the
+  allowed exception.
+- `bf8f7c8` (C) names the budgets module in `composer.json` and
+  `bootstrap/providers.php`. Those are the module test's two allowed places.
+- `4fdb218` (logos, A's track) edits C's `accounts/account-card.js`,
+  `accounts/accounts.css` and `overview/overview-page.js`. This is an overlap.
+- `7eeb426` and `7d7e182` have no track log entry. They edit C's
+  `overview.css` and `accounts.css`, and A's tokens, in the same commit. See
+  M7.
+
+**Closed from earlier rounds**
+
+- Round 5 High, Home's category bar under the CSP. Fixed by `c302dc8`: bands
+  are set through `applyStyleVars()`. The legend beside the bar was missed
+  (M2).
+- Round 5 visual 1, the header Out/In buttons. They are gone on every
+  screen.
+
+### H1 · High: reconciling to a statement posts the wrong amount. Owner: C (`d259c5f`)
+
+- The statement has a date (`statement_on`), but the gap is worked out
+  against **today's** balance:
+  - `detail-page.js:131`: `const gap = said - balance;`
+  - `account-form.js:289`: the same.
+  - `postAdjustment()` (`account-form.js:91`) then books that gap as an
+    entry dated on the statement.
+- **Checked on the bKash page.** The running balance after 20 Sep is −৳43,
+  and today's is −৳2,060. Suppose a statement of 20 Sep says −৳43, which is
+  what the ledger held that day. The page says "the ledger is ৳2,017 over",
+  and one tap posts a ৳2,017 expense on 20 Sep.
+- Every later entry reopens the gap and offers the button again, so the
+  owner is invited to post a second wrong adjustment.
+- **Cards.** A statement's "amount due" is typed as a positive figure, while
+  the ledger holds a card's debt as negative. A ৳12,000 bill against −৳12,000
+  shows "৳24,000 short" and posts ৳24,000 of income.
+- **Fix:**
+  - Compare with the balance **as of `statement_on`**. `ledger.balances()`
+    could take an `on` date, or the detail page can walk its rows back, the
+    way it already does for balance-after.
+  - For a credit account, read the statement as owed, or label the field
+    "Amount due".
+  - Add a test with an entry dated after the statement.
+
+### H2 · High: "Could have kept" counts a corrected entry twice. Owner: C (`MonthCockpit`, surfaced by `c302dc8`)
+
+- `leak()` (`MonthCockpit.php:741`) and `quality()` (`:756`) keep only rows
+  with `reverses_id === null`.
+- That drops a correction's mirror, but keeps the **original** it cancels.
+  The necessity mix (`by_need`) nets the two, so a single response disagrees
+  with itself.
+- **Checked on September's demo data.** Lunch at ৳12,500 (discretionary) is
+  reversed and re-entered as ৳1,250.
+  - `by_need[3]` = ৳8,437.28.
+  - `leak_minor` = 1,046,864, so the screen says **"Could have kept
+    ৳10,469"**. Directly above it, the Discretionary row reads ৳8,437, and
+    the caption says "all of the avoidable, and half of the discretionary".
+  - The right figure is **৳4,218.64**.
+- The spend quality grade is also computed on ৳20,937 of discretionary
+  spending instead of ৳8,437.
+- This is pre-existing, from `2833ff8`. `c302dc8` is the first screen that
+  shows it.
+- **Fix:**
+  - Use `signed()`, as `by_need` does, so a mirror subtracts.
+  - Add a test with a correction in the same month, and one across two
+    months.
+
+### M1 · Medium: a statement adjustment counts as income or spending. Owner: C (with B for the type)
+
+- `postAdjustment()` books `type: gap > 0 ? 'income' : 'expense'`
+  (`account-form.js:93`), with no category.
+- A ৳20,000 catch-up therefore moves "Spent this month", "Left to spend",
+  the savings rate and the untagged share, although nothing was earned or
+  spent.
+- **Fix:** it needs a type the month totals skip. Either an `adjustment`
+  type in the ledger (B), or book it as an opening-balance change.
+
+### M2 · Medium: Home's legend dots are all grey. Owner: C (`c302dc8`)
+
+- `overview-page.js:338` writes `data-vars="seg-color:…"` on each legend
+  name, but `applyStyleVars()` runs only on the bar (`:335`).
+- The three dots are therefore `--text-4` grey under a violet, orange and blue
+  bar, so the key matches nothing. This shows in both themes.
+- **Fix:** call `applyStyleVars(qs('[data-breakdown-legend]'))` after that
+  `innerHTML`.
+
+### M3 · Medium: the Month screen does not follow expense red, income green. Owner: C (`c302dc8`)
+
+- In "Six months", Out is grey (`reports.css:135`, `fill: var(--text-2)`).
+  In is a `--bg-3` track, which is almost invisible on the light theme's
+  paper, so only the 2px green cap shows.
+- The hero "Spent this month", the tables and "Out this month" on an account
+  page are in ink.
+- The colour-blind reasoning in `charts.js` is sound, but shape and hue can
+  work together: keep the track-and-fill shape, fill Out with `--money-out`,
+  and make the In track `--in-wash` with the green cap.
+- Pass `{ type: 'expense' }` to `formatMoneyHTML` for spending totals.
+
+### M4 · Medium: the account page still draws its own rows. Owner: C
+
+- `detail-page.js:224` keeps a private `entryRow()` ("TODO(B5)"). B's
+  `row.js` (`fe88020`) exists, and says it is for this screen.
+- So the bKash page shows a type arrow on a red disc where the Ledger shows
+  the category circle. Its comment ("Out in ink, not red") contradicts the
+  owner's rule.
+- DIRECTION C3: "reusing the ledger's row renderer … not by copying it".
+- **Fix:** use `entryRowHTML(row, look, { showAccount: false, after })`.
+
+### M5 · Medium: the entry sheet grows under the thumb. Owner: B (`e91cedd`)
+
+- 700ms after `+`, the sheet has no category row. The chips arrive with
+  `/api/categories/frequent` and push the note field and the whole pad down
+  by about 90px.
+- A digit tapped while that happens lands on the wrong key, which in this
+  sheet means a wrong amount.
+- **Fix:** reserve the row's height with five skeleton circles until the
+  chips are drawn.
+
+### M6 · Medium: the Ledger shows five entries a screen. Owner: B (`fe88020`, B5)
+
+- Most demo days have one entry. Each one gets a full day header, plus a day
+  total that repeats the row's own amount ("Yesterday −2,017" over
+  "−৳2,017").
+- At 360×780 the first screen holds five rows. B5 accepts at ten.
+- "Bank account" is 12 characters, and is cut to "Bank accou…" in a row's
+  sub-line. B5 says nothing is cut before 18.
+- **Fix:**
+  - Fold a single-entry day into its row, with the date in the sub-line.
+  - Drop the day total when a day has only one entry.
+  - Let the account name win space over the category name.
+
+### M7 · Medium: two commits with no track, and a logo commit in C's files. Owners: the director / A
+
+- `7eeb426` and `7d7e182` have one-line messages with no *why*
+  (integration rule 2), and no entry in any track log (rule 6).
+- Both edit C's `overview.css` / `accounts.css` together with A's
+  `_variables.css`.
+- `4fdb218` (logos) edits three of C's files, also with a one-line message.
+- `7d7e182` moves `--s-4` from 16 to 10px, but `_variables.css:199` still
+  says "--s-4 (16) is the page gutter, always". Seven `padding: var(--s-4)`
+  rules shrank with it: card, sheet and panel insets.
+- **Fix:**
+  - Say which track owns these.
+  - Log them.
+  - Fix the stale token comment.
+  - Ask C before touching accounts or overview.
+
+### Low
+
+- **The full account number is cacheable** (C, `d259c5f`). It is stored
+  encrypted, and only `GET /api/accounts/{id}` returns it, which is right.
+  But that response goes out with Laravel's default
+  `Cache-Control: no-cache, private`, so it can sit in the browser's HTTP
+  cache. Send `no-store` there, or on every `/api` response (A).
+  This also reverses the older rule that "a full account number belongs in
+  the vault", so record the decision in `context.md`.
+- **Hex outside the tokens** (locked rule 2):
+  - `accounts.css:131,246` (`4fdb218`).
+  - `brand.js:24-33` GROUNDS (C).
+  - `bank-logo.js:117,127,133` (A).
+  - `_data.css:464` (`96dab84`, A).
+  - The form's colour swatch is the token of the same name, while the card
+    is printed in the GROUNDS hex, so the colour picked is not the colour
+    shown.
+  - `inkOn()` is duplicated in `bank-logo.js` and `brand.js`.
+- **A band under the Ledger's header** (B or A). A 20px strip of page ground
+  sits between the header and the period toolbar, in both themes.
+  `7d7e182` closed it on Home only.
+- **Poisha only on one side** (B). The Ledger header shows
+  OUT −৳44,860**.28** but IN +৳86,348. Day totals drop the ৳ that their rows
+  carry, and Home says ৳44,860 for the same month.
+- **The day-by-day line falls** (C, `month-page.js:106`). A mirror is dated
+  on the day of the fix, so September's line climbs to ৳57.4k on the 27th
+  and drops to ৳44.9k on the 28th. The code comment says the mirror nets
+  inside its day, which is true only for a same-day fix. A cumulative line
+  that falls reads as a bug. Plot the mirror on its original's day when both
+  are in the month, or mark the dip "corrected".
+- **Zero rows** (C). "Was it worth it" shows the Important and Avoidable
+  rows at ৳0 / 0%. "Six months" shows three months with that title.
+- **Demo accounts show no logos** (C, AccountSeeder; B, DemoData).
+  "Bank account", "DPS", "Payoneer" and "LankaBangla" match no institution,
+  so they show generic glyphs. bKash also sits at −৳2,060, which a wallet
+  cannot do. Seed real banks (City, DBBL) and top up bKash.
+- **Logos are cached for a year** (A, `.htaccess:241`). PNGs are
+  `immutable, max-age=31536000`, so a corrected logo under the same filename
+  never reaches a phone that already has the old one. Version the filename,
+  or give `assets/banks/` a shorter lifetime.
+- **Budgets hide failures** (C, `bf8f7c8`, `budgets/backend/api.js:37`).
+  Any non-auth failure (a 500, a 422) comes back as "no budgets, offline",
+  so the rings vanish with no error. Separately, `PUT /budgets/{id}` accepts
+  an archived category that `month()` never lists.
+- **The account page's "In this month"** (C, `detail-page.js:161`) counts a
+  correction's mirror as money in, and its original as money out.
+- **"Remove demo data"** (A, settings) sits on a grey band left over from a
+  container. It looks unfinished.
+- **Still open from round 5:**
+  - `spark.js:93,148` still write `style=""`.
+  - Static `style=""` remains in `login.html:70`, `vault/list.html:74`, the
+    four stubs and `ledger/list.html:110-112`.
+  - `serve.php` still sends no CSP.
+  - Compact `−৳0` is still printed, and is now also red.
+  - The "Reaching hand" hint is still stale (`settings/index.html:124`).
+
+### Visual, as a picky phone user
+
+- **Home.** It is tight and reads in one pass. In, Saved and Out are green,
+  violet and red, and bKash shows its logo. But the legend dots are grey
+  (M2). "Where it went" amounts are in ink, not red. The third account tile
+  is cut to "Bank accou…", which is a fair scroll hint.
+- **Ledger.** Red minus and green plus are correct throughout, and the
+  account logos in the sub-line look crafted. It is too airy for a list (M6),
+  and the Corrected chip is green, which reads as income.
+- **Accounts.** The cards in bank colours are the best screen in the app.
+  Each card is about 224px tall, so six accounts take 1.5 screens. Offer a
+  compact list toggle. Only bKash has a real logo in the demo (Low).
+- **Month.** The charts are clean, and tap-to-read works. The red and green
+  rule is missing (M3), and the Could-have-kept figure is wrong (H2).
+- **Entry sheet (with data).** This is the most polished thing in the app:
+  the balance before and after with a strikethrough, circles for the chips,
+  and the "Again?" strip. The chip glyphs are small (16px in a 48px circle),
+  and "Subscripti…" is cut.
+- **Stubs.** Business, Investments, Budgets and Categories are still "not
+  built yet" pages, against locked rule 6. Budgets is now in progress on
+  the server.
+
+---
+
 ## Round 5 — `a58fa8f..df932b3` (8 commits: A ×5, B ×2, C ×1)
 
 **What was run**

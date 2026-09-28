@@ -566,6 +566,94 @@ Sources: [Anek on GitHub (EkType)](https://github.com/EkType/Anek),
 [Google Design — Anek multiscript](https://design.google/library/anek-multiscript),
 [IBM Plex (no Bengali released)](https://github.com/IBM/plex).
 
+### R5. Reconcile as a small ritual, dated properly — S–M — `accounts`, `ledger`
+
+**What.** On an account's page, add "Match a statement": pick the statement's
+date and type what it says. The screen then shows three lines:
+
+- the ledger's balance **on that date**;
+- the entries after that date, which the statement cannot know about yet;
+- the gap.
+
+One tap posts an `adjustment` that no month total counts. After that the card
+wears a small "matched 20 Sep" tick until the next entry on or before that
+date.
+
+**Why.** Review round 6 H1: the current version compares a dated statement
+with today's balance, so it posts wrong money. A bank app's "reconciled" tick
+is also what makes an owner trust every other figure on the card.
+
+**How hard.** The detail page already walks balances backwards for
+balance-after, so the as-of figure is one loop. The new type needs B.
+
+### R6. A payday month — S — `overview`, `accounts` (MonthCockpit), settings
+
+**What.** Add a setting: "My month starts on" — the 1st, or a day such as
+the 25th, when salary lands. "Left to spend", the a-day pace and the budgets
+then run payday to payday.
+
+**Why.** Salaried Bangladeshis and Gulf workers think in salary cycles, not
+calendar months. On the 28th, "৳12,162 a day for 3 days" is true of the
+calendar and useless to someone paid on the 25th.
+
+**How hard.** MonthCockpit and BudgetBook already take a month key. They
+would take a start day, and `periodBounds()` would learn an offset.
+
+### R7. The payee's own tile — S — `shared/js/components/bank-logo.js`, `ledger/row.js`
+
+**What.** Let `findInstitution()`'s matching also cover merchants: Shwapno,
+Meena Bazar, Agora, Uber, Pathao, foodpanda, DESCO, Titas, Grameenphone,
+Robi. Draw their tile in the row's circle in place of the category glyph,
+with the category glyph as a small badge.
+
+**Why.** "Bank logos everywhere" is the owner's request, and a ledger of
+Shwapno, Uber and DESCO tiles reads at a glance. Most demo rows are exactly
+these payees.
+
+**How hard.** Small. The matcher and the tile renderer exist. It needs 20
+marks, or brand-colour monograms, in the same data file.
+
+### R8. Budget left on the chips — S — entry sheet, `budgets` api
+
+**What.** Under each category chip in the entry sheet, show what is left in
+that budget this month ("৳2.2k left"). Once the typed amount is known,
+colour the chip amber or red where this entry would take the budget past 75%
+or 100%.
+
+**Why.** Budgets are most useful at the moment of spending, not on a report.
+The owner asked for "huge logic, yet easy", and this is logic with no extra
+tap.
+
+**How hard.** One `budgets.month()` read, cached with the chips. It is
+display only; the server stays the judge.
+
+### R9. A card's cycle, on the card — S–M — `accounts`
+
+**What.** On a credit card account, show the statement cycle from
+`statement_day`: spent this cycle, what is due, and when. Add a
+"Pay the card" preset that opens a transfer from the default bank account
+with the due amount filled in.
+
+**Why.** `d259c5f` now stores the statement day and the limit, but nothing
+uses them. Paying a card on time is the one card task that costs money when
+it is forgotten.
+
+**How hard.** It is a date window over rows the page already loads, plus a
+compose call with `to_account_id` preset.
+
+### R10. A dense ledger that still breathes — S — `ledger/list-page.js`, `row.css`
+
+**What.** A day with one entry becomes a single row, with the date in its
+sub-line ("Uber · Cash · Sat 26"). Headers are kept only for days with two
+or more entries, and their total is shown only then. Long-press a header to
+collapse that day.
+
+**Why.** Round 6 M6: five entries a screen at 360×780, against the 10 that B5
+promised. The owner asked for compact spacing twice.
+
+**How hard.** It is a change to the group-by in the list page. The rows
+already carry everything the sub-line needs.
+
 ## What the reference apps are good at, in one line each
 
 - **Monzo** — "left to spend" as the home number; spending grouped into pots
