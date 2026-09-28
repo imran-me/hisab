@@ -35,7 +35,7 @@ class StoreAccountRequest extends FormRequest
             ],
 
             'name' => ['required', 'string', 'max:120'],
-            'type' => ['required', Rule::in(Account::TYPES)],
+            'type' => ['required', Rule::in(Account::CREATABLE_TYPES)],
             'currency' => ['required', 'string', 'size:3', Rule::exists('currencies', 'code')],
             'book' => ['sometimes', 'string', 'max:32'],
 

@@ -201,6 +201,28 @@ class DuesTest extends TestCase
         $this->patchJson("/api/dues/entries/{$entry['id']}", ['amount_minor' => 1])->assertStatus(409);
     }
 
+    /** Review round 8, M11: the Dues account is the Dues module's alone. */
+    public function test_the_dues_account_cannot_be_made_edited_archived_or_deleted(): void
+    {
+        $this->actingAs($this->owner)->postJson('/api/accounts', [
+            'name' => 'Fake dues', 'type' => 'dues', 'currency' => 'BDT',
+        ])->assertStatus(422);
+
+        $this->due($this->person(), 'lent', 1_000_00);
+        $dues = $this->getJson('/api/dues')->json('data.account_id');
+
+        $this->patchJson("/api/accounts/{$dues}", ['name' => 'Mine'])->assertStatus(422);
+        $this->patchJson("/api/accounts/{$dues}", ['archived' => true])->assertStatus(422);
+        $this->deleteJson("/api/accounts/{$dues}")->assertStatus(422);
+        $this->patchJson("/api/accounts/{$this->cash->id}", ['type' => 'dues'])->assertStatus(422);
+
+        // One archived before the lock is brought back, never duplicated.
+        Account::query()->whereKey($dues)->update(['archived_at' => now()]);
+        $this->due($this->person('Karim'), 'lent', 500_00);
+        $this->assertSame(1, Account::query()->where('user_id', $this->owner->id)->where('type', 'dues')->count());
+        $this->assertSame(1_500_00, $this->getJson('/api/dues')->json('data.owed_to_you_minor'));
+    }
+
     public function test_refusals(): void
     {
         $rahim = $this->person();

@@ -37,7 +37,7 @@ class UpdateAccountRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:120'],
-            'type' => ['sometimes', Rule::in(Account::TYPES)],
+            'type' => ['sometimes', Rule::in(Account::CREATABLE_TYPES)],
             'opening_balance_minor' => ['sometimes', 'integer'],
             'opening_on' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'institution' => ['sometimes', 'nullable', 'string', 'max:120'],

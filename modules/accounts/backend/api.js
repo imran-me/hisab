@@ -37,6 +37,12 @@ export const TYPES = [
 
 export const typeOf = (key) => TYPES.find((t) => t.key === key) || TYPES[0];
 
+/**
+ * Accounts the app keeps itself (the Dues account): no edit, archive or
+ * delete, and never offered in a picker as somewhere to pay from or into.
+ */
+export const isSystem = (account) => account?.type === 'dues';
+
 /** Money in a DPS is yours but is not money you can spend today. */
 export const isSpendable = (account) => typeOf(account.type).spendable;
 

@@ -373,3 +373,13 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
   change to ৳6,000 → person ৳6,000, Dues account ৳6,000, cash −৳1,000 more.
   **Track B:** the Ledger refusing correct / repeat on a Dues leg is yours,
   as agreed; point the person to the Dues screen.
+
+### Review round 8 (M11)
+
+- The Dues account is system-kept: `dues` is out of `Account::CREATABLE_TYPES`
+  (create and switch-to refused), PATCH and DELETE on it are 422, the Accounts
+  card has no actions menu and its Edit goes to the Dues screen. An archived
+  one is revived, never duplicated. 1 test.
+- **Track B:** hide `accounts.isSystem()` accounts from the entry-sheet
+  account picker (`modules/ledger/account-picker.js`), so no manual transfer
+  can go into the Dues account.

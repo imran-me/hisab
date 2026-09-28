@@ -25,6 +25,22 @@ class Account extends Model
      */
     public const HELD_TYPES = ['savings', 'investment', 'dues'];
 
+    /**
+     * Types a person can create or switch an account to. `dues` is not one:
+     * the Dues module makes that account and is the only thing that writes
+     * to it (review round 8, M11). A second one, or an archived one, would
+     * split every person's balance across two accounts.
+     */
+    public const CREATABLE_TYPES = ['cash', 'bank', 'mfs', 'card', 'wallet', 'savings', 'investment'];
+
+    /** Made and kept by the Dues module; not editable, archivable or deletable. */
+    public const SYSTEM_TYPES = ['dues'];
+
+    public function isSystem(): bool
+    {
+        return in_array($this->type, self::SYSTEM_TYPES, true);
+    }
+
     /** What a bank account is, as the bank calls it. FDR and DPS are held, not spendable. */
     public const BANK_ACCOUNT_TYPES = ['savings', 'current', 'salary', 'fdr', 'dps'];
 

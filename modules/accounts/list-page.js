@@ -124,10 +124,11 @@ function drawGroup(host, rows, balances, { empty = null } = {}) {
   host.innerHTML = rows.map((account) => `
     <li class="acc-cards__item">
       ${accountCard(account, balances[account.id] ?? 0, { href: `detail.html?id=${encodeURIComponent(account.id)}` })}
+      ${accounts.isSystem(account) ? '' : `
       <button type="button" class="acc-cards__menu" data-account-menu="${esc(account.id)}"
               aria-label="Actions for ${esc(account.name)}">
         ${icon('more', { class: 'icon' })}
-      </button>
+      </button>`}
     </li>`).join('');
   applyStyleVars(host);
 }

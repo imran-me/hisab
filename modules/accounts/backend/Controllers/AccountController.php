@@ -71,7 +71,8 @@ class AccountController extends Controller
 
     public function update(UpdateAccountRequest $request, string $id): JsonResponse
     {
-        $account = $this->book->update($this->find($request, $id), $request->validated());
+        $account = $this->editable($request, $id);
+        $account = $this->book->update($account, $request->validated());
 
         return response()->json(['data' => $this->shape($account)]);
     }
@@ -92,7 +93,7 @@ class AccountController extends Controller
     {
         // Throws a 409 carrying the transaction count when the account is
         // referenced. Archiving is the answer then, and the client offers it.
-        $this->book->delete($this->find($request, $id));
+        $this->book->delete($this->editable($request, $id));
 
         return response()->json(null, 204);
     }
@@ -123,6 +124,20 @@ class AccountController extends Controller
         $result = $reconciler->apply($account, (int) $q['statement_minor'], $q['on']);
 
         return response()->json(['data' => $result + ['account' => $this->shape($account->refresh())]]);
+    }
+
+    /**
+     * An account the owner may change. The Dues account is the Dues module's:
+     * editing, archiving or deleting it would strand or split every person's
+     * balance, so it is refused with a reason rather than a 404.
+     */
+    private function editable(Request $request, string $id): Account
+    {
+        $account = $this->find($request, $id);
+
+        abort_if($account->isSystem(), 422, 'The Dues account is kept by the Dues screen and cannot be changed here.');
+
+        return $account;
     }
 
     private function find(Request $request, string $id): Account

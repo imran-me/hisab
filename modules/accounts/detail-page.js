@@ -32,7 +32,10 @@ mountShell({
    balance so the form can show a statement's gap against it. */
 let shown_ = { account: null, balance: 0 };
 delegate(document.body, 'click', '[data-edit-account]', () => {
-  if (shown_.account) openAccountSheet(shown_.account, { balance: shown_.balance });
+  if (!shown_.account) return;
+  // The Dues account is the Dues screen's to change (review round 8, M11).
+  if (accounts.isSystem(shown_.account)) { location.href = '../dues/list.html'; return; }
+  openAccountSheet(shown_.account, { balance: shown_.balance });
 });
 mountCompose({ onSaved: () => refresh() });
 

@@ -36,11 +36,17 @@ class DueBook
      */
     public function account(User $user, string $book): Account
     {
+        // Archived or not: one archived before archiving was refused must be
+        // brought back, never replaced by a second one.
         $existing = Account::query()
             ->where('user_id', $user->id)->where('book', $book)->where('type', self::ACCOUNT_TYPE)
-            ->whereNull('archived_at')->first();
+            ->orderBy('created_at')->first();
 
         if ($existing !== null) {
+            if ($existing->archived_at !== null) {
+                $existing->forceFill(['archived_at' => null])->save();
+            }
+
             return $existing;
         }
 
@@ -303,7 +309,7 @@ class DueBook
         $owe = -array_sum(array_filter($balances, fn (int $v): bool => $v < 0));
 
         $account = Account::query()->where('user_id', $user->id)->where('book', $book)
-            ->where('type', self::ACCOUNT_TYPE)->whereNull('archived_at')->value('id');
+            ->where('type', self::ACCOUNT_TYPE)->orderBy('created_at')->value('id');
 
         return [
             'book' => $book,
