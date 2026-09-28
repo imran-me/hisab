@@ -46,6 +46,25 @@ is(merch('Emirates NBD transfer'), null, 'the bank is not the airline');
 is(merch('Uber Eats dinner'), 'uber', 'Uber Eats');
 is(merch('Meena Bazar'), 'meenabazar', 'Meena Bazar');
 
+/* ---- Every logo and wordmark named in the data is a file on disk -----------
+   A missing file is a broken-image icon in a 40px tile, which is worse than
+   the monogram it replaced. */
+{
+  const { existsSync, statSync } = await import('node:fs');
+  const { INSTITUTIONS } = await import('../shared/js/data/institutions.js');
+  const { MERCHANTS } = await import('../shared/js/data/merchants.js');
+  const root = new URL('../assets/', import.meta.url);
+  for (const [list, dir] of [[INSTITUTIONS, 'banks'], [MERCHANTS, 'merchants']]) {
+    for (const item of list) {
+      for (const field of ['logo', 'wordmark']) {
+        if (!item[field]) continue;
+        const file = new URL(`${dir}/${item[field]}`, root);
+        is(existsSync(file) && statSync(file).size > 100, true, `${dir}/${item[field]} (${item.id}.${field}) exists`);
+      }
+    }
+  }
+}
+
 if (failures.length) {
   console.error(`\n  ${failures.length} FAILED, ${passed} passed\n`);
   for (const f of failures) console.error('  ✗ ' + f + '\n');
