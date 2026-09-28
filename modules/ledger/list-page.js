@@ -268,6 +268,23 @@ function drawList(rows, look, display, rates) {
       rates,
     ).amountMinor;
 
+    // A day with ONE entry gets no heading: the day goes on the row itself,
+    // under the amount, where the day's net would only have repeated it. Half
+    // the days in a month hold one entry, so a heading each took nearly half
+    // the screen and left five rows visible (review round 7).
+    if (dayRows.length === 1) {
+      const [row] = dayRows;
+      return `
+      <li class="ledger-day ledger-day--single">
+        <ul class="list">
+          ${entryRowHTML(row, look, {
+            cells: desktopCells(row, look),
+            after: `<span class="row__day">${esc(formatDayLabel(day))}</span>`,
+          })}
+        </ul>
+      </li>`;
+    }
+
     // One <li> per DAY, holding its heading and its own list. A sticky
     // heading sticks within its parent, so with each day in its own box the
     // current day's heading pushes the previous one out instead of every

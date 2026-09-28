@@ -33,6 +33,19 @@
    must not be mistaken. It is U+2212 either way (formatMoneyHTML). */
 .ledger-day > .list-group-head .money { font-family: var(--font-display); }
 
+/* A one-entry day: no heading, the day under the amount instead. The day's
+   label is the quiet meta line; the list's own indented rule separates it
+   from the day before. */
+.row__day {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--t-meta);
+  line-height: 1.2;
+  color: var(--text-3);
+  text-align: end;
+  white-space: nowrap;
+}
+
 /* The day's own list sits flush under its heading: the heading's bottom rule
    already separates them. */
 .ledger-day > .list > li:first-child { border-top: 0; }

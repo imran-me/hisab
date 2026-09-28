@@ -490,3 +490,12 @@ nothing and both stores are empty → signed in again → fresh copies, rows
 drawn. **For A:** call `categories.reset()` and `ledger.reset()` from both
 sign-out handlers too, so the copies go at the click rather than on the next
 read.
+
+## Review round 7 (2): eleven rows a screen, not five
+
+A day with one entry has no heading now: its date sits under the amount in
+the meta size ("Thu 17 Sep"), where the day's net would only have repeated
+the row's own figure. Days with two or more keep the sticky heading and its
+net. **Measured** at 360×780 with demo data: 11 rows fully visible between
+the filter bar and the tab bar (was 5). Dark and day checked; the list's own
+indented rule separates folded days, no overflow (scroll width 360).
