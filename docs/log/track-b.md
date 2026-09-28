@@ -444,3 +444,20 @@ else the matched entry's.
 the server, dark and day: "uber" → Uber mark, Transport, Cash in hand,
 chip ৳444; Use fills 444 and the card shows the balance after; "KFC" → Dining
 out by the merchant map with no chip; "local baz" → Food by history.
+
+## B10, part one — the SMS parser
+
+`modules/ledger/sms.js` (pure, no DOM) reads bKash, Nagad, Rocket and bank
+or card SMS into amount, type, fee, TrxID, counterparty, balance, date and
+the masked account digits; `accountFor()` finds the wallet by provider or
+the bank account by its last digits (never a guess); `seenTrx()` finds an
+entry that already recorded the TrxID (kept in the entry's note as
+`TrxID …`, so duplicate detection needs no server column). Cash Out and an
+agent Cash In are TRANSFERS (the money is still the owner's); the fee is
+its own figure.
+
+`node tools/test-sms.mjs`: 57 assertions over 15 real-shaped messages
+(6 bKash, 3 Nagad, 3 Rocket, 3 bank/card), refusals (an OTP, a chat), the
+account match and duplicates. Found by the tests: "Recharge Tk 100" read
+its own amount as a charge ("re-CHARGE"); fee and balance labels now need a
+word boundary. The sheet's "Paste SMS" is the next commit.
