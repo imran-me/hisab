@@ -66,7 +66,12 @@
 /* ---- Headings -----------------------------------------------------------
    Sizes step at 600px rather than fluidly: a clamp() heading changes size
    while a table beside it does not, and the two stop agreeing. */
-h1, .h1 { font-size: var(--fs-28); font-weight: var(--fw-bold); }
+h1, .h1 { font-size: var(--fs-28); font-weight: var(--fw-bold); letter-spacing: var(--track-head); }
+h2, .h2, h3, .h3 { letter-spacing: var(--track-head); }
+
+/* Any figure in a list, a table or a stat lines up on its digits, even when
+   a module forgot .money: Plex's tabular digits, lining, no slashed zero. */
+.list, table, .stat, .row__end, dd { font-variant-numeric: tabular-nums lining-nums; }
 h2, .h2 { font-size: var(--fs-23); font-weight: var(--fw-semibold); }
 h3, .h3 { font-size: var(--fs-19); font-weight: var(--fw-semibold); }
 h4, .h4 { font-size: var(--fs-16); font-weight: var(--fw-semibold); }

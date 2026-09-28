@@ -88,16 +88,24 @@
      takes the steel-cyan the app used to wear, which nothing else uses now. */
   --vault: #5CC8D6;  --vault-wash: rgba(92, 200, 214, .13);
 
-  /* Category tints — muted, equal lightness, for a category's glyph and its
-     segment of a bar. NEVER for flows. A category with no tint uses --text-3. */
-  --cat-food:      #E3A76B;
-  --cat-transport: #7FB2E5;
-  --cat-home:      #C79BE0;
-  --cat-utilities: #E5CF6E;
-  --cat-dining:    #E58F7A;
-  --cat-shopping:  #7ACFC2;
-  --cat-mobile:    #93A7F0;
-  --cat-health:    #E48FB6;
+  /* Category tints — for a category's glyph and its segment of a bar. NEVER
+     for flows. A category with no tint uses --text-3.
+     Retuned 2026-09-28 for a richer set that is still calm: one step more
+     chroma than v2's first cut, every tint at about the same lightness
+     (so no one category shouts), and neighbours on the wheel pushed apart
+     so food, dining and utilities no longer read as one orange. Each clears
+     4.5:1 as an icon on its own 15% wash over --bg-1. */
+  --cat-food:      #F0A868;   /* amber        */
+  --cat-transport: #6DB3F2;   /* sky          */
+  --cat-home:      #C3A0F5;   /* lavender     */
+  --cat-utilities: #E9CB55;   /* brass        */
+  --cat-dining:    #F58C7D;   /* coral        */
+  --cat-shopping:  #56D1BF;   /* teal         */
+  --cat-mobile:    #939FFF;   /* periwinkle   */
+  --cat-health:    #F28DBE;   /* rose         */
+  --cat-education: #9FCF6B;   /* leaf         */
+  --cat-fun:       #E29BEA;   /* orchid       */
+  --cat-work:      #A9B8CC;   /* steel        */
 
   /* The same eight tints in a fixed ORDER, for a bar or chart segment whose
      category has no tint of its own. Ordered so that neighbours differ in hue
@@ -124,6 +132,18 @@
   --scroll-thumb: #2A323F;
   --surface-inv:  #F2F4F7;   /* a deliberate light block: print, a QR code */
   --ink-inv:      #0C0F14;
+
+  /* Gradients — calm, and only on surfaces that carry a headline figure.
+     A card gets a sheen: 3% of ink at its top edge fading out, which reads
+     as light falling on it rather than as a colour. A figure tile gets a
+     glow of its own tone from the top corner (--glow-tone is set by the
+     tile: money in, out, saved). Nothing is a two-colour gradient. */
+  --grad-sheen: linear-gradient(180deg, rgba(242, 244, 247, .035), rgba(242, 244, 247, 0) 64%);
+  --glow-alpha: 16%;
+  --grad-glow:  radial-gradient(130% 120% at 100% 0%, color-mix(in srgb, var(--glow-tone, var(--accent)) var(--glow-alpha), transparent), transparent 62%);
+  /* The + : marigold, lit from above. */
+  --grad-plus:  linear-gradient(180deg, #FFC657 0%, #F5B53F 55%, #E9A22C 100%);
+  --plus-edge:  inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -1px 0 rgba(0, 0, 0, .12);
 
   /* Toasts sit on the INVERSE surface, so a message never looks like one
      more card on the page. */
@@ -203,8 +223,10 @@
   --lh-snug:   1.35;
   --lh-normal: 1.45;
 
-  --track-label:  0.06em;    /* the few uppercase micro-labels left        */
+  --track-label:  0.07em;    /* the few uppercase micro-labels left        */
   --track-figure: -0.012em;  /* big figures, per the hero spec             */
+  --track-head:   -0.01em;   /* headings and titles in the display face    */
+  --track-body:   0.003em;   /* Plex at 13–15px on a phone: a hair open     */
 
   /* ---------------------------------------------------------------------
      7 · SPACE — a 4px base. --s-4 (16) is the page gutter, always.
@@ -236,6 +258,14 @@
   --r-lg:   14px;   /* cards, the sheet's top corners      */
   --r-plus: 18px;   /* the + and nothing else              */
   --r-pill: 999px;  /* chips                               */
+
+  /* Roles, so a component asks for what it IS rather than a size. A button
+     and a field share one radius with the glyph tiles (10), so a form, its
+     Save and the keypad read as one set of shapes; cards are one step
+     rounder (14) so they hold what sits inside them. */
+  --r-btn:   var(--r-md);
+  --r-field: var(--r-md);
+  --r-card:  var(--r-lg);
 
   /* ---------------------------------------------------------------------
      9 · ELEVATION — luminance first. Two shadows exist, each for one thing.
@@ -294,6 +324,8 @@
 
   --tap-min: 44px;   /* the floor */
   --tap:     44px;   /* the target: the floor, so rows sit closer */
+  --row-h:   56px;   /* a list row: a 40px glyph and two lines, 8px clear  */
+  --glyph:   40px;   /* the icon circle on a row                           */
 
   /* ---------------------------------------------------------------------
      V1 ALIASES — remove once no module reads them (DIRECTION §3.7.7)
@@ -379,8 +411,12 @@
   --danger: #BF2F1F; --danger-wash: rgba(191, 47, 31, .08);
   --biz: #2F6FAE;    --biz-wash: rgba(47, 111, 174, .09);
   --vault: #0B6E7C;  --vault-wash: rgba(11, 110, 124, .09);
-  --cat-food: #B26A22;  --cat-transport: #2F6FAE;  --cat-home: #8A4FAE;  --cat-utilities: #9A7B0C;
-  --cat-dining: #B5503A;  --cat-shopping: #1F8577;  --cat-mobile: #4A5FC0;  --cat-health: #B04A7A;
+  --cat-food: #A8621A;  --cat-transport: #226DB5;  --cat-home: #7E4BC0;  --cat-utilities: #8C700A;
+  --cat-dining: #B94A38;  --cat-shopping: #0F7F70;  --cat-mobile: #4B57C9;  --cat-health: #B23F79;
+  --cat-education: #4B7A1A;  --cat-fun: #8E3E96;  --cat-work: #4F6275;
+  --grad-sheen: none;  --glow-alpha: 10%;
+  --grad-plus: linear-gradient(180deg, #2B2F38 0%, #16181D 100%);
+  --plus-edge: inset 0 1px 0 rgba(255, 255, 255, .10);
   --toast-bg: #1E2129;  --toast-ink: #F2F4F7;  --toast-ink-2: #A3AAB6;  --toast-ring: rgba(255, 255, 255, .06);
   --toast-accent: #F7C360;  --toast-good: #3DD68C;  --toast-bad: #FF7B7B;  --toast-warn: #FF9A52;
   --wash-hover: rgba(22, 24, 29, .04);  --wash-press: rgba(22, 24, 29, .075);  --wash-stripe: rgba(22, 24, 29, .02);
@@ -409,8 +445,12 @@
     --danger: #BF2F1F; --danger-wash: rgba(191, 47, 31, .08);
     --biz: #2F6FAE;    --biz-wash: rgba(47, 111, 174, .09);
     --vault: #0B6E7C;  --vault-wash: rgba(11, 110, 124, .09);
-    --cat-food: #B26A22;  --cat-transport: #2F6FAE;  --cat-home: #8A4FAE;  --cat-utilities: #9A7B0C;
-    --cat-dining: #B5503A;  --cat-shopping: #1F8577;  --cat-mobile: #4A5FC0;  --cat-health: #B04A7A;
+    --cat-food: #A8621A;  --cat-transport: #226DB5;  --cat-home: #7E4BC0;  --cat-utilities: #8C700A;
+    --cat-dining: #B94A38;  --cat-shopping: #0F7F70;  --cat-mobile: #4B57C9;  --cat-health: #B23F79;
+    --cat-education: #4B7A1A;  --cat-fun: #8E3E96;  --cat-work: #4F6275;
+    --grad-sheen: none;  --glow-alpha: 10%;
+    --grad-plus: linear-gradient(180deg, #2B2F38 0%, #16181D 100%);
+    --plus-edge: inset 0 1px 0 rgba(255, 255, 255, .10);
     --toast-bg: #1E2129;  --toast-ink: #F2F4F7;  --toast-ink-2: #A3AAB6;  --toast-ring: rgba(255, 255, 255, .06);
     --toast-accent: #F7C360;  --toast-good: #3DD68C;  --toast-bad: #FF7B7B;  --toast-warn: #FF9A52;
     --wash-hover: rgba(22, 24, 29, .04);  --wash-press: rgba(22, 24, 29, .075);  --wash-stripe: rgba(22, 24, 29, .02);
@@ -429,13 +469,23 @@
 /* =========================================================================
    Density — the same screen, tighter. It changes the RHYTHM, never the tap
    target: a finger does not get smaller when the table does.
+
+   2026-09-28: this block used to set the OLD, airier spacing, so after the
+   app-wide tightening "Compact" was the looser of the two. It now steps every
+   space down by one, rows to 50px and glyphs to 36px; the page gutter stays.
    ========================================================================= */
 [data-density="compact"] {
-  --s-3: 0.5rem;
-  --s-4: 0.75rem;
-  --s-5: 1rem;
-  --s-6: 1.25rem;
+  --s-1: 0.125rem;  /*  2 */
+  --s-2: 0.25rem;   /*  4 */
+  --s-3: 0.375rem;  /*  6 */
+  --s-4: 0.5rem;    /*  8 */
+  --s-5: 0.625rem;  /* 10 */
+  --s-6: 0.75rem;   /* 12 */
+  --s-8: 0.875rem;  /* 14 */
+  --row-h: 50px;
+  --glyph: 36px;
   --fs-14: 0.8125rem;
+  --t-body: 0.875rem;
   --tap: 44px;
 }
 

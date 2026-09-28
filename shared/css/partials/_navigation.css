@@ -157,10 +157,15 @@
   inset-inline-start: 50%;
   width: 20px;
   margin-inline-start: -10px;
-  height: 2px;
-  border-radius: 0 0 2px 2px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
   background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
+
+/* The current tab's icon draws a touch heavier, so "you are here" reads
+   in the shape as well as the colour. */
+.tab[aria-current='page'] > .icon { stroke-width: 1.9; }
 
 /* An unread / attention count on a tab. */
 .tab__badge {
@@ -198,9 +203,9 @@
   height: 54px;
   margin-block-start: -20px;
   border-radius: var(--r-plus);
-  background: var(--plus-bg);
+  background: var(--grad-plus), var(--plus-bg);
   color: var(--plus-ink);
-  box-shadow: var(--shadow-plus);
+  box-shadow: var(--plus-edge), var(--shadow-plus);
   transition: transform var(--t-press) var(--ease-snap), background-color var(--t-fast) var(--ease);
 }
 

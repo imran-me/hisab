@@ -7,9 +7,9 @@
 
 /* ---- Card / panel ------------------------------------------------------- */
 .card {
-  background: var(--bg-1);
+  background: var(--grad-sheen), var(--bg-1);
   border: 0;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-card);
   box-shadow: var(--ring-card);
   padding: var(--s-4);
   min-width: 0;   /* so a wide child truncates instead of widening the card */
@@ -89,7 +89,7 @@
   content: '';
   position: absolute;
   inset-block-start: 0;
-  inset-inline: calc(var(--s-4) + 40px + var(--s-3)) 0;
+  inset-inline: calc(var(--s-4) + var(--glyph) + var(--s-3)) 0;
   border-top: 1px solid var(--line-soft);
   pointer-events: none;
 }
@@ -100,7 +100,7 @@
   align-items: center;
   gap: var(--s-3);
   width: 100%;
-  min-height: 60px;
+  min-height: var(--row-h);
   padding: var(--s-2) var(--s-4);
   background: transparent;
   border: 0;
@@ -131,8 +131,8 @@
    icon the table does not know, marigold. */
 .row__glyph {
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: var(--glyph);
+  height: var(--glyph);
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -154,6 +154,9 @@
 .row__glyph--logo > .inst-logo--img { padding: 6px; }
 
 /* Category tints, by name. A module sets the class; the colour is a token. */
+.cat-education { --tint: var(--cat-education); }
+.cat-fun       { --tint: var(--cat-fun); }
+.cat-work      { --tint: var(--cat-work); }
 .cat-food      { --tint: var(--cat-food); }
 .cat-transport { --tint: var(--cat-transport); }
 .cat-home      { --tint: var(--cat-home); }

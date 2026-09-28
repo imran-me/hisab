@@ -14,9 +14,9 @@
   flex-direction: column;
   gap: var(--s-1);
   padding: var(--s-3);
-  background: var(--bg-1);
+  background: var(--grad-glow), var(--grad-sheen), var(--bg-1);
   border: 0;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-card);
   box-shadow: var(--ring-card);
   min-width: 0;
   /* The tinted rule along the top. Drawn as a pseudo-element rather than a
@@ -47,9 +47,9 @@
   background: var(--stat-tone, var(--accent));
 }
 
-.stat--in   { --stat-tone: var(--in); }
-.stat--out  { --stat-tone: var(--out); }
-.stat--hold { --stat-tone: var(--saved); }
+.stat--in   { --stat-tone: var(--in);    --glow-tone: var(--in); }
+.stat--out  { --stat-tone: var(--out);   --glow-tone: var(--out); }
+.stat--hold { --stat-tone: var(--saved); --glow-tone: var(--saved); }
 .stat--flat { --stat-tone: var(--accent); }
 
 /* The glyph, in a tinted square.
@@ -123,6 +123,7 @@
   padding: 2px var(--s-2);
   border-radius: var(--r-xs);
   background: var(--bg-3);
+  letter-spacing: 0.01em;
   border: 0;
   color: var(--text-2);
   font-size: var(--fs-11);
