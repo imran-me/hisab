@@ -37,18 +37,29 @@ export function institution(id) {
 /**
  * Match free text (an account's `institution` field, or its name) to an
  * institution. Longest spelling wins, whole words only, so "Bank Asia" is not
- * taken for a generic bank and "Dhaka Bank" does not match "Dhaka Bank Asia"
- * wrongly. Generic entries are never matched by text: they are the fallback.
+ * taken for a generic bank. The id is NOT a spelling: ids like "trust",
+ * "one", "standard" and "wise" are ordinary words, and "Trust fund" or "One
+ * card" must not wear a bank's logo. A single ambiguous word ("City",
+ * "Wise") is listed under `exact` and matches only as the whole text.
+ * Generic entries are never matched by text: they are the fallback.
  */
+const norm = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
 export function findInstitution(text) {
-  const hay = ` ${String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ')} `;
-  if (!hay.trim()) return null;
+  const bare = norm(text);
+  if (!bare) return null;
+  const hay = ` ${bare} `;
   let best = null;
   let bestLen = 0;
   for (const inst of INSTITUTIONS) {
     if (inst.kind === 'generic') continue;
-    for (const spelling of [inst.id, inst.name, ...(inst.match || [])]) {
-      const needle = ` ${spelling.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+    const exact = (inst.exact || []).map(norm);
+    if (exact.includes(bare)) return inst;
+    // A one-word name that is also listed as exact ("Wise", "Tap") is not a
+    // spelling to look for inside longer text.
+    const named = exact.includes(norm(inst.name)) ? [] : [inst.name];
+    for (const spelling of [...named, ...(inst.match || [])]) {
+      const needle = ` ${norm(spelling)} `;
       if (needle.length > bestLen && hay.includes(needle)) { best = inst; bestLen = needle.length; }
     }
   }
