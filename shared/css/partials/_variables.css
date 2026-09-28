@@ -125,6 +125,17 @@
   --surface-inv:  #F2F4F7;   /* a deliberate light block: print, a QR code */
   --ink-inv:      #0C0F14;
 
+  /* Toasts sit on the INVERSE surface, so a message never looks like one
+     more card on the page. */
+  --toast-bg:     #E9ECF1;
+  --toast-ink:    #16181D;
+  --toast-ink-2:  #5C6270;
+  --toast-ring:   rgba(0, 0, 0, 0);
+  --toast-accent: #8A5A00;
+  --toast-good:   #04703A;
+  --toast-bad:    #B42318;
+  --toast-warn:   #A94E07;
+
   /* ---------------------------------------------------------------------
      6 · TYPE — two families and one symbol
 
@@ -370,6 +381,8 @@
   --vault: #0B6E7C;  --vault-wash: rgba(11, 110, 124, .09);
   --cat-food: #B26A22;  --cat-transport: #2F6FAE;  --cat-home: #8A4FAE;  --cat-utilities: #9A7B0C;
   --cat-dining: #B5503A;  --cat-shopping: #1F8577;  --cat-mobile: #4A5FC0;  --cat-health: #B04A7A;
+  --toast-bg: #1E2129;  --toast-ink: #F2F4F7;  --toast-ink-2: #A3AAB6;  --toast-ring: rgba(255, 255, 255, .06);
+  --toast-accent: #F7C360;  --toast-good: #3DD68C;  --toast-bad: #FF7B7B;  --toast-warn: #FF9A52;
   --wash-hover: rgba(22, 24, 29, .04);  --wash-press: rgba(22, 24, 29, .075);  --wash-stripe: rgba(22, 24, 29, .02);
   --scrim: rgba(22, 24, 29, .38);
   --scroll-thumb: #D3CEC5;
@@ -398,6 +411,8 @@
     --vault: #0B6E7C;  --vault-wash: rgba(11, 110, 124, .09);
     --cat-food: #B26A22;  --cat-transport: #2F6FAE;  --cat-home: #8A4FAE;  --cat-utilities: #9A7B0C;
     --cat-dining: #B5503A;  --cat-shopping: #1F8577;  --cat-mobile: #4A5FC0;  --cat-health: #B04A7A;
+    --toast-bg: #1E2129;  --toast-ink: #F2F4F7;  --toast-ink-2: #A3AAB6;  --toast-ring: rgba(255, 255, 255, .06);
+    --toast-accent: #F7C360;  --toast-good: #3DD68C;  --toast-bad: #FF7B7B;  --toast-warn: #FF9A52;
     --wash-hover: rgba(22, 24, 29, .04);  --wash-press: rgba(22, 24, 29, .075);  --wash-stripe: rgba(22, 24, 29, .02);
     --scrim: rgba(22, 24, 29, .38);
     --scroll-thumb: #D3CEC5;

@@ -97,9 +97,22 @@
   min-height: 0;                  /* a flex child will not scroll without it */
 }
 
-/* While being dragged, the sheet follows the finger with no transition — a
-   transition here makes the drag feel like it is on elastic. */
-.sheet.is-dragging { transition: none; transform: translateY(var(--drag-y, 0px)); }
+/* The drag (sheet.js) moves the sheet with `translate`, which composes with
+   the open animation's `transform` instead of fighting it. While the finger
+   is down it follows 1:1 with no transition (a transition there feels like
+   elastic); let go short of the line and it springs back over --t-base. The
+   scrim fades with the drag, so the page behind comes up as the sheet goes. */
+.sheet {
+  translate: 0 var(--drag-y, 0px);
+  transition: translate var(--t-base) var(--ease-out);
+  /* Above the on-screen keyboard (--kb from visualViewport). */
+  inset-block-end: var(--kb, 0px);
+}
+.sheet.has-keyboard { max-height: calc(100dvh - var(--kb, 0px) - var(--safe-top) - 12px); }
+.sheet.is-dragging { transition: none; }
+.sheet.is-dragging, .sheet.is-dragging * { user-select: none; }
+.sheet::backdrop { opacity: calc(1 - var(--drag-k, 0) * 0.9); }
+.sheet__head { touch-action: none; }
 
 @media (min-width: 700px) {
   /* On a wide screen the sheet becomes a centred dialog: rising from the
@@ -210,33 +223,70 @@
   .toast-stack { inset-block-end: var(--s-5); align-items: flex-end; padding-inline: var(--s-5); }
 }
 
+/* A toast is set on the INVERSE surface (--toast-bg: light at night, ink by
+   day), which is what makes it read as "the app telling you" rather than one
+   more card on the page. The tone lives in the glyph's circle, not in a
+   border round the whole thing. Swiped sideways or down (toast.js) it
+   follows the finger and fades. */
 .toast {
+  position: relative;
   pointer-events: auto;
   display: flex;
   align-items: center;
   gap: var(--s-3);
   width: 100%;
   max-width: 28rem;
-  padding: var(--s-3);
-  background: var(--bg-3);
-  border: 1px solid var(--line-hot);
-  border-radius: var(--r-sm);
-  box-shadow: var(--shadow-menu);
-  font-size: var(--fs-13);
+  min-height: 48px;
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+  background: var(--toast-bg);
+  color: var(--toast-ink);
+  border: 0;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-menu), inset 0 0 0 1px var(--toast-ring);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  touch-action: pan-y;
+  translate: var(--swipe-x, 0px) var(--swipe-y, 0px);
+  opacity: calc(1 - var(--swipe-k, 0) * 0.8);
+  transition: translate var(--t-base) var(--ease-out), opacity var(--t-base) var(--ease-out);
   animation: hisab-toast-in var(--t-base) var(--ease-out) both;
 }
+.toast.is-dragging { transition: none; }
 
 .toast.is-leaving { animation: hisab-toast-out var(--t-fast) var(--ease-in) both; }
-.toast__glyph { flex: none; color: var(--text-3); }
-.toast__body { flex: 1 1 auto; min-width: 0; }
-.toast__action { flex: none; }
+.toast__glyph {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border-radius: 50%;
+  stroke-width: 2;
+  color: var(--tone, var(--toast-ink-2));
+  background: color-mix(in srgb, var(--tone, var(--toast-ink-2)) 20%, transparent);
+}
+.toast__body { flex: 1 1 auto; min-width: 0; line-height: var(--lh-snug); }
+.toast__action { flex: none; color: var(--toast-accent); font-weight: var(--fw-semibold); }
+.toast__action:hover { color: var(--toast-accent); background: color-mix(in srgb, var(--toast-accent) 12%, transparent); }
+.toast__close { flex: none; color: var(--toast-ink-2); }
+.toast__close:hover { color: var(--toast-ink); }
 
-.toast--good { border-color: var(--in); }
-.toast--good .toast__glyph { color: var(--in); }
-.toast--bad  { border-color: var(--out); }
-.toast--bad  .toast__glyph { color: var(--out); }
-.toast--warn { border-color: var(--warn); }
-.toast--warn .toast__glyph { color: var(--warn); }
+.toast--good { --tone: var(--toast-good); }
+.toast--bad  { --tone: var(--toast-bad); }
+.toast--warn { --tone: var(--toast-warn); }
+
+/* The Undo window, draining. Paused while a finger or the pointer is on it. */
+@keyframes hisab-toast-timer { from { scale: 1 1; } to { scale: 0 1; } }
+.toast__timer {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: var(--toast-accent);
+  opacity: 0.7;
+  transform-origin: left center;
+  animation: hisab-toast-timer var(--toast-life, 6000ms) linear forwards;
+}
+.toast.is-held .toast__timer { animation-play-state: paused; }
 
 /* ---- Lock screen -------------------------------------------------------
    The vault's cover. Above everything including the header, because a locked
