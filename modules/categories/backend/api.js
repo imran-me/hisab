@@ -10,8 +10,9 @@
  * ledger and "Dining out" is a red flag on a company one.
  */
 
-import { moduleStore } from '../../../shared/js/core/storage.js';
-import { get, post, patch, hasBackend } from '../../../shared/js/core/http.js';
+import { moduleStore, session as sessionCache } from '../../../shared/js/core/storage.js';
+import { get, post, patch, del, hasBackend } from '../../../shared/js/core/http.js';
+import { session as currentSession } from '../../../shared/js/core/session.js';
 import { siteURL } from '../../../shared/js/core/paths.js';
 import { ulid, slugify } from '../../../shared/js/core/id.js';
 
@@ -153,13 +154,24 @@ export async function archive(id) {
   const row = await find(id);
   if (!row) return { ok: false, reason: 'missing' };
 
-  row.archived_at = new Date().toISOString();
-  persist(all);
-
+  // The server archives through DELETE (and hard-deletes a category nothing
+  // ever used). This sent PATCH { archived: true }, which the server refuses
+  // for want of a label, so an archive never reached it.
   if (await hasBackend()) {
-    const res = await patch(`/categories/${id}`, { archived: true });
+    const res = await del(`/categories/${id}`);
     if (!res.ok && res.reason !== 'offline') return res;
+    if (res.ok && res.data?.data?.deleted) {
+      for (const scope of Object.values(all.books)) {
+        for (const [type, rows] of Object.entries(scope)) scope[type] = rows.filter((c) => c.id !== id);
+      }
+      persist(all);
+      return { ok: true, data: { ...row, deleted: true } };
+    }
+    if (res.ok) row.archived_at = res.data?.data?.archived_at || new Date().toISOString();
   }
+
+  row.archived_at ??= new Date().toISOString();
+  persist(all);
   return { ok: true, data: row };
 }
 
@@ -167,6 +179,13 @@ export async function restore(id) {
   const all = await load();
   const row = await find(id);
   if (!row) return { ok: false, reason: 'missing' };
+
+  // It never told the server, so a restored category came back archived on
+  // the next load.
+  if (await hasBackend()) {
+    const res = await post(`/categories/${id}/restore`);
+    if (!res.ok && res.reason !== 'offline') return res;
+  }
   row.archived_at = null;
   persist(all);
   return { ok: true, data: row };
@@ -174,9 +193,25 @@ export async function restore(id) {
 
 /* ---- Storage ------------------------------------------------------------ */
 
-async function load() {
-  if (memo) return memo;
+/**
+ * The whole set, once.
+ *
+ * ONE PROMISE, SHARED. The row renderer, the entry sheet and the page each ask
+ * for categories as they mount, all before the first answer arrives. With only
+ * the finished value memoised, every one of them started its own load - on
+ * the Ledger that was three loads of six requests each, eighteen calls to a
+ * server that answers one at a time, and the larger part of a 24-second first
+ * paint. The in-flight promise is what is shared now.
+ */
+let loading = null;
 
+function load() {
+  if (memo) return Promise.resolve(memo);
+  loading ??= fetchAll().finally(() => { loading = null; });
+  return loading;
+}
+
+async function fetchAll() {
   // THE SERVER'S CATEGORIES WHEN THERE IS ONE.
   //
   // This used to read only local storage and the seed, so with a backend the
@@ -185,25 +220,30 @@ async function load() {
   // invalid"). The ids have to be the server's.
   //
   // Every book and type, archived included, because find() resolves a
-  // historical row's category by id wherever it lives.
+  // historical row's category by id wherever it lives - in ONE request
+  // (GET /categories/all), not one per book and type.
   if (await hasBackend()) {
-    const pairs = [];
-    for (const book of ['personal', 'business']) {
-      for (const type of ['income', 'expense', 'deposit']) pairs.push([book, type]);
-    }
-    const results = await Promise.all(pairs.map(([book, type]) =>
-      get('/categories', { book, type, include_archived: 1 })));
+    const who = await ownerId();
 
-    const ok = results.every((r) => r.ok);
-    // A 401 must not fall through to this device's data (api-contract.md §1).
-    const signedOut = results.some((r) => r.reason === 'auth');
-    if (ok || signedOut) {
-      const base = await seedReference();
-      const all = { necessity: base.necessity, methods: base.methods, books: { personal: {}, business: {} } };
-      pairs.forEach(([book, type], i) => { all.books[book][type] = ok ? (results[i].data?.data || []) : []; });
-      if (ok) persist(all); else memo = all;
+    // Kept for the tab's session: categories change a few times a year, and
+    // every page needs them before it can draw a row. Keyed to the signed-in
+    // owner, so a tab that signs out and in as someone else never shows the
+    // first person's category names.
+    const cached = who ? sessionCache.get(SESSION_KEY, null) : null;
+    if (cached?.owner === who && cached.all?.books) {
+      memo = cached.all;
+      owner = who;
+      // Older than the window: used anyway (a category renamed on another
+      // device ten minutes ago is not worth a blank screen), and refreshed
+      // behind the paint.
+      if (Date.now() - (cached.at || 0) > SESSION_FRESH_MS) {
+        window.setTimeout(() => { refreshFromServer(who); }, 1500);
+      }
       return memo;
     }
+
+    const res = await refreshFromServer(who);
+    if (res) return res;
     // Offline or a 500: the last copy below is better than nothing.
   }
 
@@ -257,7 +297,58 @@ function seedReference() {
   return seedPromise;
 }
 
-function persist(all) { memo = all; store.write(all); }
+/**
+ * One request for every book and type. Resolves to the set, or null when the
+ * server could not answer (offline, a 500), so the caller falls back.
+ */
+async function refreshFromServer(who) {
+  const res = await get('/categories/all');
+
+  // A 401 must not fall through to this device's data (api-contract.md §1).
+  if (!res.ok && res.reason === 'auth') {
+    const base = await seedReference();
+    memo = { necessity: base.necessity, methods: base.methods, books: { personal: {}, business: {} } };
+    return memo;
+  }
+  if (!res.ok) return null;
+
+  const base = await seedReference();
+  const books = { personal: {}, business: {} };
+  for (const [book, types] of Object.entries(res.data?.data || {})) {
+    books[book] = {};
+    for (const [type, rows] of Object.entries(types || {})) books[book][type] = rows || [];
+  }
+  const all = { necessity: base.necessity, methods: base.methods, books };
+  persist(all, who);
+  return all;
+}
+
+/** The signed-in owner's id, from the page's one session probe (no request of its own). */
+async function ownerId() {
+  try {
+    const state = await currentSession();
+    return state?.user?.id ?? null;
+  } catch { return null; }
+}
+
+const SESSION_KEY = store.key;
+/** How long the tab's copy counts as fresh before it is refreshed behind the paint. */
+const SESSION_FRESH_MS = 10 * 60 * 1000;
+
+let owner = null;
+
+/**
+ * Keep the set: in memory for this page, on the device as the offline copy,
+ * and in session storage for the next page of this tab. Every write (create,
+ * rename, archive) goes through here, so the tab's copy never lags a change
+ * made in it.
+ */
+function persist(all, who = owner) {
+  memo = all;
+  owner = who ?? owner;
+  store.write(all);
+  if (owner) sessionCache.set(SESSION_KEY, { owner, at: Date.now(), all });
+}
 
 /** For the settings screen's "reset categories to defaults". */
-export function reset() { memo = null; store.clear(); }
+export function reset() { memo = null; store.clear(); sessionCache.remove(SESSION_KEY); }

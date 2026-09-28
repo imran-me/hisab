@@ -78,6 +78,29 @@ category would put a household grocery bill in a profit figure.
 Archived categories are excluded by default because they exist for history, not
 for picking.
 
+## `GET /api/categories/all`
+
+Every category the owner has, **every book and every type, archived
+included**, in one response. This is what the browser loads once per session.
+
+```json
+{ "data": {
+  "personal": { "income": [ … ], "expense": [ … ], "deposit": [ … ] },
+  "business": { "income": [ … ], "expense": [ … ], "deposit": [ … ] }
+} }
+```
+
+- Each array holds rows of the usual shape, ordered as `GET /api/categories`
+  orders them (`sort_order`, then `label`).
+- Every book and type key is present, even when empty, so the client never
+  has to guard a missing key.
+- Archived rows are in it, because a historical entry's category is resolved by
+  id wherever it lives; pickers filter on `archived_at` themselves.
+- Why it exists: the client used to make six `GET /api/categories` calls
+  (two books × three types) on every page, and with three panels asking at
+  once, eighteen. On a server that answers one request at a time that was the
+  larger part of the Ledger's first paint.
+
 ## `GET /api/categories/frequent`
 
 The categories the entry sheet offers as one-tap tiles: the owner's most used

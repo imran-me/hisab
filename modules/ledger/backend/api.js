@@ -711,9 +711,24 @@ function shiftYear(dateKey, n) {
 
 /* ---- Storage ------------------------------------------------------------- */
 
-async function load() {
-  if (memo) return memo;
+/**
+ * Every row, once per page.
+ *
+ * The in-flight read is shared, not only the finished one. The Ledger asks for
+ * the list and the summary in parallel, and the entry sheet asks for recents:
+ * with only the value memoised each started its own paged read, so a page
+ * fetched the whole ledger two or three times from a server that answers one
+ * request at a time.
+ */
+let loading = null;
 
+function load() {
+  if (memo) return Promise.resolve(memo);
+  loading ??= readAll().finally(() => { loading = null; });
+  return loading;
+}
+
+async function readAll() {
   // THE SERVER IS THE SOURCE OF TRUTH WHEN THERE IS ONE.
   //
   // This used to read local storage first and return it if anything was there,

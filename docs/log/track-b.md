@@ -319,3 +319,42 @@ the translucent filter bar (same z-index, later in the page).
 
 **Verified** at 360×780, dark and day: rows show tinted circles, bKash's pink
 tile, red −৳ amounts, the note as the title. No overflow.
+
+## Performance: the Ledger paints in 5s, not 18s (one categories call)
+
+`GET /api/categories/all` returns every book and type, archived included, in
+one response (contract in categories `endpoints.md`; the test
+`test_all_returns_every_book_and_type_in_one_call_archived_included` checks
+that it matches the six per-type calls row for row and holds nothing of
+another owner's). `categories/backend/api.js` uses it and keeps the set in
+session storage for the tab, keyed to the signed-in owner's id, so another
+sign-in in the same tab never sees the first person's names. A copy older
+than 10 minutes is used, then refreshed after the paint.
+
+The larger cause was not the six calls but eighteen: `load()` memoised only
+the finished value, so the row renderer, the page and the sheet each started
+their own six-call load before the first answered. The in-flight promise is
+shared now, in categories and in the ledger (two full ledger reads per page
+became one).
+
+Also fixed on the way, pre-existing: `archive()` sent `PATCH {archived:
+true}`, which the server refuses for want of a label, so no archive ever
+reached it. It now uses `DELETE` (and drops a hard-deleted row). `restore()`
+never told the server; it now POSTs `/restore`.
+
+**Measured** (signed in, 360×780, php -S, three months of demo data, time from
+navigation to the first day group):
+
+| | first visit | next visit in the tab | /api calls |
+|---|---|---|---|
+| before | 17,966ms | 15,308ms | 24 / 23 (18 categories, 2 ledger) |
+| after | 5,365ms | 4,209ms | 7 / 5 (1 categories, 1 ledger) |
+
+**For C:** `/api/accounts` and `/api/fx/rates` are each fetched twice on one
+Ledger load. The cause is the same (only the finished value is memoised) in
+`accounts/backend/api.js` and `fx/backend/api.js`, and the same few-line fix
+there takes the Ledger to 5 calls on a first visit.
+
+**Note for whoever runs the harnesses:** `test-auth-browser.html` generates
+demo data and removes it again, so a throwaway DB is empty afterwards; run
+`hisab:demo` again before screenshots.

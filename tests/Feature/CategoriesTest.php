@@ -230,6 +230,45 @@ class CategoriesTest extends TestCase
         $this->actingAs($mine)->deleteJson("/api/categories/{$id}")->assertNotFound();
     }
 
+    public function test_all_returns_every_book_and_type_in_one_call_archived_included(): void
+    {
+        $owner = $this->owner('me@example.test');
+        $other = $this->owner('them@example.test');
+
+        $archived = $this->actingAs($owner)->postJson('/api/categories', [
+            'label' => 'Old thing', 'type' => 'expense', 'book' => 'business',
+        ])->json('data.id');
+        Category::query()->whereKey($archived)->update(['archived_at' => now()]);
+        $theirs = $this->actingAs($other)->postJson('/api/categories', [
+            'label' => 'Their thing', 'type' => 'expense',
+        ])->json('data.id');
+
+        $all = $this->actingAs($owner)->getJson('/api/categories/all')->assertOk()->json('data');
+
+        // Every key present, so the browser never guards a missing one.
+        foreach (Category::BOOKS as $book) {
+            foreach (Category::TYPES as $type) {
+                $this->assertIsArray($all[$book][$type] ?? null, "{$book}.{$type} missing");
+            }
+        }
+
+        // The same rows, in the same order, as the six per-type calls it replaces.
+        foreach (Category::BOOKS as $book) {
+            foreach (Category::TYPES as $type) {
+                $one = $this->actingAs($owner)
+                    ->getJson("/api/categories?book={$book}&type={$type}&include_archived=1")->json('data');
+                $this->assertSame(array_column($one, 'id'), array_column($all[$book][$type], 'id'), "{$book}.{$type}");
+            }
+        }
+
+        $ids = collect($all)->flatten(1)->flatten(1)->pluck('id');
+        $this->assertTrue($ids->contains($archived), 'an archived row is still resolvable by id');
+        $this->assertFalse($ids->contains($theirs), 'another owner\'s rows never appear');
+
+        $this->app['auth']->forgetGuards();
+        $this->getJson('/api/categories/all')->assertUnauthorized();
+    }
+
     public function test_categories_need_a_session_but_the_vocabulary_does_not(): void
     {
         $this->getJson('/api/categories')->assertUnauthorized();

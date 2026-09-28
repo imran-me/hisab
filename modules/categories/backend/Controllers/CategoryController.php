@@ -45,6 +45,35 @@ class CategoryController extends Controller
         return response()->json(['data' => $rows]);
     }
 
+    /**
+     * Every book and type in one response, archived rows included. See
+     * endpoints.md, "all".
+     *
+     * The browser needs the whole set on every page (a historical row's
+     * category is resolved by id wherever it lives), and asking for it one
+     * book-and-type at a time was six requests. On a server that answers one
+     * request at a time, six requests are six queues.
+     */
+    public function all(Request $request): JsonResponse
+    {
+        $out = [];
+        foreach (Category::BOOKS as $book) {
+            foreach (Category::TYPES as $type) {
+                $out[$book][$type] = [];
+            }
+        }
+
+        $this->owned($request)
+            ->orderBy('sort_order')
+            ->orderBy('label')
+            ->get()
+            ->each(function (Category $c) use (&$out): void {
+                $out[$c->book][$c->type][] = $this->shape($c);
+            });
+
+        return response()->json(['data' => $out]);
+    }
+
     /** The one-tap tiles on the entry sheet. See endpoints.md, "frequent". */
     public function frequent(Request $request): JsonResponse
     {
