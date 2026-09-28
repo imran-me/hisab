@@ -20,6 +20,8 @@ export const KEYS = {
   THEME:     `${NS}:theme`,      // 'night' | 'day' | 'system' (follow the phone); absent = night
   DENSITY:   `${NS}:density`,    // 'default' | 'compact'
   HAND:      `${NS}:hand`,       // 'right' | 'left' — which side the FAB sits on
+  DIGITS:    `${NS}:digits`,     // 'latin' | 'bangla' — how figures are written
+  HAPTICS:   `${NS}:haptics`,    // 'on' | 'off' — navigator.vibrate on taps
   BOOK:      `${NS}:book`,       // the active book: 'personal' | a business ULID
   CURRENCY:  `${NS}:currency`,   // the display currency for roll-ups
   PERIOD:    `${NS}:period`,     // the month being viewed, 'YYYY-MM'

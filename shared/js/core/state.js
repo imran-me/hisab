@@ -21,7 +21,7 @@
 import { storage, KEYS } from './storage.js';
 import { emit, EVENTS } from './bus.js';
 import { currentPeriod } from './dates.js';
-import { setHomeCurrency } from './money.js';
+import { setHomeCurrency, setDigits as setMoneyDigits } from './money.js';
 
 const state = {
   book: storage.get(KEYS.BOOK, 'personal'),
@@ -30,6 +30,8 @@ const state = {
   theme: storage.get(KEYS.THEME, null),
   density: storage.get(KEYS.DENSITY, 'default'),
   hand: storage.get(KEYS.HAND, 'right'),
+  digits: storage.get(KEYS.DIGITS, 'latin'),
+  haptics: storage.get(KEYS.HAPTICS, 'on'),
 };
 
 /**
@@ -67,6 +69,7 @@ if (state.theme !== 'day' && state.theme !== 'night' && state.theme !== 'system'
 // The display currency is the one figures are shown in without a code, so the
 // formatter is told about it before any screen renders a figure.
 setHomeCurrency(state.currency);
+setMoneyDigits(state.digits);
 
 export function getState() {
   // A copy, so a caller cannot mutate the state object directly and skip the
@@ -128,6 +131,20 @@ export function setDensity(value) {
   applyTheme();
 }
 
+/** 'bangla' writes every displayed figure in ০–৯; takes effect on the next render. */
+export function setDigits(value) {
+  state.digits = value === 'bangla' ? 'bangla' : 'latin';
+  storage.set(KEYS.DIGITS, state.digits);
+  setMoneyDigits(state.digits);
+  applyTheme();
+}
+
+export function setHaptics(value) {
+  state.haptics = value === 'off' ? 'off' : 'on';
+  storage.set(KEYS.HAPTICS, state.haptics);
+  applyTheme();
+}
+
 export function setHand(value) {
   state.hand = value === 'left' ? 'left' : 'right';
   storage.set(KEYS.HAND, state.hand);
@@ -158,6 +175,12 @@ export function applyTheme() {
 
   if (state.hand === 'left') root.setAttribute('data-hand', 'left');
   else root.removeAttribute('data-hand');
+
+  // Read by haptics.js, so a buzz is switched off in one place.
+  if (state.haptics === 'off') root.setAttribute('data-haptics', 'off');
+  else root.removeAttribute('data-haptics');
+  if (state.digits === 'bangla') root.setAttribute('data-digits', 'bangla');
+  else root.removeAttribute('data-digits');
 
   // The browser UI around the page — the address bar on Android, the status bar
   // in a home-screen install. Left unset, a night-mode app is framed in white.

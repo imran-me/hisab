@@ -216,6 +216,34 @@ export function setHomeCurrency(code) {
 export const homeCurrency = () => HOME;
 
 /**
+ * Bangla digits (Settings). Display only: moneyLabel() and formatMoneyHTML()
+ * write ০–৯, formatMoney() — the form that goes into an input — stays Latin
+ * (parseAmount() reads either, so a figure typed in Bangla still parses).
+ * Pushed in by state.js, like the home currency.
+ */
+let DIGITS = 'latin';
+
+export function setDigits(value) {
+  DIGITS = value === 'bangla' ? 'bangla' : 'latin';
+}
+
+export const digits = () => DIGITS;
+
+const BN = '০১২৩৪৫৬৭৮৯';
+const toBangla = (text) => text.replace(/[0-9]/g, (d) => BN[d]);
+
+/** Text in the display digits. Exported for counts and dates beside figures. */
+export function localDigits(text) {
+  return DIGITS === 'bangla' ? toBangla(String(text)) : String(text);
+}
+
+/* Markup in the display digits: only text between tags, never an attribute. */
+function localDigitsHTML(html) {
+  if (DIGITS !== 'bangla') return html;
+  return html.replace(/(^|>)([^<]*)/g, (_m, lead, text) => lead + toBangla(text));
+}
+
+/**
  * Group the integer part.
  *
  * 'western' — 3,3,3 from the right.
@@ -338,7 +366,7 @@ export function formatMoney(minor, code = 'BDT', opts = {}) {
  * only when it is not zero. `৳1,250`, `৳1,250.50`, `USD 1,070`.
  */
 export function moneyLabel(minor, code = 'BDT', opts = {}) {
-  return formatMoney(minor, code, { symbol: true, minor: 'auto', ...opts });
+  return localDigits(formatMoney(minor, code, { symbol: true, minor: 'auto', ...opts }));
 }
 
 // U+2212, not a hyphen: a hyphen is narrower than a digit and breaks the
@@ -395,7 +423,7 @@ export function formatMoneyHTML(minor, code = 'BDT', opts = {}) {
   // The direction wrapper is what makes every expense red and every income
   // green on every page with no page opting in (owner, 2026-09-27). A figure
   // with no direction — a balance, a total — is left as it is.
-  return dir ? `<span class="money-dir money-dir--${dir}">${inner}</span>` : inner;
+  return localDigitsHTML(dir ? `<span class="money-dir money-dir--${dir}">${inner}</span>` : inner);
 }
 
 /**

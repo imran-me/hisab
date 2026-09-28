@@ -18,6 +18,7 @@
 import {
   parseAmount, formatMoney, formatMoneyHTML, convert, convertAndSum,
   splitMinor, sumMinor, currency, minorFactor, moneyLabel, setHomeCurrency, homeCurrency,
+  setDigits, localDigits,
 } from '../shared/js/core/money.js';
 
 let passed = 0;
@@ -262,6 +263,17 @@ throws(
 }
 
 is(splitMinor(10000, [0, 0]), [0, 0], 'zero weights do not divide by zero');
+
+/* ---- Bangla digits (display only) ---------------------------------------- */
+setDigits('bangla');
+is(moneyLabel(12345000, 'BDT'), '৳১,২৩,৪৫০', 'Bangla digits in a label, lakh grouping kept');
+is(/[০-৯]/.test(formatMoney(12345000, 'BDT')), false, 'formatMoney (the input form) stays Latin');
+is(/class="[^"]*[০-৯]/.test(formatMoneyHTML(-25000, 'BDT')), false, 'no attribute is rewritten');
+is(/[০-৯]/.test(formatMoneyHTML(-25000, 'BDT')), true, 'HTML figures are Bangla');
+is(parseAmount('১,২৫০.৫০'), 125050, 'a Bangla figure still parses');
+is(localDigits('day 28'), 'day ২৮', 'localDigits for counts beside figures');
+setDigits('latin');
+is(moneyLabel(12345000, 'BDT'), '৳1,23,450', 'back to Latin');
 
 /* ---- Report ------------------------------------------------------------- */
 if (failures.length) {
