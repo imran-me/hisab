@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <script>
+    /* PRE-PAINT. Inline, and first, on purpose: a deferred script runs after
+       the first paint, and the first paint is exactly what this exists to get
+       right. A night-theme user who sees one white frame on every navigation
+       has a broken app, however correct it looks a moment later.
+
+       This block is the twin of applyTheme() in shared/js/core/state.js. If one
+       changes, so must the other. It is duplicated into every page rather than
+       imported because an import cannot run before paint.
+
+       It is byte-identical in every page, and tools/check-pages.py asserts
+       that, because duplicated code drifts. That tool also prints the
+       Content-Security-Policy hash for this exact block; if the two disagree,
+       the browser blocks the script and every page paints the white frame this
+       is here to prevent.
+
+       .no-js is removed here too, so [data-reveal] content is only hidden when
+       JavaScript is actually present to reveal it. */
+    document.documentElement.classList.remove('no-js');
+    try {
+      var root = document.documentElement;
+      var theme = localStorage.getItem('hisab:theme');
+      if (theme) {
+        var value = JSON.parse(theme);
+        /* Both directions matter. A stored 'day' must ADD the attribute and a
+           cleared preference must REMOVE it, or someone who switches back to
+           following their device stays stuck on their old choice. */
+        if (value === 'day' || value === 'night') root.setAttribute('data-theme', value);
+        else root.removeAttribute('data-theme');
+      }
+      var density = localStorage.getItem('hisab:density');
+      if (density && JSON.parse(density) === 'compact') root.setAttribute('data-density', 'compact');
+      var hand = localStorage.getItem('hisab:hand');
+      if (hand && JSON.parse(hand) === 'left') root.setAttribute('data-hand', 'left');
+    } catch (e) { /* storage off, or private mode - the built-in theme stands. */ }
+  </script>
+
+  <title>Dues — Hisab</title>
+  <meta name="description" content="Money lent and borrowed, per person: who owes what, settling, and reminders.">
+  <meta name="theme-color" content="#0C0F14">
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../../assets/logo/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="../../site.webmanifest">
+
+  <link rel="stylesheet" href="../../shared/css/hisab.css">
+  <link rel="stylesheet" href="dues.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="app">
+    <header class="app-header"></header>
+    <nav class="app-rail" aria-label="Sections"></nav>
+
+    <main class="app-main" id="main">
+      <div class="page dues">
+
+        <!-- The screen's question: who owes me, and whom do I owe? Both
+             figures side by side, green coming in and red going out. -->
+        <section class="dues-hero" aria-label="Dues">
+          <div class="dues-hero__side dues-hero__side--in">
+            <span class="dues-hero__label">Owed to you</span>
+            <span class="dues-hero__figure money" data-owed><span class="skeleton skeleton--fig"></span></span>
+            <span class="dues-hero__count" data-owed-count></span>
+          </div>
+          <div class="dues-hero__side dues-hero__side--out">
+            <span class="dues-hero__label">You owe</span>
+            <span class="dues-hero__figure money" data-owe><span class="skeleton skeleton--fig"></span></span>
+            <span class="dues-hero__count" data-owe-count></span>
+          </div>
+        </section>
+        <p class="dues-net" data-net></p>
+
+        <div class="dues-actions">
+          <button type="button" class="btn btn--secondary" data-new="lent">
+            <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-arrow-out"/></svg>
+            <span>I lent</span>
+          </button>
+          <button type="button" class="btn btn--secondary" data-new="borrowed">
+            <svg class="icon icon--sm" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-arrow-in"/></svg>
+            <span>I borrowed</span>
+          </button>
+        </div>
+
+        <div data-reminders></div>
+
+        <section class="dues-sec" data-people-sec hidden aria-labelledby="dues-people-h">
+          <div class="dues-sec__head">
+            <h2 class="dues-sec__title" id="dues-people-h">People</h2>
+          </div>
+          <div class="card card--flush">
+            <ul class="list" data-people></ul>
+          </div>
+        </section>
+
+        <div class="empty" data-empty hidden>
+          <span class="empty__glyph">
+            <svg class="icon icon--lg" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-users"/></svg>
+          </span>
+          <span class="empty__title">No dues yet</span>
+          <p class="empty__text">Lend or borrow, and it is recorded as a real move of money, with who it was and what is still owed.</p>
+        </div>
+
+        <div class="empty" data-offline hidden>
+          <span class="empty__glyph">
+            <svg class="icon icon--lg" aria-hidden="true"><use href="../../shared/icons/sprite.svg#i-users"/></svg>
+          </span>
+          <span class="empty__title">Dues need the server</span>
+          <p class="empty__text">A due is written to the ledger on the server, so it can only be recorded while this device is connected and signed in.</p>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <nav class="tabbar" aria-label="Primary"></nav>
+
+  <script type="module" src="../../shared/js/main.js"></script>
+  <script type="module" src="list-page.js"></script>
+</body>
+</html>

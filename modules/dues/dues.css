@@ -1,0 +1,197 @@
+/* =========================================================================
+   Dues · module styles
+   Money owed to you reads green (it is coming in), money you owe reads red
+   (it is going out): the owner's rule for every flow. Tokens only.
+   ========================================================================= */
+
+.page.dues { padding-block-start: 6px; }
+
+/* ---- The two figures ---------------------------------------------------- */
+.dues-hero {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-block-end: 1px solid var(--line-soft);
+}
+
+.dues-hero__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+  padding: var(--s-2) 0 var(--s-3);
+}
+
+.dues-hero__side + .dues-hero__side { padding-inline-start: var(--s-4); border-inline-start: 1px solid var(--line-soft); }
+
+.dues-hero__label { font-size: var(--fs-13); color: var(--text-2); }
+
+.dues-hero__figure {
+  font-family: var(--font-display);
+  font-size: var(--fs-28);
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-hero);
+  line-height: var(--lh-flush);
+  letter-spacing: var(--track-figure);
+}
+
+.dues-hero__figure .money__sym { font-size: 0.6em; margin-inline-end: 0.06em; }
+.dues-hero__side--in .dues-hero__figure { color: var(--in); }
+.dues-hero__side--out .dues-hero__figure { color: var(--out); }
+.dues-hero__count { font-size: var(--fs-12); color: var(--text-3); }
+
+.dues-net { margin: var(--s-2) 0 0; font-size: var(--fs-13); color: var(--text-3); }
+.dues-net strong { color: var(--text-1); font-weight: var(--fw-semibold); }
+
+/* ---- The two ways in ---------------------------------------------------- */
+.dues-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2);
+  margin-block-start: var(--s-3);
+}
+
+.dues-actions .btn { justify-content: center; }
+
+/* ---- A reminder that has come due -------------------------------------- */
+.dues-remind {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-block-start: var(--s-3);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  border-inline-start: 3px solid var(--warn);
+  background: var(--bg-1);
+  font-size: var(--fs-13);
+  color: var(--text-2);
+}
+
+.dues-remind > span { flex: 1 1 auto; min-width: 0; }
+.dues-remind strong { color: var(--text-1); }
+
+/* ---- People ------------------------------------------------------------- */
+.dues-sec { margin-block-start: var(--s-4); }
+
+.dues-sec__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-block-end: var(--s-2);
+}
+
+.dues-sec__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--t-section);
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-title);
+}
+
+/* Initials in a tinted circle. The tint is one of the category tints, picked
+   from the name, so a person keeps their colour between visits. */
+.dues-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--tint, var(--text-3)) 16%, transparent);
+  color: var(--tint, var(--text-2));
+  font-family: var(--font-display);
+  font-size: var(--fs-14);
+  font-weight: var(--fw-semibold);
+}
+
+.dues-person.is-settled .row__title { color: var(--text-2); }
+.dues-person__state { font-size: var(--fs-12); color: var(--text-3); text-align: end; display: block; margin-block-start: 2px; }
+.dues-due { color: var(--warn); font-weight: var(--fw-medium); }
+
+.money.dues-owed { color: var(--in); }
+.money.dues-owe { color: var(--out); }
+.money.dues-zero { color: var(--text-3); }
+
+/* ---- Sheets ------------------------------------------------------------- */
+.dues-form { display: flex; flex-direction: column; gap: var(--s-3); }
+
+.dues-kinds {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--r-md);
+  background: var(--bg-3);
+}
+
+.dues-kind {
+  min-height: 36px;
+  padding: 0 var(--s-1);
+  border: 0;
+  border-radius: calc(var(--r-md) - 3px);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.dues-kind[aria-pressed='true'] { background: var(--bg-1); color: var(--text-1); box-shadow: var(--e-1); }
+.dues-kind[aria-pressed='true'][data-tone='in'] { color: var(--in); }
+.dues-kind[aria-pressed='true'][data-tone='out'] { color: var(--out); }
+
+.dues-hint { margin: 0; font-size: var(--fs-12); color: var(--text-3); }
+
+.dues-chips {
+  display: flex;
+  gap: var(--s-2);
+  overflow-x: auto;
+  padding-block: 2px;
+  scrollbar-width: none;
+}
+
+.dues-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 36px;
+  padding: 0 var(--s-3) 0 var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-13);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dues-chip--text { padding-inline-start: var(--s-3); }
+.dues-chip[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-wash); }
+
+.dues-row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-2); }
+
+/* The person sheet */
+.dues-card { display: flex; flex-direction: column; gap: var(--s-3); }
+
+.dues-card__balance {
+  font-family: var(--font-display);
+  font-size: var(--fs-34);
+  font-weight: var(--fw-semibold);
+  font-stretch: var(--wd-hero);
+  line-height: var(--lh-flush);
+}
+
+.dues-card__balance.dues-owed { color: var(--in); }
+.dues-card__balance.dues-owe { color: var(--out); }
+.dues-card__balance .money__sym { font-size: 0.6em; }
+.dues-card__caption { margin: 2px 0 0; font-size: var(--fs-13); color: var(--text-2); }
+
+.dues-card__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2); }
+.dues-card__actions .btn { justify-content: center; }
+.dues-card__actions .btn--block { grid-column: 1 / -1; }
+
+.dues-entries .row { min-height: 52px; }
+.dues-entries .is-reversed .row__title { text-decoration: line-through; color: var(--text-3); }
+.dues-entries .row__end .meta { display: block; text-align: end; font-size: var(--fs-12); color: var(--text-3); }

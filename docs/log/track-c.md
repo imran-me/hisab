@@ -307,3 +307,23 @@ this into `context.md` and `docs/STATUS.md`. Newest last.
 - Verified at 360 in both themes: Home 901px, Budgets 1010px, the sheet over
   the list, no OVERFLOW. Shots: scratchpad `c/b1-dark`, `c/b1-light`,
   `c/b2-sheet`.
+
+### Dues (baki)
+
+- Counting rule decided (DIRECTION.md §6 q6) in `modules/dues/backend/
+  endpoints.md`: lending is not spending and borrowing is not income. One
+  held `dues` account per book; every due is a ledger transfer between a
+  spendable account and it, written with the due in one DB transaction.
+  A person's balance is never stored: the sum of their Dues legs plus any
+  reversal mirrors, so reversing the transfer in the Ledger corrects them.
+- `dues` added to `Account::TYPES` / `HELD_TYPES` and the client TYPES, so
+  money lent stays in net worth and out of spendable.
+- Screen `modules/dues/list.html` (in More): owed to you (green) / you owe
+  (red), I lent / I borrowed, reminders that have come due, people with
+  running balances. Person sheet: balance, one-tap Settle for the whole
+  amount (a real ledger entry), lend more / part payment, remind-me dates,
+  and a prepared reminder handed to the phone's share sheet.
+- Demo: three people in all three states via `hisab:demo`.
+- Verified: `artisan test` 175 passed (8 new in DuesTest); Dues screen,
+  person sheet and record sheet at 360 in both themes (scratchpad
+  `c/d1-*`, `c/d2-person`, `c/d3-record`).
