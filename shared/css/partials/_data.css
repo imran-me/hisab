@@ -453,10 +453,7 @@
   box-sizing: border-box;
   /* Square whatever the logo's own shape: the width attribute sets the size,
      and this overrides the image's intrinsic ratio (and the global
-     img { height: auto }
-.inst-logo--pad-xs { padding: 2px; }
-.inst-logo--pad-sm { padding: 3px; }
-.inst-logo--pad-md { padding: 5px; }) so a tall or wide mark sits centred in a tile. */
+     img { height: auto }) so a tall or wide mark sits centred in a tile. */
   aspect-ratio: 1 / 1;
   height: auto;
   padding: 4px;
@@ -465,6 +462,12 @@
   box-shadow: inset 0 0 0 1px var(--line-soft);
   object-fit: contain;
 }
+
+/* Padding in px by tile size, never a percentage: a percentage padding
+   resolves against the PARENT's width, so in a wide row it ate the tile. */
+.inst-logo--pad-xs { padding: 2px; }
+.inst-logo--pad-sm { padding: 3px; }
+.inst-logo--pad-md { padding: 5px; }
 
 /* The monogram's lettering: the figures face, bold and slightly condensed so
    "DBBL" fills a 40px tile as well as "N" does. */
