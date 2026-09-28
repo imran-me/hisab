@@ -23,6 +23,7 @@ import * as ledger from './backend/api.js';
 import * as accounts from '../accounts/backend/api.js';
 import * as categories from '../categories/backend/api.js';
 import { glyphOf } from '../categories/glyphs.js';
+import { merchantGlyph } from '../../shared/js/components/merchant-logo.js';
 import { logoFor } from './account-picker.js';
 import { loadStyles } from './styles.js';
 
@@ -71,8 +72,10 @@ export function entryRowHTML(row, look, { showAccount = true, after = '', cells 
     : wasReversed ? '<span class="chip">Reversed</span>'
       : row.corrects_id ? '<span class="chip chip--in">Corrected</span>' : '';
 
-  // The circle: the category's own colour and glyph. An entry with no category
-  // (a transfer) shows its type's glyph on the neutral tint.
+  // The circle: the merchant's own mark when the payee or note names one
+  // ("Foodpanda", "Uber to office"), else the category's colour and glyph. An
+  // entry with no category (a transfer) shows its type's glyph on the neutral
+  // tint.
   const { icon: glyph, className } = category ? glyphOf(category) : { icon: type.icon, className: '' };
 
   const title = row.payee || row.note || row.category_label || type.label;
@@ -95,7 +98,7 @@ export function entryRowHTML(row, look, { showAccount = true, after = '', cells 
   return `
     <li>
       <button type="button" class="row row--ledger entry-row${isReversal || wasReversed ? ' row--void' : ''}" data-edit="${esc(row.id)}">
-        <span class="row__glyph ${className}">${icon(glyph, { class: 'icon' })}</span>
+        ${merchantGlyph(row) || `<span class="row__glyph ${className}">${icon(glyph, { class: 'icon' })}</span>`}
         <span class="row__main">
           <span class="row__title">${esc(title)}</span>
           <span class="row__sub">${sub || `<span>${esc(type.label)}</span>`}</span>

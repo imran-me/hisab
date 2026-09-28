@@ -406,3 +406,15 @@ confirm → the row collapses, "Reversed …" → Undo → it is back; a hold op
 the four-item menu and not the entry; a 60px swipe springs back and does
 nothing; a cancelled swipe leaves no layer behind; a tap still opens the
 entry. php artisan test 167, check-pages ok.
+
+## Merchant marks on ledger rows
+
+`row.js` draws A's `merchantGlyph(row)` (69d9ebc) in place of the category
+circle when the payee or note names a known merchant ("Foodpanda dinner",
+"Uber to office", "Daraz order", "Netflix"), and falls back to the category
+glyph otherwise. One line, so Home's Today and account detail get it too
+once they use `entryRowHTML()`.
+
+**Verified** at 360×780, dark and day: four seeded entries show the
+Foodpanda, Uber, Daraz and Netflix marks; "local bazar" keeps its tinted
+food circle. No overflow.
