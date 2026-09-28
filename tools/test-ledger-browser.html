@@ -120,6 +120,26 @@ function check(label, condition) {
     const again = await ledger.reverse(second.data.id, 'again');
     check('reversing twice is refused', again.ok === false);
 
+    // --- repeat (swipe right, and the Undo after a reversal) -------------------
+    const copy = await ledger.repeat(made.data.id);
+    check('repeat records a new entry', copy.ok === true && copy.data.id !== made.data.id);
+    check('repeat is dated today', copy.data?.occurred_on === today());
+    check('repeat keeps the payee and the account', copy.data?.payee === 'Shwapno' && copy.data?.account_id === cash.id);
+    const restored = await ledger.repeat(second.data.id, { occurred_on: '2026-09-06' });
+    check('undoing a reversal records it again on its own date', restored.ok === true && restored.data.occurred_on === '2026-09-06');
+    const mirrorRow = afterRev.find((r) => r.reverses_id === second.data.id);
+    check('a reversal is not an entry to repeat', (await ledger.repeat(mirrorRow.id)).ok === false);
+    const others = list.data.filter((a) => a.id !== cash.id && a.currency === cash.currency);
+    if (others.length) {
+      const move = await ledger.create({
+        type: 'transfer', account_id: cash.id, to_account_id: others[0].id, amount_minor: 1000,
+        currency: cash.currency, occurred_on: '2026-09-07',
+      });
+      const again2 = await ledger.repeat(move.data.id);
+      const legs = await ledger.group(again2.data);
+      check('a transfer repeats as a transfer, both legs', legs.length === 2 && legs.some((l) => l.account_id === others[0].id && l.direction === 'in'));
+    }
+
     // --- a foreign-currency row moves its account by its converted value ---
     // A USD 12.99 charge on a taka account used to move it by ৳12.99.
     const beforeUsd = (await ledger.balances({})).data[cash.id];

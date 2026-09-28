@@ -8,7 +8,7 @@
  */
 
 import { qs, qsa, icon, esc, delegate, announce } from '../../shared/js/core/dom.js';
-import { formatMoneyHTML, formatMoney, convertAndSum } from '../../shared/js/core/money.js';
+import { formatMoneyHTML, formatMoney, moneyLabel, convertAndSum } from '../../shared/js/core/money.js';
 import { formatDayLabel } from '../../shared/js/core/dates.js';
 import { debounce } from '../../shared/js/utils/debounce.js';
 import { on, EVENTS } from '../../shared/js/core/bus.js';
@@ -19,6 +19,10 @@ import * as accounts from '../accounts/backend/api.js';
 import * as fx from '../fx/backend/api.js';
 import { openEntrySheet, mountCompose } from './entry-sheet.js';
 import { rowLook, entryRowHTML } from './row.js';
+import { attachRowGestures, collapseRow } from './row-gestures.js';
+import { toast, toastOk, toastFailure } from '../../shared/js/components/toast.js';
+import { menu } from '../../shared/js/components/menu.js';
+import { confirmDialog } from '../../shared/js/components/sheet.js';
 
 // No header actions: adding an entry is the tab bar's + and nothing else
 // (docs/DIRECTION.md §3.2). Three buttons for one job was two too many.
@@ -78,10 +82,95 @@ qs('[data-search]')?.addEventListener('input', debounce((event) => {
   refresh();
 }, 220));
 
-delegate(document.body, 'click', '[data-edit]', async (_event, button) => {
-  const res = await ledger.find(button.dataset.edit);
-  if (res.ok) openEntrySheet({ transaction: res.data, onSaved: refresh });
+delegate(document.body, 'click', '[data-edit]', (_event, button) => editEntry(button.dataset.edit));
+
+/* Swipe right: the same entry again, today. Swipe left: reverse it. Hold (or
+   right-click): the menu, which offers both and more - a swipe is never the
+   only way to do something. */
+attachRowGestures(qs('[data-list]'), {
+  onRepeat: (id) => repeatEntry(id),
+  onReverse: (id, row) => reverseEntry(id, row),
+  onMenu: (id, row) => rowMenu(id, row),
 });
+
+async function editEntry(id) {
+  const res = await ledger.find(id);
+  if (res.ok) openEntrySheet({ transaction: res.data, onSaved: refresh });
+}
+
+/** "৳250 · Transport" - what a toast names an entry by. */
+function entryName(row) {
+  return [moneyLabel(row.amount_minor, row.currency), row.payee || row.note || row.category_label]
+    .filter(Boolean).join(' · ');
+}
+
+async function repeatEntry(id) {
+  const res = await ledger.repeat(id);
+  if (!res.ok) { toastFailure(res, 'Could not repeat that entry.'); return; }
+  const copy = res.data;
+  // Undo is a reversal of the copy: recorded is final, even a second ago.
+  toastOk(`Repeated ${entryName(copy)} today.`, {
+    action: { label: 'Undo', onClick: () => ledger.reverse(copy.id, 'Undone').then((r) => r.ok || toastFailure(r)) },
+  });
+}
+
+async function reverseEntry(id, rowEl) {
+  const found = await ledger.find(id);
+  if (!found.ok) { toastFailure(found); return; }
+  const row = found.data;
+
+  const sure = await confirmDialog({
+    title: 'Reverse this entry?',
+    text: `${entryName(row)}. A reversing entry is recorded today and the two cancel out. Both stay in History.`,
+    confirmLabel: 'Reverse',
+    danger: true,
+  });
+  if (!sure) return;
+
+  await collapseRow(rowEl);
+  const res = await ledger.reverse(id);
+  if (!res.ok) { toastFailure(res, 'Could not reverse that entry.'); refresh(); return; }
+
+  // Undo records the entry again on its own date. Reversing the reversal
+  // would leave the original marked reversed - hidden from the list, and
+  // refused if it ever needs reversing for real.
+  toast(`Reversed ${entryName(row)}.`, {
+    tone: 'good',
+    action: {
+      label: 'Undo',
+      onClick: () => ledger.repeat(id, { occurred_on: row.occurred_on }).then((r) => r.ok || toastFailure(r)),
+    },
+  });
+}
+
+async function copyAmount(id) {
+  const found = await ledger.find(id);
+  if (!found.ok) return;
+  const { amount_minor: minor, currency } = found.data;
+  // The bare figure, no marker and no grouping: what a bKash or bank app's
+  // amount field accepts when it is pasted.
+  const plain = formatMoney(minor, currency, { minor: 'auto' }).replace(/,/g, '');
+  try {
+    await navigator.clipboard.writeText(plain);
+    toastOk(`Copied ${plain}.`);
+  } catch {
+    toast(`Could not copy. The amount is ${plain}.`, { tone: 'warn' });
+  }
+}
+
+function rowMenu(id, rowEl) {
+  // A reversal, or an entry already reversed, is history: it can be read and
+  // copied, not changed.
+  const isVoid = rowEl.classList.contains('row--void');
+  const items = [
+    !isVoid && { label: 'Edit', icon: 'edit', onClick: () => editEntry(id) },
+    !isVoid && { label: 'Repeat today', icon: 'refresh', onClick: () => repeatEntry(id) },
+    { label: 'Copy amount', icon: 'copy', onClick: () => copyAmount(id) },
+    !isVoid && { separator: true },
+    !isVoid && { label: 'Reverse', icon: 'trash', danger: true, onClick: () => reverseEntry(id, rowEl) },
+  ].filter(Boolean);
+  menu(rowEl, items, { align: 'end' });
+}
 
 for (const event of [
   EVENTS.TRANSACTION_CREATED, EVENTS.TRANSACTION_UPDATED, EVENTS.TRANSACTION_DELETED,

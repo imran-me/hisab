@@ -358,3 +358,51 @@ there takes the Ledger to 5 calls on a first visit.
 **Note for whoever runs the harnesses:** `test-auth-browser.html` generates
 demo data and removes it again, so a throwaway DB is empty afterwards; run
 `hisab:demo` again before screenshots.
+
+## B7 — Swipe rows, hold for the menu
+
+`modules/ledger/row-gestures.js`, attached to the Ledger's list:
+
+- **Swipe right: Repeat today.** The same entry again (same account, the
+  other leg of a transfer, category, payee, note), dated today, at once, with
+  a toast whose Undo reverses the copy. `ledger.repeat(id, { occurred_on })`
+  is the one door for it.
+- **Swipe left: Reverse**, after the confirm the sheet already used. The row
+  collapses out, and the toast's Undo records the entry again **on its own
+  date** rather than reversing the reversal. Decision: a reversed reversal
+  leaves the original marked reversed, so the list keeps hiding it and the
+  server refuses to reverse it ever again ("already reversed"). A fresh copy
+  has neither problem, and History still shows exactly what happened.
+- **Hold (or right-click): Edit, Repeat today, Copy amount, Reverse.** A
+  reversal or an already-reversed row does not swipe and its menu offers only
+  Copy amount. Copy gives the bare figure (`1995`, `12.50`), which is what a
+  bKash or bank app's amount field accepts.
+- Feel: 1:1 to the arming point (28% of the row, at least 84px), then a third
+  of the movement; one tick (A's `haptic('drag')`) when it arms, the layer
+  fills (marigold for Repeat, danger for Reverse) and its icon grows; release
+  springs home on `--ease-snap`. The direction is decided in the first 10px
+  and `touch-action: pan-y` leaves vertical scrolling to the browser. A swipe
+  or a hold never also opens the entry.
+
+**Found while testing:** a touch's implicit pointer capture sits on the child
+under the finger, so taking capture onto the row fires `lostpointercapture`
+first; ending the swipe on that event killed every swipe in its first frame.
+Only the row's own loss counts now. A cancelled swipe (the browser took the
+gesture) springs back instead of staying pushed aside.
+
+**Found, pre-existing, not fixed here:** `BalanceSheet::summary()` signs a
+row by `reverses_id === null ? +1 : -1`, so a reversal of a reversal (which
+`LedgerWriter::reverse()` allows, and says is how a wrong correction is
+undone) is subtracted a second time instead of restoring the original. The
+app never does this (Undo re-records instead), but the API allows it. The
+fix is to sign by the depth of the reversal chain.
+
+**Verified:** ledger harness 46 (6 new: repeat is a new row dated today with
+the payee and account; the Undo-after-reverse copy keeps its own date; a
+reversal is refused; a transfer repeats with both legs). Driven at 360×780
+by CDP touch against the server, dark and day: swipe right armed, released →
+"Repeated ৳1,995 · local bazar today", one row more; swipe left armed →
+confirm → the row collapses, "Reversed …" → Undo → it is back; a hold opens
+the four-item menu and not the entry; a 60px swipe springs back and does
+nothing; a cancelled swipe leaves no layer behind; a tap still opens the
+entry. php artisan test 167, check-pages ok.

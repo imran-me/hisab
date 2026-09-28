@@ -39,3 +39,78 @@
 .entry-row__account > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Amount colours come from the shared formatter (money--in / money--out). */
+
+/* ---- Swipe and hold (row-gestures.js) ------------------------------------
+   The row slides over a layer that says what letting go will do: Repeat on
+   the left (revealed by a swipe right), Reverse on the right. Vertical
+   scrolling stays the browser's (pan-y), so a list that swipes still scrolls
+   like any other. */
+.swipe-list .entry-row {
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.swipe-host { position: relative; overflow: hidden; }
+
+.entry-row.is-swiping,
+.entry-row.is-springing {
+  position: relative;
+  z-index: 1;
+  background: var(--bg-1);
+  will-change: transform;
+}
+
+.entry-row.is-springing { transition: transform 420ms var(--ease-snap); }
+
+.entry-row.is-held {
+  background: var(--bg-2);
+  transform: scale(.985);
+  transition: transform var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
+}
+
+.swipe-under {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--s-5);
+  font: 600 13px/1 var(--font-body);
+  pointer-events: none;
+}
+
+.swipe-under__act {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  opacity: 0;
+}
+
+.swipe-under__act .icon { transition: transform 260ms var(--ease-snap); }
+
+.swipe-under[data-side='repeat'] { background: var(--accent-wash); color: var(--accent-text); }
+.swipe-under[data-side='reverse'] { background: var(--danger-wash); color: var(--danger); }
+.swipe-under[data-side='repeat'] .swipe-under__act--repeat,
+.swipe-under[data-side='reverse'] .swipe-under__act--reverse { opacity: 1; }
+
+/* Armed: the layer fills and the icon grows, with the haptic tick. */
+.swipe-under.is-armed[data-side='repeat'] { background: var(--accent); color: var(--on-accent); }
+.swipe-under.is-armed[data-side='reverse'] { background: var(--danger); color: var(--bg-0); }
+.swipe-under.is-armed .icon { transform: scale(1.25); }
+
+/* A reversed entry leaving the list. */
+li.is-collapsing {
+  overflow: hidden;
+  opacity: 0;
+  transition: height 260ms var(--ease-in), opacity 180ms var(--ease-in);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entry-row.is-springing,
+  .entry-row.is-held,
+  .swipe-under__act .icon,
+  li.is-collapsing { transition: opacity 120ms linear; }
+  .entry-row.is-held { transform: none; }
+}

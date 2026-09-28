@@ -422,6 +422,52 @@ export async function reverse(id, reason = 'Reversed') {
 
 export const destroy = reverse;
 
+/**
+ * Record an entry again: the same money, the same accounts, the same
+ * category, the same words - on another day (today, unless told otherwise).
+ *
+ * The swipe-right on a Ledger row, and the Undo after a reversal (which
+ * records the entry again on its own date rather than reversing the
+ * reversal: a reversed reversal leaves the original marked as reversed, so it
+ * could never be reversed a second time, and the list would keep hiding it).
+ *
+ * Built from the SOURCE leg of a pair - the one that carries the meaning -
+ * and the other leg's account, so a transfer repeats as a transfer, not as
+ * two unrelated movements.
+ *
+ * @param {string} id
+ * @param {object} [opts]
+ * @param {string} [opts.occurred_on]  YYYY-MM-DD, default today
+ */
+export async function repeat(id, { occurred_on = today() } = {}) {
+  const rows = await load();
+  const row = rows.find((r) => r.id === id);
+  if (!row) return { ok: false, reason: 'missing' };
+  if (row.reverses_id) {
+    return { ok: false, reason: 'invalid', errors: { entry: ['A reversal is not an entry to repeat.'] } };
+  }
+
+  const legs = row.group_id ? rows.filter((r) => r.group_id === row.group_id && !r.reverses_id) : [row];
+  const source = legs.find((l) => l.direction === typeOf(l.type).direction) || row;
+  const other = legs.find((l) => l !== source);
+
+  return create({
+    type: source.type,
+    amount_minor: source.amount_minor,
+    currency: source.currency,
+    account_id: source.account_id,
+    to_account_id: other?.account_id || source.counter_account_id || null,
+    category_id: source.category_id || null,
+    // A band the owner set by hand on the original stays with the copy.
+    necessity: source.type === 'expense' ? (source.necessity || null) : null,
+    method: source.method || null,
+    payee: source.payee || null,
+    note: source.note || null,
+    occurred_on,
+    book: source.book,
+  });
+}
+
 /* =========================================================================
    Derived figures — the only place these are computed
    ========================================================================= */
