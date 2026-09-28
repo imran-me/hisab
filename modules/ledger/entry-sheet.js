@@ -263,7 +263,12 @@ async function renderForm(ctx, initial) {
     <p class="field__error entry__error" data-error="to_account_id" role="alert" hidden></p>
 
     <!-- Category: icon chips in colour circles, one scrolling row. -->
-    <div class="entry__cats" data-cats role="radiogroup" aria-label="Category"></div>
+    <!-- Ghost circles hold the row at its final height until the real
+         categories arrive, so nothing below (the pad) moves under a thumb
+         that is already on its way to a key. -->
+    <div class="entry__cats" data-cats role="radiogroup" aria-label="Category" aria-busy="true">
+      ${'<span class="entry-cat entry-cat--ghost" aria-hidden="true"><span class="entry-cat__glyph"></span><span class="entry-cat__label">&nbsp;</span></span>'.repeat(5)}
+    </div>
     <p class="field__error entry__error" data-error="category_id" role="alert" hidden></p>
     <p class="field__error entry__error" data-error="entry" role="alert" hidden></p>
 
@@ -288,7 +293,7 @@ async function renderForm(ctx, initial) {
     <div class="entry__suggest" data-suggest aria-live="polite" hidden></div>
 
     <!-- Repeat a recent entry: one slim row, only when there is history. -->
-    <div class="entry__recents" data-recents role="group" aria-label="Repeat a recent entry" hidden></div>
+    <div class="entry__recents is-pending" data-recents role="group" aria-label="Repeat a recent entry"></div>
 
     <input type="hidden" name="account_id" value="${esc(account.id)}">
     <input type="hidden" name="to_account_id" value="${esc(initial.to_account_id || initial.counter_account_id || '')}">
@@ -468,6 +473,7 @@ function drawChips(ctx) {
   }
   ctx.shown = chips;
 
+  qs('[data-cats]', form).removeAttribute('aria-busy');
   qs('[data-cats]', form).innerHTML = chips.map((c) => {
     const { icon: glyph, className } = glyphOf(c);
     return `
@@ -495,7 +501,7 @@ function shortLabel(label) {
 async function drawRecents(ctx, kind) {
   const { form, editing, book } = ctx;
   const host = qs('[data-recents]', form);
-  if (editing || kind === 'transfer') { host.hidden = true; return; }
+  if (editing || kind === 'transfer') { host.classList.remove('is-pending'); host.hidden = true; return; }
 
   const rows = (await ledger.list({ book, type: kind })).data;
   if (form.elements.kind.value !== kind) return;
@@ -517,6 +523,7 @@ async function drawRecents(ctx, kind) {
       <span class="entry-recent__name">${esc(row.payee || row.note || shortLabel(row.category_label))}</span>
       <span class="entry-recent__amount">${esc(moneyLabel(row.amount_minor, row.currency, { minor: 'never' }))}</span>
     </button>`).join('');
+  host.classList.remove('is-pending');
   host.hidden = picks.length === 0;
 }
 

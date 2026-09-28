@@ -267,6 +267,10 @@
   transition: transform var(--t-press) var(--ease-snap), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
 
+/* The placeholder before the categories load: the same box, no content. */
+.entry-cat--ghost { pointer-events: none; }
+.entry-cat--ghost .entry-cat__glyph { background: var(--bg-3); }
+
 .entry-cat__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .entry-cat:active .entry-cat__glyph { transform: scale(.92); }
 .entry-cat:focus-visible { outline: none; }
@@ -366,6 +370,9 @@
 
 .entry__recents::-webkit-scrollbar { display: none; }
 .entry__recents[hidden] { display: none; }
+/* Its place is kept while the history loads (one 30px row, the height of a
+   chip), so the pad does not drop when it arrives. */
+.entry__recents.is-pending { min-height: 30px; }
 .entry__recents.is-yielding { display: none; }
 
 /* Last time's amount for this note: one tap fills it. Same height as the

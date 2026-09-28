@@ -461,3 +461,12 @@ its own figure.
 account match and duplicates. Found by the tests: "Recharge Tk 100" read
 its own amount as a charge ("re-CHARGE"); fee and balance labels now need a
 word boundary. The sheet's "Paste SMS" is the next commit.
+
+## Review round 7 (1): the pad no longer drops when the categories arrive
+
+The category row now opens with five ghost circles of the real chips' size
+(75px), and the recent strip keeps its 30px while the history loads; each is
+replaced in place. **Measured** on a cold tab with 400ms added latency: the
+pad's top sits at 554px from the moment the sheet settles, and stays there
+when the chips land 1.8s later (before: it moved by the row's height).
+Ledger harness 54.
