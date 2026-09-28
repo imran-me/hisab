@@ -123,3 +123,54 @@ html:not(.no-js) [data-reveal].is-revealed {
 /* A button in flight keeps its label — replacing the text with a spinner
    changes the button's width mid-press and moves everything beside it. */
 .btn.is-busy { pointer-events: none; opacity: 0.7; }
+
+/* ---- Press feedback (components/press.js) -------------------------------
+   press.js puts .is-pressed on whatever the finger lands on, at pointerdown,
+   and swaps it for .is-released when the finger lifts. Two looks:
+
+   · a thing you tap as a whole (button, chip, tab, tile) dips to .97;
+   · a list row, which is as wide as the screen and would look like the page
+     lurching if it scaled, draws a ripple from the touch point instead.
+
+   Animations, not transitions, and the individual `scale` property, not
+   `transform`: a component's own `transition` or `transform` would be
+   overwritten by either, and here nothing a component declares is touched.
+   ------------------------------------------------------------------------ */
+@property --ripple-r { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --ripple-o { syntax: '<number>'; inherits: false; initial-value: 0; }
+
+@keyframes hisab-press-in  { to { scale: 0.97; } }
+@keyframes hisab-press-out { from { scale: 0.97; } to { scale: 1; } }
+@keyframes hisab-ripple-in  { from { --ripple-r: 0px; --ripple-o: 1; } to { --ripple-r: var(--pr, 240px); --ripple-o: 1; } }
+@keyframes hisab-ripple-out { from { --ripple-r: var(--pr, 240px); --ripple-o: 1; } to { --ripple-r: var(--pr, 240px); --ripple-o: 0; } }
+
+:where(.btn, .chip, .choice, .tab, .acc-card, .home-account, .acc-provider, .tile, .seg > *, [data-press]).is-pressed {
+  animation: hisab-press-in var(--t-press) var(--ease-out) forwards;
+}
+:where(.btn, .chip, .choice, .tab, .acc-card, .home-account, .acc-provider, .tile, .seg > *, [data-press]).is-released {
+  animation: hisab-press-out var(--t-base) var(--ease-snap);
+}
+
+/* The + dips its square, not its whole slot, and snaps back: it is the
+   button pressed most, so it gets the one springy release. */
+.tab--compose.is-pressed,
+.tab--compose.is-released { animation: none; }
+.tab--compose.is-pressed .tab__plus { animation: hisab-press-in var(--t-press) var(--ease-out) forwards; }
+.tab--compose.is-released .tab__plus { animation: hisab-press-out var(--t-tick) var(--ease-snap); }
+
+.row.is-pressed,
+.row.is-released {
+  background-image: radial-gradient(circle at var(--px, 50%) var(--py, 50%),
+    color-mix(in srgb, var(--text-1) calc(var(--ripple-o) * 7%), transparent) var(--ripple-r),
+    transparent calc(var(--ripple-r) + 1px));
+}
+.row.is-pressed  { animation: hisab-ripple-in 420ms var(--ease-out) forwards; }
+.row.is-released { animation: hisab-ripple-out 300ms var(--ease) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* The surface step on :active stays; nothing moves or spreads. */
+  .is-pressed, .is-released,
+  .tab--compose.is-pressed .tab__plus, .tab--compose.is-released .tab__plus { animation: none !important; }
+  .row.is-pressed, .row.is-released { background-image: none; }
+}
+

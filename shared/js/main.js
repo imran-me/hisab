@@ -15,6 +15,7 @@ import { requireSession } from './core/session.js';
 import { applyTheme } from './core/state.js';
 import { on, EVENTS } from './core/bus.js';
 import { toastWarn } from './components/toast.js';
+import { initPress } from './components/press.js';
 
 /**
  * Where the icon sprite lives, resolved once and read by dom.js's icon().
@@ -130,6 +131,9 @@ function boot() {
   initSessionGate();
   initReveal();
   initConnectivity();
+  // Touch and motion, for every page at once. Each respects
+  // prefers-reduced-motion on its own.
+  initPress();         // press feedback on anything tappable, and haptics
 }
 
 // DOMContentLoaded may already have fired: a module script is deferred by
