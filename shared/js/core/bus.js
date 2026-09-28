@@ -37,6 +37,10 @@ export const EVENTS = {
   PERIOD_CHANGED:   'period:changed',    // the month being viewed
   CURRENCY_CHANGED: 'currency:changed',  // the display currency
   THEME_CHANGED:    'theme:changed',
+  // Also a request: a pull from the top of a list page (pull-refresh.js).
+  // Payload { done } — call it when the fresh data is painted. With no
+  // listener the page is reloaded instead.
+  REFRESH_REQUESTED: 'refresh:requested',
 
   // Vault. Note there is no 'vault:decrypted' with a payload — plaintext never
   // travels on the bus, because a bus is a broadcast and every listener would

@@ -16,6 +16,8 @@ import { applyTheme } from './core/state.js';
 import { on, EVENTS } from './core/bus.js';
 import { toastWarn } from './components/toast.js';
 import { initPress } from './components/press.js';
+import { initCountUp } from './components/count-up.js';
+import { initPullRefresh } from './components/pull-refresh.js';
 
 /**
  * Where the icon sprite lives, resolved once and read by dom.js's icon().
@@ -134,6 +136,8 @@ function boot() {
   // Touch and motion, for every page at once. Each respects
   // prefers-reduced-motion on its own.
   initPress();         // press feedback on anything tappable, and haptics
+  initCountUp();       // hero figures roll to their value
+  initPullRefresh();   // pull down on a list page for fresh data
 }
 
 // DOMContentLoaded may already have fired: a module script is deferred by

@@ -174,3 +174,54 @@ html:not(.no-js) [data-reveal].is-revealed {
   .row.is-pressed, .row.is-released { background-image: none; }
 }
 
+/* ---- Pull to refresh (components/pull-refresh.js) ------------------------ */
+.pull {
+  position: fixed;
+  inset-block-start: calc(var(--header-h) + var(--safe-top) - 40px);
+  inset-inline-start: 50%;
+  z-index: var(--z-sticky);
+  width: 36px;
+  height: 36px;
+  margin-inline-start: -18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bg-2);
+  color: var(--text-2);
+  box-shadow: var(--shadow-menu), 0 0 0 1px var(--line);
+  opacity: 0;
+  translate: 0 var(--pull, 0px);
+  pointer-events: none;
+  transition: translate var(--t-base) var(--ease-out), opacity var(--t-fast) var(--ease);
+}
+.pull.is-pulling { transition: opacity var(--t-fast) var(--ease); }
+.pull.is-visible { opacity: 1; }
+.pull.is-armed   { color: var(--accent-text); }
+.pull__icon { width: 18px; height: 18px; rotate: var(--turn, 0deg); }
+.pull.is-busy .pull__icon { animation: hisab-spin 700ms linear infinite; }
+
+/* The browser's own pull-to-refresh would fire under ours. */
+html.has-pull, html.has-pull body { overscroll-behavior-y: contain; }
+
+/* ---- Page transitions ----------------------------------------------------
+   A same-site navigation cross-fades the content while the header and the
+   tab bar hold still (cross-document View Transitions; a browser without
+   them simply navigates). The bar staying put is what makes five pages
+   read as one app. */
+@view-transition { navigation: auto; }
+
+.app-header { view-transition-name: app-header; }
+.tabbar     { view-transition-name: app-tabbar; }
+
+@keyframes hisab-page-out { to   { opacity: 0; translate: 0 -6px; } }
+@keyframes hisab-page-in  { from { opacity: 0; translate: 0 10px; } }
+
+::view-transition-old(root) { animation: hisab-page-out var(--t-leave) var(--ease-in) both; }
+::view-transition-new(root) { animation: hisab-page-in var(--t-base) var(--ease-out) both; }
+::view-transition-group(app-header),
+::view-transition-group(app-tabbar) { animation-duration: 0s; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root) { animation: hisab-fade-out 120ms linear both; }
+  ::view-transition-new(root) { animation: hisab-fade-in 120ms linear both; }
+}
