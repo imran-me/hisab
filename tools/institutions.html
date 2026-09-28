@@ -20,6 +20,8 @@
   .tile { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 11.5px; color: var(--text-2); }
   .sizes { display: flex; align-items: center; gap: 6px; }
   h2 { font-size: 15px; margin: 20px 0 10px; }
+  .round > .inst-logo { border-radius: 50%; }
+  .round > .inst-logo--img { padding: 6px; }
 </style>
 </head>
 <body>
@@ -31,20 +33,31 @@
   if (theme) document.documentElement.setAttribute('data-theme', theme);
   window.HISAB_SPRITE = '../shared/icons/sprite.svg';
   const { institutions, bankLogo } = await import('../shared/js/components/bank-logo.js');
-  const groups = [['bank', 'Banks'], ['mfs', 'Mobile wallets'], ['card', 'Cards'], ['generic', 'Generic']];
+  const { merchants } = await import('../shared/js/components/merchant-logo.js');
+  const bd = (i) => i.kind === 'bank' && !i.region && !i.group;
+  const groups = [
+    ['Banks in Bangladesh', institutions.filter(bd)],
+    ['Gulf banks', institutions.filter((i) => i.region === 'ae')],
+    ['Online accounts', institutions.filter((i) => i.group === 'online')],
+    ['Mobile wallets', institutions.filter((i) => i.kind === 'mfs')],
+    ['Cards', institutions.filter((i) => i.kind === 'card')],
+    ['Generic', institutions.filter((i) => i.kind === 'generic')],
+    ['Merchants and billers', merchants],
+  ];
   const out = document.querySelector('[data-out]');
-  out.innerHTML = groups.map(([kind, title]) => `
-    <h2>${title}</h2>
+  out.innerHTML = groups.map(([title, list]) => `
+    <h2>${title} <span class="meta">${list.length}</span></h2>
     <div class="gallery">
-      ${institutions.filter((i) => i.kind === kind).map((i) => `
+      ${list.map((i) => `
         <div class="tile">
-          <div class="sizes">${bankLogo(i, 24)}${bankLogo(i, 40)}</div>
+          <div class="sizes">${bankLogo(i, 24)}${bankLogo(i, 40)}<span class="round">${bankLogo(i, 40)}</span></div>
           <span>${i.name}${i.logo ? '' : ' ·&nbsp;mono'}</span>
         </div>`).join('')}
     </div>`).join('');
-  const withLogo = institutions.filter((i) => i.logo).length;
+  const all = [...institutions, ...merchants];
+  const withLogo = all.filter((i) => i.logo).length;
   document.querySelector('[data-count]').textContent =
-    `${institutions.length} institutions · ${withLogo} with a logo file · ${institutions.length - withLogo} drawn`;
+    `${institutions.filter(bd).length} Bangladesh banks · ${all.length} tiles · ${withLogo} with a logo file · ${all.length - withLogo} drawn`;
 </script>
 </body>
 </html>

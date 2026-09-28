@@ -146,6 +146,13 @@
    reads as a mark rather than a sketch. */
 .row__glyph > .icon { width: 20px; height: 20px; stroke-width: 1.75; }
 
+/* A merchant's own mark (merchant-logo.js) in place of the category glyph:
+   the logo on its white disc, padded so a square mark's corners clear the
+   circle (6px on 40 leaves a 28px box whose corners sit inside the rim). */
+.row__glyph--logo { background: none; box-shadow: none; }
+.row__glyph--logo > .inst-logo { width: 40px; height: 40px; border-radius: 50%; }
+.row__glyph--logo > .inst-logo--img { padding: 6px; }
+
 /* Category tints, by name. A module sets the class; the colour is a token. */
 .cat-food      { --tint: var(--cat-food); }
 .cat-transport { --tint: var(--cat-transport); }

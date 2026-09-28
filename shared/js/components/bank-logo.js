@@ -7,6 +7,9 @@
  *   accountLogo(account, 40)         → the right tile for an account row
  *   findInstitution('City Bank Ltd') → the City Bank entry, or null
  *
+ * merchant-logo.js draws shops and billers through the same tile: an entry
+ * with `dir: 'merchants'` reads its file from assets/merchants/.
+ *
  * A tile is always drawn. With a self-hosted logo file (assets/banks/) it is
  * the logo on white; without one it is a MONOGRAM in the brand's own colour
  * (bKash pink with "bK", DBBL green with "DBBL"); for no institution at all it
@@ -98,7 +101,7 @@ export function bankLogo(idOrInstitution, size = 40, { label = null } = {}) {
     // Padding by size class, not a percentage: a percentage padding resolves
     // against the PARENT's width, which in a wide row ate the whole tile.
     const pad = s <= 24 ? 'xs' : s <= 36 ? 'sm' : 'md';
-    return `<img class="inst-logo inst-logo--img inst-logo--pad-${pad}" src="${esc(siteURL(`assets/banks/${inst.logo}`))}"`
+    return `<img class="inst-logo inst-logo--img inst-logo--pad-${pad}" src="${esc(siteURL(`assets/${inst.dir || 'banks'}/${inst.logo}`))}"`
       + ` width="${s}" height="${s}" alt="${label ? esc(label) : ''}"${label ? '' : ' aria-hidden="true"'}`
       + ` loading="lazy" decoding="async">`;
   }
