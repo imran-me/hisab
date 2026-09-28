@@ -82,3 +82,6 @@ and Dhaka WASA (their sites serve the government emblem).
 | emirates | `emirates.png`: the brand’s favicon via Google’s favicon service (`emirates.com`) |
 | qatar | `qatar.png`: Wikipedia “Qatar Airways”, [Qatar Airways Logo.svg](https://en.wikipedia.org/wiki/File:Qatar_Airways_Logo.svg) (Fair use), cropped from the wordmark<br>`qatar-wordmark.png`: Wikipedia “Qatar Airways”, [Qatar Airways Logo.svg](https://en.wikipedia.org/wiki/File:Qatar_Airways_Logo.svg) (Fair use), the article’s logo file |
 | desco | `desco-wordmark.png`: Wikipedia “Dhaka Electric Supply Company Limited”, [Logo of DESCO.svg](https://commons.wikimedia.org/wiki/File:Logo_of_DESCO.svg) (Public domain), the article’s logo file |
+
+Replaced 2026-09-29 (review): `apex.png` was a blurry 30 px favicon; it is
+now the 250 px icon from Apex's own site (`apex4u.com/favicon.ico`).

@@ -148,3 +148,19 @@ mCash, CellFin and dmoney (no usable icon).
 | payoneer | `payoneer.png`: Wikipedia “Payoneer”, [Payoneer logo.svg](https://commons.wikimedia.org/wiki/File:Payoneer_logo.svg) (Public domain), cropped from the wordmark<br>`payoneer-wordmark.png`: Wikipedia “Payoneer”, [Payoneer logo.svg](https://commons.wikimedia.org/wiki/File:Payoneer_logo.svg) (Public domain), the article’s logo file |
 | wise | `wise.png`: the brand’s favicon via Google’s favicon service (`wise.com`)<br>`wise-wordmark.png`: Wikipedia “Wise (company)”, [Wise logo light-on-dark.png](https://commons.wikimedia.org/wiki/File:Wise_logo_light-on-dark.png) (Public domain), the article’s logo file |
 | paypal | `paypal.png`: the brand’s favicon via Google’s favicon service (`paypal.com`)<br>`paypal-wordmark.png`: Wikipedia “PayPal”, [PayPal 2024.svg](https://commons.wikimedia.org/wiki/File:PayPal_2024.svg) (Public domain), the article’s logo file |
+
+## Replaced 2026-09-29 (review)
+
+- `one.png`, `midland.png`, `nrb.png` were upscaled favicons and blurry.
+  Now cropped from each article's logo file rendered at 960 px:
+  [Logo of ONE Bank-en.svg](https://commons.wikimedia.org/wiki/File:Logo_of_ONE_Bank-en.svg),
+  [Logo of Midland Bank.svg](https://commons.wikimedia.org/wiki/File:Logo_of_Midland_Bank.svg),
+  [Logo of NRB Bank.svg](https://commons.wikimedia.org/wiki/File:Logo_of_NRB_Bank.svg)
+  (all public domain); the three wordmarks are re-cut from the same files.
+- `sibl.png` was a crop that cut the letters off; it is now the whole mark
+  from [Logo of Social Islami Bank.svg](https://en.wikipedia.org/wiki/File:Logo_of_Social_Islami_Bank.svg) (fair use).
+- SureCash: the square was a blurry 16 px favicon. The brand has no square
+  symbol, so it is a monogram again; `surecash-wordmark.png` is its site
+  logo (`surecash.net/wp-content/uploads/2016/12/logo.png.png`).
+- Checked and kept: Union Bank's "6" swirl and Shohoz's green pin are the
+  brands' own marks.
