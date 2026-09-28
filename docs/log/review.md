@@ -15,6 +15,154 @@ and `tools/shoot-mobile.mjs` at 360×780.
 
 ---
 
+## Round 7 — `7cb63ce..1672fd2` (6 commits: A ×4, B ×1, C ×1)
+
+`1512e88` (B, categories in one call), `0f373cc` (C, budgets UI),
+`b5df5e5` and `69d9ebc` (A, bank and merchant logos), `866cd89` (A, press
+and haptics), and `1672fd2` (A, sheets and toasts). The dues, swipe, count-up
+and merchant-row commits that landed after them (`e236e35..a521dcf`) are left
+for round 8.
+
+**What was run**
+
+- `php artisan test` at `7173c6f`: **175 passed, 739 assertions**.
+- `test-money`: 97. `check-pages`: ok.
+- Home and Budgets at 360 in both themes.
+- The `tools/institutions.html` contact sheet: 130 tiles and 42 merchants.
+- `findInstitution()` run over 90 account names, both real and everyday.
+
+**Identity.** All six commits are `Md Imran Hossain
+<me.imran.personal@gmail.com>` as author and committer. No AI attribution.
+
+**Ownership.**
+
+- `0f373cc` (C) adds its one `SECONDARY` line for Budgets. It also
+  realigns the Vault line's spacing, which is harmless.
+- `1512e88` (B) stays inside `categories/` and `ledger/`.
+- A's four commits touch only `shared/`, `assets/` and `tools/`. None of
+  them has a `track-a.md` entry, whose last entry is `ae1b7dc` (rule 6).
+
+**Closed from round 6**
+
+- M2, the grey legend dots: fixed by `0f373cc` (`overview-page.js:416`).
+- Low, demo bKash below zero: the demo now ends September at +৳684.
+- Low, a Payoneer tile: "Payoneer (USD)" now matches Payoneer's mark.
+
+**Still open from round 6:** H1 (a statement reconciled against today's
+balance) and H2 (Could-have-kept counts a corrected entry twice). Neither
+has been touched.
+
+### H3 · High: an everyday word in an account's name gives it a bank's logo and colour. Owner: A (`b5df5e5`)
+
+- `findInstitution()` (`bank-logo.js`) matches the institution's **id** as
+  a whole word, as well as its name. `accountInstitution()` then falls back
+  to the account's **name**.
+- `b5df5e5` adds ids that are ordinary English and Bangladeshi words:
+  - `standard` (`institutions.js:85`), `one` (`:51`), `trust` (`:52`) and
+    `basic` (`:60`);
+  - `union` (`:84`), `wise` (`:106`) and `tap` (`:114`);
+  - `padma`, `meghna`, `uttara`, `bengal` and `citizens`.
+- **Checked** by running the matcher on these account names:
+
+  | Account name | Shown as |
+  |---|---|
+  | "Trust fund" | Trust Bank |
+  | "Standard savings" | Standard Bank |
+  | "Basic savings" | BASIC Bank |
+  | "Dhaka flat rent" | Dhaka Bank |
+  | "Uttara flat" | Uttara Bank |
+  | "Wise savings" | Wise |
+  | "One card" | ONE Bank |
+  | "Premier league" | The Premier Bank |
+
+- The account card is then printed in that bank's colour, with its logo, and
+  labelled as that bank. That is a wrong statement about where the money is
+  held, on the screen the owner uses to check it.
+- The merchant matcher in `69d9ebc` already solved this with an `exact`
+  field.
+- **Fix:**
+  - Stop matching on `inst.id`.
+  - Give every common-word institution an `exact` spelling, and require
+    "bank" (or the full name) in the free text.
+  - Add the table above to a test.
+
+### M8 · Medium: "Left in your budgets" nets overruns against headroom. Owner: C (`bf8f7c8`, `0f373cc`)
+
+- The Budgets screen's hero says "৳1,070 left, ৳356 a day for 3 days, 96%
+  used, 2 over".
+- Dining out is ৳2,430 over and Subscriptions ৳641 over. The four budgets
+  still under their limits have **৳4,141** of headroom between them.
+  `totals()` (`BudgetBook.php`) sums the limits and the spending across all
+  budgets, so the ৳3,071 of overrun silently eats that headroom, and the ring
+  is amber.
+- One honest reading is "৳4,141 left in 4 budgets · ৳3,071 over in 2". If
+  the net figure stays, label it "net of overruns".
+
+### M9 · Medium: logos no one can read, and marks that need a second look. Owner: A (`b5df5e5`, `69d9ebc`)
+
+From the contact sheet, at 40px on the phone:
+
+- **Too blurry to read.** ONE Bank, Midland, NRB Bank and Apex are upscaled
+  favicons, soft at 40px and worse at 18px.
+- **Illegible.** The American Express tile is unreadable at 18 and 24px.
+  Titas Gas's seal is a grey smudge at 24px. Both would read better as
+  monograms.
+- **Check these against each bank's own site before shipping:**
+  - The Social Islami Bank tile (a red swoosh with a "9").
+  - Union Bank (a purple "9").
+  - SureCash (a blue Bengali "শি", which reads as another brand).
+  - Shohoz (a green "Q").
+- **Licence.** `assets/banks/README.md` now says many marks are
+  "non-free logos used under fair use" on Wikipedia, or favicons fetched
+  through Google's service. That is weaker than the Commons-only rule
+  `9169432` started with. Record it as a decision in `context.md`, and keep
+  the README row per file.
+
+### Low
+
+- **The merchant matcher is not used yet** (A, `69d9ebc`). Nothing imports
+  `merchant-logo.js` at `1672fd2`. `8e5a136` wires it later, and is for
+  round 8.
+- **Merchant false positives** (A, `merchants.js`).
+  - `bata` matches "shorshe bata" (mustard paste, a grocery line) as Bata
+    shoes.
+  - `gp` matches any line with "GP" in it, such as "GP fund".
+  - Move both to `exact`, or add `not`.
+- **Two haptics on one save** (A and B).
+  - `press.js` fires `tap` on `.btn--primary`, and `entry-sheet.js` calls
+    `navigator.vibrate(8)` on save.
+  - The 30ms guard catches only the pair in the same frame.
+  - B should call `haptic('success')` instead.
+- **Cached categories outlive a sign-out** (B, `1512e88`). The session copy
+  is keyed by owner id, which is right. But sign-out does not clear it, so a
+  shared tab keeps the last owner's category names in `sessionStorage`.
+  `categories.reset()` (`categories/backend/api.js:354`) exists, but nothing
+  calls it on sign-out.
+- **Archiving now calls DELETE** (B, `categories/backend/api.js`). The
+  server hard-deletes a category that has no entries, which cascades to its
+  budget (`bf8f7c8` migration). Deleting an unused category therefore also
+  deletes the budget someone just set on it, and the only warning is the
+  toast. Say so in the confirm step.
+- **Budgets fall back silently** (C, round 6 Low, still open):
+  `budgets/backend/api.js:37`.
+
+### Visual
+
+- **Home.** The budget rings are the best new element: the overrun lap and
+  the marigold today tick read at a glance. But "limit reached" under a ring
+  that says 181% undersells it; "৳2,430 over" already says it, so drop the
+  third line. With the budgets added, Home is 901px tall, still within 1.6
+  screens.
+- **Budgets.** It is clean and dense, with red, amber and green used
+  correctly. The "+ ৳20,000" pill on Rent is one tap to a budget, which is
+  exactly "huge logic, yet easy". The ring's percentage text is 11px, which
+  is hard to read in the light theme's 52px ring.
+- **Contact sheet.** The coverage is impressive: 61 BD banks, 6 Gulf banks,
+  11 wallets and 42 merchants. Fix the handful in M9, and the tiles will
+  read as a real app's.
+
+---
+
 ## Round 6 — `f34fa9e..bf8f7c8` (17 commits: A ×7, B ×4, C ×4, no track ×2)
 
 **What was run**
