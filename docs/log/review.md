@@ -15,6 +15,144 @@ and `tools/shoot-mobile.mjs` at 360×780.
 
 ---
 
+## Round 8 — `e236e35..494cf5b` (9 commits: A ×2, B ×3, C ×4)
+
+The commits reviewed: swipe rows (`e236e35`), dues on the server and on a
+phone (`69a6fa8`, `7173c6f`), count-up and pull to refresh (`c128a4f`),
+merchant marks on rows (`8e5a136`), the palette (`64f0a68`), smart notes
+(`a521dcf`), and the fixes for H1 (`8b4ba99`) and H2 (`494cf5b`).
+
+**What was run**
+
+- `php artisan test`: all passing.
+- The fixes for H1 and H2, checked in tinker against the demo data.
+- DueBook and LedgerWriter driven directly, to test a loan corrected from
+  the Ledger.
+- Home, Ledger, Dues and Accounts at 360 in both themes.
+
+**Identity.** All 9 commits are `Md Imran Hossain
+<me.imran.personal@gmail.com>` as author and committer. No AI attribution.
+
+**Ownership.**
+
+- `69a6fa8` (C) edits `accounts/` (C's) and adds the module to
+  `composer.json` and `providers.php`, which are the allowed places.
+- `7173c6f` adds its one `SECONDARY` line.
+- B's commits stay in `ledger/` and `tools/test-ledger-browser.html`.
+- The orchestrator says `4fdb218`, `7eeb426` and `7d7e182` were its own,
+  made at the owner's request, so round 6's M7 is withdrawn.
+
+**Closed**
+
+- **H1** (statement reconcile). Fixed by `8b4ba99`. `Reconciler` works out
+  the balance on the statement's date, reads a card's statement as the
+  amount due, and closes the gap through the opening balance rather than an
+  income or expense entry. That also closes M1, and the tests cover an entry
+  after the statement. Two Lows are left on it; see below.
+- **H2** (Could have kept). Fixed by `494cf5b`. `leak()` and `quality()` now
+  sum signed rows, mirrors included. With September's reseeded demo,
+  `leak_minor` = 755,614 = 0 + ⌊1,511,228 / 2⌋, which matches `by_need`.
+
+### H4 · High: correcting or repeating a loan in the Ledger breaks the person's balance. Owners: C (dues), B (ledger)
+
+- A due is a ledger transfer into the held "Dues" account. The person's
+  balance is summed only over the legs whose ids are in `due_entries`, plus
+  their reversal mirrors (`DueBook::balances()`).
+- The Ledger does not know that a transfer belongs to a due:
+  - **Correcting it** (tap the row, change the amount, save) writes a
+    mirror and a replacement. The mirror cancels the person's leg, and the
+    replacement belongs to no one.
+  - **Swipe-right Repeat** (`e236e35`) writes a new transfer into Dues that
+    belongs to no one.
+- **Reproduced.** I lent Rahim ৳5,000 and corrected it to ৳6,000 through
+  `LedgerWriter::correct()`, which is what the entry sheet does. Afterwards
+  the person's balance is **৳0** and the Dues account holds **৳6,000**.
+  - On screen, the Dues page says "Rahim: settled".
+  - The Accounts page shows a Dues card of **+৳3,000**, while the Dues page
+    says net **−৳3,000** (you owe ৳3,000 more).
+  - The screenshot is `rev-r8-light/modules_accounts_list-2.png`, taken
+    before the test row was removed.
+- **Fix, one of:**
+  - (a) Have the ledger refuse correct and repeat on a leg that touches a
+    `dues` account, and send the person to the Dues page (B). This is the
+    smallest fix.
+  - (b) Have the dues module listen for a correction and move the
+    `due_entries.transaction_id` onto the replacement leg (C).
+- Add a test either way. Also refuse a manual transfer into the Dues account
+  from the entry sheet: it is in the picker, under "Savings & investments".
+
+### M10 · Medium: typing a note can switch the entry to another currency under a typed amount. Owner: B (`a521dcf`)
+
+- `runSuggest()` switches the account to the one used last with that note.
+  `setAccount()` (`entry-sheet.js:660`) then sets the amount's currency to
+  that account's currency, unless the currency was picked by hand.
+- **The case:** type 500, then a note that was last used on Payoneer (USD).
+  The digits stay and the currency flips, so the entry saves as **USD 500**
+  (about ৳61,000) instead of ৳500.
+- The card flashes, but the amount line is where the eye is.
+- **Fix:** once the pad has a value, do not let a suggestion change the
+  currency; offer it in the chip instead ("Use Payoneer · USD").
+
+### M11 · Medium: the Dues account behaves like an ordinary account. Owner: C (`69a6fa8`)
+
+- **The account form can create one.** `type: dues` is in
+  `Account::TYPES`, and `StoreAccountRequest` validates against that list.
+  `DueBook::account()` then uses whichever active Dues account it finds
+  first.
+- **It can be archived or edited.** It is offered in the entry sheet's
+  picker, and shows the ⋮ menu on Accounts. Archiving it makes
+  `account()` create a second one, which splits the ledger side of every
+  person's balance across two accounts.
+- **Net worth.** It counts in Held, so money you owe reduces "Held". That is
+  defensible, but label it ("Dues, net") or keep it out of Held.
+- **Fix:** keep `dues` out of the client-creatable types, hide it from the
+  picker, and refuse archive, edit and delete on it.
+
+### Low
+
+- **Reconcile skips an unconvertible leg** (C, `8b4ba99`).
+  `Reconciler::balanceOn()` does `continue` on a leg it cannot convert. The
+  gap then includes that leg, and `apply()` writes it permanently into the
+  opening balance. Refuse to apply while any leg is unconverted, as the
+  balances endpoint names them.
+- **A reconcile leaves no trace** (C). Moving the opening balance is right
+  for the month totals, but nothing in the ledger or on the account page
+  records that ৳X was adjusted on a date.
+  - Keep a row, or show "adjusted ৳2,017 on 20 Sep" on the account.
+  - A statement dated before `opening_on` is also measured against the
+    opening balance. Refuse it.
+- **Settle is not atomic** (C, `DueBook::settle()`). The balance is read
+  outside the transaction that records the settlement. Two taps settle
+  twice, and the second flips the person to the other side. Read it inside
+  the transaction with a lock, or make the button busy.
+- **Dues are BDT-only** (C). A Gulf owner cannot lend AED. That is fine as a
+  first cut, but record it under "Not built" in `endpoints.md`.
+- **Note memory is not per owner** (B, `smart-entry.js`).
+  `moduleStore('ledger-notes')` keeps notes, amounts and account ids in
+  plain local storage. On a shared phone the next owner is offered the last
+  one's amounts. Key it by owner, as `1512e88` did for categories, and clear
+  it on sign-out.
+- **Transfer day totals read "0"** (B). A day that holds only a dues
+  transfer shows a day total of "0" in ink ("Today 0", "Fri 25 Sep 0"). Hide
+  the total when nothing moved in or out.
+
+### Visual
+
+- **Ledger (dark).** The Uber row with Uber's own mark is exactly what the
+  owner meant by "logos everywhere". The dues rows ("Rahim (cousin)
+  −৳2,000") are neutral grey, which is correct for a transfer. They would
+  read better with the person's initial disc from the Dues page than with the
+  transfer arrow.
+- **Dues (light).** It is clear and fits one screen: owed to you in green,
+  owed by you in red, a reminder banner, and one-tap I lent / I borrowed. A
+  settled person at "৳0" could drop to a quieter "Settled" row, or fold
+  away.
+- **Accounts.** The Payoneer card, with its wordmark on the brand's orange,
+  looks crafted. The Dues card, printed like a bank card with a wallet icon,
+  looks like an account you can spend from (M11).
+
+---
+
 ## Round 7 — `7cb63ce..1672fd2` (6 commits: A ×4, B ×1, C ×1)
 
 `1512e88` (B, categories in one call), `0f373cc` (C, budgets UI),
