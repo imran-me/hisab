@@ -15,6 +15,115 @@ and `tools/shoot-mobile.mjs` at 360×780.
 
 ---
 
+## Round 9 — `826e73f..b408f44` (9 commits: A ×3, B ×4, C ×2)
+
+The commits reviewed: the SMS parser (`31e755a`), Bangla digits and the
+haptics switch (`c52477a`), Settings as a grouped list (`882b818`), budgets
+never netted (`c1f09c1`), the category row held in place (`c69434b`), no bank
+logo for everyday words (`a6df567`), caches cleared on sign-out
+(`fad1160`), one-entry days folded (`3a91e14`), and savings goals
+(`b408f44`).
+
+**What was run**
+
+- `php artisan test`: **185 passed, 785 assertions**.
+- `test-sms`: 57. `test-institutions`: 40. `test-money`: 104.
+- The SMS parser on ten messages of my own, and the matcher on round 7's
+  list.
+- Ledger, Budgets & goals, and Settings at 360 in both themes, after
+  reseeding the demo.
+
+**Identity.** All 9 commits are `Md Imran Hossain
+<me.imran.personal@gmail.com>` as author and committer. No AI attribution.
+
+**Ownership.** Each track stayed in its own files. `b408f44` renames its own
+`SECONDARY` line to "Budgets & goals".
+
+**Closed**
+
+- **H3** (everyday words picking a bank): fixed by `a6df567`. "Trust fund",
+  "Standard savings", "Dhaka flat rent", "One card", "Wise savings" and
+  "City card" now match nothing. "Trust Bank", "ONE Bank" and "City Bank"
+  still match their banks.
+- **M8** (budgets netted): fixed by `c1f09c1`, which shows the room left and
+  the overrun side by side.
+- **M5** (chips moving the pad): fixed by `c69434b`.
+- **Round 7 Low**, categories kept after sign-out: fixed by `fad1160`.
+- **M6** (five entries a screen): partly fixed by `3a91e14`; see M13.
+
+**Still open:** **H4**, a loan corrected or repeated in the Ledger breaking
+the person's balance. No commit touches it. M10, M11 and M3 are also open.
+
+### M12 · Medium: two goals on one account both count the whole balance. Owner: C (`b408f44`)
+
+- An account-linked goal takes the account's **entire balance** as saved
+  (`GoalBook::progress()`), so:
+  - money that was there before the goal started counts toward it;
+  - two goals linked to the same account both show that full balance as
+    saved.
+- **Example.** Link "Umrah" and "Emergency fund" to one ৳1,00,000 DPS, and
+  each shows ৳1,00,000 saved. The response's `saved_minor` total says
+  ৳2,00,000, which is money that does not exist.
+- **Fix, one of:**
+  - Allow one goal per account.
+  - Count only movement since `started_on`, as category-linked goals do.
+- **Currencies.** The same total sums goals in different currencies
+  (`all()`: `array_sum(array_column($rows, 'saved_minor'))`). That breaks
+  "never sum two currencies". Drop the totals, or convert them with the rate
+  and date.
+
+### M13 · Medium: a folded row reads as part of the day above it. Owner: B (`3a91e14`)
+
+- After the "Sat 26 Sep" group, "Rahim (cousin) … Fri 25 Sep" follows with
+  no break. The date sits small under the amount, so the row reads as a
+  third Saturday entry. The same happens after "Tue 22 Sep".
+- **Count at 360×780 (light theme).** The first screen shows seven entries
+  under the IN/OUT cards, not the eleven the commit claims. It shows more
+  once scrolled.
+- **Fix:**
+  - Give a folded row a full-width hairline above it.
+  - Or put the date first, in the sub-line ("Fri 25 · Cash in hand"), so
+    the date is read before the row is placed.
+
+### Low
+
+- **An unconvertible goal balance reads as ৳0** (C). `progress()` uses
+  `$fx->convert(...) ?? 0`, so a goal on a USD account with no rate shows no
+  progress instead of "no rate for USD".
+- **A fee message becomes the spend** (B, `sms.js`). "Tk 25.00 fee charged
+  for Send Money of Tk 2,500.00" parses as a ৳25 send, with the counterparty
+  "Send Money of Tk 2".
+  - Treat a message that leads with a fee as a fee line for a TrxID that is
+    already recorded.
+  - Or take the amount after "of".
+  - Add the case to `test-sms.mjs`.
+- **The SMS parser is not wired in** (B). Nothing imports `sms.js` yet. The
+  paste box is the next step, and it should use `seenTrx()` to refuse a
+  message whose TrxID is already recorded.
+- **A foreign card purchase is refused** (B). "Card ending 4417 … USD 12.99
+  at NETFLIX.COM" returns `no-amount`. Refusing is the safe choice, but it is
+  the most common card message for a freelancer. Accept USD, AED and so on,
+  with the currency.
+- **Digits** (A, `c52477a`). Display-only Bangla digits are the right cut,
+  with `formatMoney()` left Latin for inputs, and the tests pass. Check that
+  chart axes and the day-by-day readout (`moneyLabel`) do not come out mixed
+  when the count beside them is written as a plain number.
+
+### Visual
+
+- **Settings (dark).** Much better. The grouped cards with tinted circles,
+  the segmented controls, and the Bangla option shown as "১২৩" all look
+  finished. "Reaching hand" now says "Moves what you reach for to this
+  side", which closes the old stale hint.
+- **Budgets & goals.** The goals read clearly: violet saved figures,
+  "Needs ৳15,000/month · going in ৳3,333" in amber, and a date to aim at.
+  The Umrah goal on the DPS shows why M12 matters, since the DPS had
+  ৳15,000 before the goal existed.
+- **Ledger (light).** It is denser, and the merchant marks for Uber look
+  great. See M13 on where the dates sit.
+
+---
+
 ## Round 8 — `e236e35..494cf5b` (9 commits: A ×2, B ×3, C ×4)
 
 The commits reviewed: swipe rows (`e236e35`), dues on the server and on a
