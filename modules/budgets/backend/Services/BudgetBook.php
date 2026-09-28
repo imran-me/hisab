@@ -230,6 +230,11 @@ class BudgetBook
         $spent = 0;
         $count = 0;
         $over = 0;
+        // Kept apart, not netted (review round 7, M8): 3,071 taka over in two
+        // budgets does not make the other four's 4,141 of room smaller -
+        // money over in Dining is not taken back out of Groceries.
+        $headroom = 0;
+        $overrun = 0;
 
         foreach ($rows as $row) {
             if ($row['budget'] === null) {
@@ -252,12 +257,23 @@ class BudgetBook
 
             $budgeted += $amount;
             $spent += $used;
+            if ($used > $amount) {
+                $overrun += $used - $amount;
+            } else {
+                $headroom += $amount - $used;
+            }
         }
 
-        return ['budgeted_minor' => $budgeted, 'spent_minor' => $spent, 'count' => $count, 'over' => $over]
-            + ($count > 0
-                ? $this->progress($budgeted, $spent, $daysLeft, $currency)
-                : ['left_minor' => null, 'per_day_minor' => null, 'ratio' => null, 'state' => null]);
+        return [
+            'budgeted_minor' => $budgeted, 'spent_minor' => $spent, 'count' => $count, 'over' => $over,
+            'under' => $count - $over,
+            'headroom_minor' => $headroom,
+            'overrun_minor' => $overrun,
+            // The pace is over the room that is really left, not the net.
+            'headroom_per_day_minor' => $count > 0 ? $this->perDay($headroom, $daysLeft, $currency) : null,
+        ] + ($count > 0
+            ? $this->progress($budgeted, $spent, $daysLeft, $currency)
+            : ['left_minor' => null, 'per_day_minor' => null, 'ratio' => null, 'state' => null]);
     }
 
     /**

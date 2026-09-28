@@ -35,7 +35,10 @@ const EMPTY = (month, book, currency) => ({
 export async function month({ month = currentPeriod(), book = 'personal', currency = 'BDT' } = {}) {
   if (!(await hasBackend())) return { ok: true, data: EMPTY(month, book, currency), meta: { offline: true } };
   const res = await get('/budgets', { month, book, currency });
-  if (!res.ok) return res.reason === 'auth' ? res : { ok: true, data: EMPTY(month, book, currency), meta: { offline: true } };
+  // Only a device that cannot reach the server is "offline". A 500 or a 422
+  // used to come back as "no budgets" too, so the rings vanished with no
+  // error (review round 7): now it is returned as the failure it is.
+  if (!res.ok) return res.reason === 'offline' ? { ok: true, data: EMPTY(month, book, currency), meta: { offline: true } } : res;
   return { ok: true, data: res.data?.data };
 }
 

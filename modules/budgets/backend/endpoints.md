@@ -58,6 +58,11 @@ without a budget; default BDT).
   last month, rounded up to a round figure (৳7,340 → ৳7,500). It is what the
   one-tap sheet offers first.
 - `totals` are over budgeted categories only, converted into `currency`.
+  `left_minor` is the NET (limits minus spending). The screen leads with
+  `headroom_minor` (room left in the `under` budgets) and `overrun_minor`
+  (spent past the limit in the `over` ones) side by side, because an
+  overrun in one category does not use up another's room.
+  `headroom_per_day_minor` is the pace over that room.
 - `other_minor` is the month's spending with no row here (uncategorised, or
   in a category since archived), in `currency`. Every row's `spent_minor`
   plus this is the ledger summary's `expense_minor`, and a test says so.

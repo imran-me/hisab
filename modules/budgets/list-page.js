@@ -103,21 +103,25 @@ function drawHero() {
   dial.setAttribute('role', 'img');
   dial.setAttribute('aria-label', `${percent(t.ratio)} of your budgets used`);
 
-  const over = t.left_minor < 0;
-  qs('[data-hero-label]').textContent = over
-    ? 'Over your budgets'
-    : data.is_current ? 'Left in your budgets' : `Left at the end of ${name}`;
-  left.innerHTML = figure(Math.abs(t.left_minor), code);
-  left.classList.toggle('is-over', over);
+  // The room left in the budgets still under their limit, and the overrun
+  // in the others, SIDE BY SIDE. Netting them (the old hero) let ৳3,071 of
+  // overrun silently eat ৳4,141 of room and read "৳1,070 left" (review
+  // round 7, M8): money over in Dining is not taken back out of Groceries.
+  const plural = (n) => `${n} ${n === 1 ? 'budget' : 'budgets'}`;
+  qs('[data-hero-label]').textContent = !t.under
+    ? 'Every budget is over'
+    : data.is_current ? `Left in ${plural(t.under)}` : `Left in ${plural(t.under)} at the end of ${name}`;
+  left.innerHTML = figure(t.under ? t.headroom_minor : t.overrun_minor, code);
+  left.classList.toggle('is-over', !t.under);
 
-  pace.innerHTML = data.is_current && !over
-    ? `<strong>${esc(label(t.per_day_minor, code))}</strong> a day for ${data.days_left} ${data.days_left === 1 ? 'day' : 'days'}`
-    : over ? `${esc(label(t.spent_minor, code))} spent of ${esc(label(t.budgeted_minor, code))}` : '';
+  pace.innerHTML = [
+    data.is_current && t.under && t.headroom_per_day_minor !== null
+      ? `<strong>${esc(label(t.headroom_per_day_minor, code))}</strong> a day for ${data.days_left} ${data.days_left === 1 ? 'day' : 'days'}`
+      : '',
+    t.over && t.under ? `<span class="bud-tone--over">${esc(label(t.overrun_minor, code))} over in ${plural(t.over)}</span>` : '',
+  ].filter(Boolean).join('<br>');
 
-  const parts = over ? [] : [`${label(t.spent_minor, code)} of ${label(t.budgeted_minor, code)}`];
-  parts.push(`${t.count} ${t.count === 1 ? 'budget' : 'budgets'}`);
-  if (t.over) parts.push(`${t.over} over`);
-  meta.textContent = parts.join(' · ');
+  meta.textContent = `${label(t.spent_minor, code)} spent of ${label(t.budgeted_minor, code)}`;
 
   animateRings(dial);
 }

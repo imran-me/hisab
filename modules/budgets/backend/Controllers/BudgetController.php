@@ -76,6 +76,9 @@ class BudgetController extends Controller
             ->where('user_id', $request->user()->id)
             ->where('id', $id)
             ->where('type', 'expense')
+            // An archived category is never listed by month(), so a budget
+            // on it would limit something the screen cannot show.
+            ->whereNull('archived_at')
             ->firstOrFail();
     }
 }

@@ -122,6 +122,14 @@ class BudgetsTest extends TestCase
         // The most used comes first, so the one about to run out is read first.
         $this->assertSame(['dining', 'transport', 'groceries'], array_slice(array_column($data['rows'], 'key'), 0, 3));
 
+        // Kept apart: 500 taka over in dining does not eat groceries' and
+        // transport's 6,600 of room.
+        $this->assertSame(660_000, $data['totals']['headroom_minor']);
+        $this->assertSame(50_000, $data['totals']['overrun_minor']);
+        $this->assertSame(2, $data['totals']['under']);
+        $this->assertSame(220_000, $data['totals']['headroom_per_day_minor']);
+        $this->assertSame(610_000, $data['totals']['left_minor']);
+
         $this->assertSame(1_500_000, $data['totals']['budgeted_minor']);
         $this->assertSame(890_000, $data['totals']['spent_minor']);
         $this->assertSame(1, $data['totals']['over']);
@@ -205,6 +213,11 @@ class BudgetsTest extends TestCase
         $this->putJson("/api/budgets/{$salary->id}", ['amount_minor' => 1000])->assertNotFound();
 
         $this->putJson("/api/budgets/{$this->category('groceries')->id}", ['amount_minor' => 0])->assertStatus(422);
+
+        // An archived category is not listed, so it cannot carry a budget.
+        $archived = $this->category('clothing');
+        $archived->forceFill(['archived_at' => now()])->save();
+        $this->putJson("/api/budgets/{$archived->id}", ['amount_minor' => 1000])->assertNotFound();
 
         // spent_minor is not a field: sent anyway, it changes nothing.
         $this->putJson("/api/budgets/{$this->category('groceries')->id}", ['amount_minor' => 5000, 'spent_minor' => 1])->assertOk();
