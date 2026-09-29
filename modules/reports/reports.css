@@ -84,14 +84,14 @@
   background: var(--key, var(--text-3));
 }
 
-.month-legend__key--now { --key: var(--text-1); }
+.month-legend__key--now { --key: var(--out); }
 .month-legend__key--was { --key: var(--text-3); }
 
 /* In and Out mirror their marks: a well with a green top, and a fill. */
 .month-legend__key--in::before,
 .month-legend__key--out::before { width: 10px; height: 10px; border-radius: 2px; }
-.month-legend__key--in::before  { background: var(--bg-3); box-shadow: inset 0 2px 0 var(--in); }
-.month-legend__key--out::before { background: var(--text-2); }
+.month-legend__key--in::before  { background: var(--in-wash); box-shadow: inset 0 2px 0 var(--in); }
+.month-legend__key--out::before { background: var(--out); }
 
 /* The value the chart is pointing at. Values lead, the label follows. */
 .month-readout {
@@ -119,20 +119,22 @@
 }
 
 .chart__line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.chart__line--now { stroke: var(--text-1); }
+.chart__line--now { stroke: var(--out); }
 .chart__line--was { stroke: var(--text-3); }
-.chart__area { fill: var(--text-1); opacity: 0.06; }
+.chart__area { fill: var(--out); opacity: 0.08; }
 
 /* A 2px ring in the surface colour keeps a dot legible where it crosses a line. */
 .chart__dot { stroke: var(--bg-0); stroke-width: 2; }
-.chart__dot--now { fill: var(--text-1); }
+.chart__dot--now { fill: var(--out); }
 .chart__dot--was { fill: var(--text-3); }
 
 .chart__crossline { stroke: var(--text-3); stroke-width: 1; }
 
-.chart__track { fill: var(--bg-3); }
+/* Income is the green well, spending the red fill inside it: the owner's
+   rule, expense red and income green, holds in the charts too. */
+.chart__track { fill: var(--in-wash); }
 .chart__cap { stroke: var(--in); stroke-width: 2; stroke-linecap: round; }
-.chart__fill { fill: var(--text-2); }
+.chart__fill { fill: var(--out); }
 
 /* The picked month is at full strength; the others step back. */
 .chart__month { opacity: 0.55; transition: opacity var(--t-fast) var(--ease); }
