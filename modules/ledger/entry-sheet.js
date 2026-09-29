@@ -104,7 +104,9 @@ async function open(opts) {
     loadStyles('row.css'),
   ]);
 
-  const accountRows = accountRes.data;
+  // The Dues account is the Dues screen's own: an entry into it from here
+  // would carry no person, and the server refuses it. Not offered at all.
+  const accountRows = accountRes.data.filter((a) => a.type !== 'dues');
   if (!accountRows.length) {
     toast('Add an account first — a transaction has to come from somewhere.', {
       tone: 'warn',
@@ -580,12 +582,24 @@ function runSuggest(ctx) {
   }
   if (s?.account_id && form.dataset.accountSet !== 'true' && s.account_id !== form.elements.account_id.value) {
     const account = ctx.accountRows.find((a) => a.id === s.account_id);
-    if (account) {
+    if (account && mayAutoSwitch(ctx, account)) {
       setAccount(ctx, 'from', account);
       qs('.acct-card', form)?.classList.add('is-switched');
     }
   }
   drawSuggestion(ctx);
+}
+
+/**
+ * Whether a suggestion may move the entry to another account by itself.
+ * Not once an amount is typed in a different currency: "uber" last paid from
+ * the USD card turned a typed 500 taka into USD 500 (review M10). The owner
+ * can still pick that account; it is only never done for them.
+ */
+function mayAutoSwitch(ctx, account) {
+  if (!ctx.pad?.value()) return true;
+  const current = ctx.accountRows.find((a) => a.id === ctx.form.elements.account_id.value);
+  return !current || current.currency === account.currency;
 }
 
 /** The chip: who it is, what it is filed under, and the amount to fill. */
@@ -652,7 +666,7 @@ function chooseCategory(ctx, id, { auto = true } = {}) {
     const remembered = prefs.read({})[id]
       || ctx.chips.find((c) => c.id === id)?.last_account_id;
     const account = accountRows.find((a) => a.id === remembered);
-    if (account && account.id !== form.elements.account_id.value) {
+    if (account && account.id !== form.elements.account_id.value && mayAutoSwitch(ctx, account)) {
       setAccount(ctx, 'from', account);
       qs('.acct-card', form)?.classList.add('is-switched');
     }
