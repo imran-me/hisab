@@ -5,6 +5,26 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 
+// Module classes by convention: Hisab\Name\... lives in modules/name/backend/...
+// The same rule composer.json's PSR-4 map spells out, applied here as well
+// because the server's vendor/ is installed by hand and its autoloader only
+// knows the modules that existed on that day. Without this a new module is
+// "class not found" on the live site until someone runs composer again, and
+// its routes 404 while every screen that calls them looks broken.
+spl_autoload_register(static function (string $class): void {
+    if (! str_starts_with($class, 'Hisab\\')) {
+        return;
+    }
+    $parts = explode('\\', substr($class, 6), 2);
+    if (count($parts) !== 2) {
+        return;
+    }
+    $file = dirname(__DIR__).'/modules/'.strtolower($parts[0]).'/backend/'.str_replace('\\', '/', $parts[1]).'.php';
+    if (is_file($file)) {
+        require $file;
+    }
+});
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',

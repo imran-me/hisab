@@ -313,6 +313,19 @@ migrate_if_installed() {
     *"Nothing to migrate"*) : ;;
     *) say "ran database migrations"; log "$output" ;;
   esac
+
+  # A cached route or config file outlives every pull: bootstrap/cache is not
+  # in git, so once anyone has run `artisan optimize` the live API keeps
+  # answering with the routes of that day - new endpoints 404 while the new
+  # screens that call them are already published. Cleared whenever one exists;
+  # the check is a stat, so the usual tick costs nothing.
+  if ls "$SRC"/bootstrap/cache/routes-*.php "$SRC"/bootstrap/cache/config.php >/dev/null 2>&1; then
+    if "$php" "$SRC/artisan" optimize:clear --no-interaction >/dev/null 2>&1; then
+      say "cleared a stale Laravel route/config cache"
+    else
+      say "could not clear the Laravel cache - new API routes may 404"
+    fi
+  fi
 }
 
 # Every run, not only the ones that deploy.
