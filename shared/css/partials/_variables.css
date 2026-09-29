@@ -302,9 +302,11 @@
   --z-sticky:   10;
   --z-header:   40;
   --z-tabbar:   45;
-  --z-dropdown: 60;
   --z-scrim:    70;
   --z-sheet:    80;
+  /* Above the sheet: a menu is opened FROM a sheet (the date, More
+     categories), and under it it drew behind the scrim, unreachable. */
+  --z-dropdown: 85;
   --z-toast:    90;
   --z-lock:    100;   /* the vault lock screen covers all of it */
 

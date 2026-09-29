@@ -160,9 +160,17 @@
    ------------------------------------------------------------------------ */
 .menu {
   position: fixed;
+  inset: auto;               /* undo the popover UA centring; top/left below */
   top: var(--menu-top, 0);
   left: var(--menu-left, 0);
+  margin: 0;
+  color: inherit;
   z-index: var(--z-dropdown);
+  /* A long list (every category) scrolls inside the menu instead of running
+     off the screen. */
+  max-height: calc(100dvh - 2 * var(--s-3));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   min-width: 11rem;
   max-width: min(20rem, calc(100vw - var(--s-4)));
   padding: var(--s-1);

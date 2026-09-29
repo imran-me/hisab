@@ -279,11 +279,16 @@ async function renderForm(ctx, initial) {
       <input class="entry__note" id="entry-note" name="note" autocomplete="off"
              enterkeyhint="done" maxlength="2000" placeholder="Add a note"
              value="${esc(initial.note || '')}">
-      <button type="button" class="entry__date" data-pick-date aria-haspopup="menu">
-        ${icon('calendar', { class: 'icon icon--sm' })}<span data-date-name></span>
-      </button>
-      <input type="date" class="entry__date-input" name="occurred_on" tabindex="-1" aria-label="Date"
-             value="${esc(initial.occurred_on || today())}" max="${esc(nextYear())}">
+      <!-- The real date input lies invisibly over the chip, so a tap lands
+           on it and the phone's own calendar opens: showPicker() from a
+           button is not honoured by every mobile browser. -->
+      <span class="entry__date-wrap">
+        <span class="entry__date" data-pick-date aria-hidden="true">
+          ${icon('calendar', { class: 'icon icon--sm' })}<span data-date-name></span>
+        </span>
+        <input type="date" class="entry__date-input" name="occurred_on" aria-label="Date"
+               value="${esc(initial.occurred_on || today())}" max="${esc(nextYear())}">
+      </span>
     </div>
     <p class="field__error entry__error" data-error="occurred_on" role="alert" hidden></p>
 
@@ -718,19 +723,6 @@ function attachHandlers(ctx) {
     ctx.draftSoon?.();
   });
 
-  delegate(form, 'click', '[data-pick-date]', (_e, button) => {
-    import('../../shared/js/components/menu.js').then(({ menu }) => {
-      const set = (value) => { form.elements.occurred_on.value = value; syncDate(ctx); ctx.draftSoon?.(); };
-      menu(button, [
-        { label: 'Today', icon: 'calendar', onClick: () => set(today()) },
-        { label: 'Yesterday', icon: 'calendar', onClick: () => set(shiftDay(today(), -1)) },
-        { label: 'Another day…', icon: 'calendar', onClick: () => {
-          const input = form.elements.occurred_on;
-          try { input.showPicker(); } catch { input.focus(); }
-        } },
-      ], { align: 'end' });
-    });
-  });
   form.elements.occurred_on.addEventListener('change', () => syncDate(ctx));
 
   // The note is read as it is typed: "uber" files the entry under Transport

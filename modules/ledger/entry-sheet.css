@@ -245,11 +245,11 @@
 
 .entry-cat {
   flex: none;
-  width: 64px;
+  width: 52px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 2px 0;
   border: 0;
   background: none;
@@ -265,8 +265,8 @@
 .entry-cat__glyph {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   color: var(--tint, var(--text-2));
   /* Saturated enough to read as the category's colour at a glance, not a
@@ -277,7 +277,7 @@
 
 /* The glyph at half the circle, on a 2px stroke: at the sprite's default
    size it was a 14px mark in a 48px disc and read as a dot. */
-.entry-cat__glyph .icon { width: 24px; height: 24px; stroke-width: 2; }
+.entry-cat__glyph .icon { width: 18px; height: 18px; stroke-width: 2; }
 
 /* The placeholder before the categories load: the same box, no content. */
 .entry-cat--ghost { pointer-events: none; }
@@ -357,16 +357,29 @@
 
 .entry__date.is-set { border-color: var(--accent); color: var(--text-1); }
 
-/* The real date input, kept for showPicker() and assistive tech, drawn nowhere. */
+/* The real date input, invisible, laid over the chip: a tap opens the phone's calendar. */
+.entry__date-wrap { position: relative; display: inline-flex; flex: none; }
 .entry__date-input {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   opacity: 0;
-  pointer-events: none;
+  cursor: pointer;
+  /* Chrome only opens the calendar from its own icon; stretch that over the
+     whole input so a tap anywhere on the chip opens it. */
 }
+.entry__date-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.entry__date-wrap:has(.entry__date-input:focus-visible) .entry__date { box-shadow: var(--e-focus); }
 
 /* ---- Recent entries: one slim row --------------------------------------- */
 .entry__recents {

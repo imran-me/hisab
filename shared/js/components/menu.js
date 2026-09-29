@@ -36,7 +36,20 @@ export function openMenu_(anchor, items, opts = {}) {
       </button>`;
   }).join('');
 
-  document.body.append(menu);
+  // Inside the open dialog the anchor lives in, when there is one: a modal
+  // dialog makes everything outside it inert, so a menu appended to <body>
+  // could be seen but never tapped.
+  (anchor.closest('dialog[open]') || document.body).append(menu);
+
+  // Into the TOP LAYER when the browser has popovers. The entry sheet is a
+  // modal <dialog>, which the browser draws above every z-index, so a menu
+  // opened from inside it (the date, More categories) drew behind its scrim.
+  // A popover shown after the dialog stacks above it. Shown before measuring:
+  // an unshown popover is display:none and measures as zeros.
+  if (typeof menu.showPopover === 'function') {
+    menu.popover = 'manual';
+    menu.showPopover();
+  }
 
   // Measured only after it is in the DOM. getBoundingClientRect on a detached
   // node returns zeros, and positioning from zeros puts every menu in the
