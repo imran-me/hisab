@@ -65,10 +65,28 @@ garbage.
 | `GET` | `/api/vault/header` | the header, or 404 if no vault has been set up |
 | `POST` | `/api/vault/header` | first-time setup — refuses if one already exists |
 | `PUT` | `/api/vault/header` | replace after a master-password change |
-| `GET` | `/api/vault` | every blob for this user |
-| `POST` | `/api/vault` | create |
+| `GET` | `/api/vault` | every blob for this user, as `{ "data": [rows] }` |
+| `POST` | `/api/vault` | create with the browser's id — or replace, if that id is already yours |
 | `PUT` | `/api/vault/{id}` | replace a blob wholesale |
 | `DELETE` | `/api/vault/{id}` | delete |
+
+Every response is in the `{ "data": … }` envelope, the header included.
+
+### Sync (built 2026-09-29)
+
+The server is the source of truth once it keeps vaults; each device holds a
+copy for offline use (`api.js`, `readHeader()` and `readBlobs()`):
+
+- A row carries `synced` on the device. One saved offline is `synced: false`
+  and is sent on the next read. POST replaces an id it already holds, so a
+  retry after a dropped response can never become a second copy.
+- A delete made offline is remembered and replayed; a synced row missing from
+  the server was deleted on another device and is dropped here too.
+- A vault made on a device before the server kept vaults is uploaded — the
+  header first, then every entry — the first time that device reads it.
+- A device holding a DIFFERENT vault from the server's (another verifier,
+  i.e. set up separately; a password change keeps the verifier) sets its copy
+  aside under `hisab:vault:setAside`, untouched, and never pushes it.
 
 ### On the server side
 

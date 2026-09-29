@@ -122,22 +122,54 @@ function serverHasNoVault(res) {
   return res.reason === 'missing';
 }
 
+/* Beside the two vault keys: entries deleted while offline, still to be
+   deleted on the server, and a vault set aside because the server holds a
+   different one. Ciphertext and ids only, like the keys themselves. */
+const DELETED_KEY = `${KEYS.VAULT}:deleted`;
+const SET_ASIDE_KEY = `${KEYS.VAULT}:setAside`;
+
+/**
+ * The header, from the SERVER when there is one - that is what lets a second
+ * phone open the vault - and from this device when there is not.
+ *
+ * Two cases are handled on the way:
+ * - The server has no vault but this device does: made here before the server
+ *   kept vaults. Its header is uploaded, and readBlobs() sends the entries.
+ * - The server has a DIFFERENT vault (another verifier): set up separately on
+ *   another device. This device's copy cannot be opened with the server's key
+ *   and must never be pushed there, so it is set aside, untouched, rather than
+ *   merged or deleted.
+ */
 async function readHeader() {
   const local = storage.get(KEYS.VAULT_META, null);
-  if (local) return local;
+  if (!(await hasBackend())) return local;
 
-  if (await hasBackend()) {
-    const res = await get('/vault/header');
-    if (res.ok && res.data) {
-      storage.set(KEYS.VAULT_META, res.data);
-      return res.data;
-    }
-    // A 404 means no vault yet, which is a legitimate state. A 401 does NOT
-    // mean that, and must not be answered with "set up a new vault" — that
-    // would offer to overwrite a vault the person simply is not signed in to.
-    if (res.reason === 'auth') throw new Error('Sign in to open the vault.');
+  const res = await get('/vault/header');
+  if (res.ok) {
+    const server = res.data?.data ?? res.data;
+    // The verifier, not the salt, names a vault: a password change gives the
+    // header a new salt and keeps the verifier, sealed once at setup.
+    if (local && local.verifier?.ct !== server?.verifier?.ct) setAside(local);
+    storage.set(KEYS.VAULT_META, server);
+    return server;
   }
-  return null;
+
+  // A 401 is NOT "no vault yet", and must not be answered with "set up a new
+  // vault" - that would offer to overwrite a vault the person is simply not
+  // signed in to.
+  if (res.reason === 'auth') throw new Error('Sign in to open the vault.');
+
+  if (res.reason === 'missing' && local) await post('/vault/header', local);
+  return local;
+}
+
+function setAside(localHeader) {
+  storage.set(SET_ASIDE_KEY, {
+    header: localHeader,
+    blobs: storage.get(KEYS.VAULT, []),
+    at: new Date().toISOString(),
+  });
+  storage.remove(KEYS.VAULT);
 }
 
 /**
@@ -307,8 +339,10 @@ export async function save(input) {
   // the id and the timestamp — see endpoints.md.
   const blob = await crypto.seal(session.key(), entry);
 
-  const row = { id: entry.id, blob, created_at: entry.created_at, updated_at: entry.updated_at };
-  const blobs = (await readBlobs()).filter((b) => b.id !== entry.id);
+  // `synced: false` until the server has it, so an entry saved offline is
+  // sent on the next read instead of being lost to the server's copy.
+  const row = { id: entry.id, blob, created_at: entry.created_at, updated_at: entry.updated_at, synced: false };
+  const blobs = storage.get(KEYS.VAULT, []).filter((b) => b.id !== entry.id);
   blobs.push(row);
   writeBlobs(blobs);
 
@@ -318,8 +352,11 @@ export async function save(input) {
   emit(EVENTS.VAULT_CHANGED, { id: entry.id });
 
   if (await hasBackend()) {
-    const res = existing ? await put(`/vault/${entry.id}`, { blob }) : await post('/vault', row);
-    if (!res.ok && res.reason !== 'offline' && !serverHasNoVault(res)) return res;
+    // POST for a new entry and a changed one alike: the server replaces an
+    // entry sent with an id it already holds, so a retry cannot duplicate.
+    const res = await post('/vault', { id: entry.id, blob });
+    if (res.ok) markSynced(entry.id);
+    else if (res.reason !== 'offline' && !serverHasNoVault(res)) return res;
   }
 
   return { ok: true, data: entry };
@@ -328,7 +365,7 @@ export async function save(input) {
 export async function destroy(id) {
   if (!session.isUnlocked()) return { ok: false, reason: 'locked' };
 
-  const blobs = await readBlobs();
+  const blobs = storage.get(KEYS.VAULT, []);
   const next = blobs.filter((b) => b.id !== id);
   if (next.length === blobs.length) return { ok: false, reason: 'missing' };
 
@@ -338,7 +375,10 @@ export async function destroy(id) {
 
   if (await hasBackend()) {
     const res = await del(`/vault/${id}`);
-    if (!res.ok && res.reason !== 'offline' && !serverHasNoVault(res)) return res;
+    // Offline: remembered, and deleted on the server at the next read -
+    // otherwise the server's copy would bring it back.
+    if (res.reason === 'offline') storage.set(DELETED_KEY, [...storage.get(DELETED_KEY, []), id]);
+    else if (!res.ok && !serverHasNoVault(res)) return res;
   }
   return { ok: true, data: null };
 }
@@ -447,24 +487,55 @@ export const strength = crypto.strength;
    Storage
    ========================================================================= */
 
+/**
+ * Every blob. The SERVER's set when it answers - so an entry added on the
+ * laptop is on the phone - with this device's copy kept for offline use.
+ *
+ * Reconciled on the way:
+ * - an entry this device has that the server does not know yet (`synced`
+ *   false: saved offline, or made before the server kept vaults) is sent;
+ * - an entry deleted here while offline is deleted there;
+ * - an entry that WAS synced and is gone from the server was deleted on
+ *   another device, and goes from this one too.
+ */
 async function readBlobs() {
-  const local = storage.get(KEYS.VAULT, null);
-  if (Array.isArray(local)) return local;
+  const mine = storage.get(KEYS.VAULT, null);
+  const local = Array.isArray(mine) ? mine : [];
+  if (!(await hasBackend())) return local;
 
-  if (await hasBackend()) {
-    const res = await get('/vault');
-    if (res.ok) {
-      const rows = res.data?.data || [];
-      storage.set(KEYS.VAULT, rows);
-      return rows;
-    }
+  const res = await get('/vault');
+  if (!res.ok) {
     if (res.reason === 'auth') throw new Error('Sign in to open the vault.');
+    return local;   // offline, or a server without vaults: this device's copy
   }
-  return [];
+
+  const deleted = new Set(storage.get(DELETED_KEY, []));
+  for (const id of deleted) {
+    const gone = await del(`/vault/${id}`);
+    if (gone.ok || gone.reason === 'missing') deleted.delete(id);
+  }
+  storage.set(DELETED_KEY, [...deleted]);
+
+  const rows = new Map((res.data?.data || [])
+    .filter((r) => !deleted.has(r.id))
+    .map((r) => [r.id, { ...r, synced: true }]));
+
+  for (const row of local.filter((r) => !r.synced && !deleted.has(r.id))) {
+    const up = await post('/vault', { id: row.id, blob: row.blob });
+    rows.set(row.id, up.ok ? { ...row, synced: true } : row);
+  }
+
+  const all = [...rows.values()];
+  writeBlobs(all);
+  return all;
 }
 
 function writeBlobs(rows) {
   storage.set(KEYS.VAULT, rows);
+}
+
+function markSynced(id) {
+  writeBlobs(storage.get(KEYS.VAULT, []).map((r) => (r.id === id ? { ...r, synced: true } : r)));
 }
 
 function validate(input) {
@@ -486,4 +557,5 @@ export function forgetOnThisDevice() {
   cache = null;
   storage.remove(KEYS.VAULT);
   storage.remove(KEYS.VAULT_META);
+  storage.remove(DELETED_KEY);
 }

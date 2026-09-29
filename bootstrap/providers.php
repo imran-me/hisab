@@ -8,6 +8,7 @@ use Hisab\Categories\CategoriesServiceProvider;
 use Hisab\Dues\DuesServiceProvider;
 use Hisab\Fx\FxServiceProvider;
 use Hisab\Ledger\LedgerServiceProvider;
+use Hisab\Vault\VaultServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -18,4 +19,5 @@ return [
     LedgerServiceProvider::class,
     BudgetsServiceProvider::class,
     DuesServiceProvider::class,
+    VaultServiceProvider::class,
 ];
