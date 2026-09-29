@@ -2,6 +2,7 @@
 
 namespace Hisab\Accounts\Services;
 
+use Hisab\Ledger\Services\ReversalChain;
 use App\Models\User;
 use Hisab\Accounts\Models\FinanceSetting;
 use Hisab\Accounts\Models\MonthClose;
@@ -259,7 +260,7 @@ class MonthCockpit
      */
     private function signed(Transaction $row): int
     {
-        return ($row->reverses_id === null ? 1 : -1) * $this->amount($row);
+        return ReversalChain::sign($row->reverses_id) * $this->amount($row);
     }
 
     /**
@@ -272,7 +273,7 @@ class MonthCockpit
      */
     private function isCountedDepositLeg(Transaction $row): bool
     {
-        return $row->direction === ($row->reverses_id === null ? 'out' : 'in');
+        return ReversalChain::countsDepositLeg((string) $row->direction, $row->reverses_id);
     }
 
     /**
@@ -708,7 +709,7 @@ class MonthCockpit
         // Counted once, on the leg that takes money out of the spendable
         // account - its mirror is the leg that puts it back.
         $deposit = $sum(fn (Transaction $t): bool => $t->type === 'deposit'
-            && ($t->reverses_id === null ? $t->direction === 'out' : $t->direction === 'in'));
+            && ReversalChain::countsDepositLeg((string) $t->direction, $t->reverses_id));
 
         return [
             'income' => $income,

@@ -208,6 +208,20 @@ class FinanceCockpitTest extends TestCase
         $this->assertSame(-40000, $m['expense_minor']);
     }
 
+    public function test_reversing_a_reversal_restores_the_entry_rather_than_subtracting_again(): void
+    {
+        $this->record('expense', 40000, now()->format('Y-m-d'));
+        $expense = \Hisab\Ledger\Models\Transaction::query()->where('type', 'expense')->firstOrFail();
+
+        $mirror = $this->actingAs($this->owner)->postJson("/api/ledger/{$expense->id}/reverse")
+            ->assertCreated()->json('data.id');
+        $this->actingAs($this->owner)->postJson("/api/ledger/{$mirror}/reverse")->assertCreated();
+
+        // Entry +40,000, mirror −40,000, mirror's mirror +40,000: spent once.
+        // Signing every mirror −1 read this as −40,000.
+        $this->assertSame(40000, $this->month(now()->format('Y-m'))['expense_minor']);
+    }
+
     // -------------------------------------------------------------- closing
 
     public function test_closing_files_the_month_without_touching_a_record(): void

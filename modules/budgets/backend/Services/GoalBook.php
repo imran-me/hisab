@@ -2,6 +2,7 @@
 
 namespace Hisab\Budgets\Services;
 
+use Hisab\Ledger\Services\ReversalChain;
 use App\Models\User;
 use Hisab\Budgets\Models\Goal;
 use Hisab\Fx\Services\Converter;
@@ -155,12 +156,12 @@ class GoalBook
             $saved = 0;
             $recent = 0;
             foreach ($legs as $leg) {
-                $counted = $leg->reverses_id === null ? $leg->direction === 'out' : $leg->direction === 'in';
+                $counted = ReversalChain::countsDepositLeg((string) $leg->direction, $leg->reverses_id);
                 if (! $counted) {
                     continue;
                 }
                 $value = $in((int) $leg->amount_minor, (string) $leg->currency, substr((string) $leg->occurred_on, 0, 10));
-                $value = $leg->reverses_id === null ? $value : -$value;
+                $value = ReversalChain::sign($leg->reverses_id) * $value;
                 $saved += $value;
                 if ($leg->occurred_on >= $recentFrom && $leg->occurred_on <= $recentTo) {
                     $recent += $value;

@@ -2,6 +2,7 @@
 
 namespace Hisab\Budgets\Services;
 
+use Hisab\Ledger\Services\ReversalChain;
 use App\Models\User;
 use Hisab\Budgets\Models\Budget;
 use Hisab\Categories\Models\Category;
@@ -313,7 +314,7 @@ class BudgetBook
             $key = (string) ($row->category_id ?? '');
             $mirror = $row->reverses_id !== null;
 
-            $out[$month][$key][0] = ($out[$month][$key][0] ?? 0) + ($mirror ? -$value : $value);
+            $out[$month][$key][0] = ($out[$month][$key][0] ?? 0) + ReversalChain::sign($row->reverses_id) * $value;
             $out[$month][$key][1] = ($out[$month][$key][1] ?? 0) + ($mirror || isset($reversed[$row->id]) ? 0 : 1);
         }
 
