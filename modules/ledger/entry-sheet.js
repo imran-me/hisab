@@ -707,6 +707,7 @@ function attachHandlers(ctx) {
       menu(button, ctx.categoryRows.map((c) => ({
         label: c.label,
         icon: glyphOf(c).icon,
+        iconClass: glyphOf(c).className,
         onClick: () => { form.dataset.catSet = 'true'; chooseCategory(ctx, c.id); },
       })), { align: 'end' });
     });

@@ -17,7 +17,7 @@ let openMenu = null;
 
 /**
  * @param {HTMLElement} anchor          the button that opened it
- * @param {Array} items                 { label, icon?, danger?, onClick } or { separator: true }
+ * @param {Array} items                 { label, icon?, iconClass?, danger?, onClick } or { separator: true }
  * @param {object} [opts]
  * @param {'start'|'center'|'end'} [opts.align='end']
  */
@@ -31,7 +31,7 @@ export function openMenu_(anchor, items, opts = {}) {
     if (item.separator) return '<div class="menu__sep" role="separator"></div>';
     return `
       <button type="button" role="menuitem" class="menu__item${item.danger ? ' menu__item--danger' : ''}" data-index="${i}">
-        ${item.icon ? icon(item.icon, { class: 'icon icon--sm' }) : ''}
+        ${item.icon ? icon(item.icon, { class: `icon icon--sm${item.iconClass ? ` ${item.iconClass}` : ''}` }) : ''}
         <span>${esc(item.label)}</span>
       </button>`;
   }).join('');

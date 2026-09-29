@@ -184,6 +184,9 @@
   transform-origin: var(--menu-origin, top);
 }
 
+/* A category's icon in its own colour (item.iconClass = .cat-<tint>). */
+.menu__item .icon[class*="cat-"] { color: var(--tint); }
+
 .menu[hidden] { display: none; }
 
 .menu__item {
