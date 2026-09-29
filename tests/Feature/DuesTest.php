@@ -287,4 +287,32 @@ class DuesTest extends TestCase
     {
         $this->getJson('/api/dues')->assertUnauthorized();
     }
+
+    /**
+     * Review H4: lend Rahim ৳5,000, correct it to ৳6,000 in the Ledger, and
+     * the Dues account held ৳6,000 while Rahim read as settled. The Ledger now
+     * refuses to write a Dues leg; reversing stays allowed.
+     */
+    public function test_the_ledger_cannot_correct_or_repeat_a_dues_move(): void
+    {
+        $rahim = $this->person();
+        $this->due($rahim, 'lent', 5_000_00);
+        $dues = Account::query()->where('user_id', $this->owner->id)->where('type', 'dues')->firstOrFail();
+        $leg = Transaction::query()->where('user_id', $this->owner->id)->where('account_id', $this->cash->id)->firstOrFail();
+
+        // Correct: refused, and nothing is written.
+        $this->actingAs($this->owner)->patchJson("/api/ledger/{$leg->id}", ['amount_minor' => 6_000_00])
+            ->assertUnprocessable()->assertJsonValidationErrors('account_id');
+        $this->assertSame(2, Transaction::query()->where('user_id', $this->owner->id)->count());
+
+        // Repeat (a new move into the Dues account): refused.
+        $this->actingAs($this->owner)->postJson('/api/ledger', [
+            'type' => 'transfer', 'account_id' => $this->cash->id, 'to_account_id' => $dues->id,
+            'amount_minor' => 5_000_00, 'currency' => 'BDT', 'occurred_on' => '2026-09-28',
+        ])->assertUnprocessable()->assertJsonValidationErrors('account_id');
+
+        // Rahim still owes exactly what was lent.
+        $person = $this->getJson("/api/dues/people/{$rahim}")->assertOk()->json('data');
+        $this->assertSame(5_000_00, $person['balance_minor'] ?? $person['person']['balance_minor'] ?? null);
+    }
 }

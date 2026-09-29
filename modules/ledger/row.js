@@ -62,6 +62,10 @@ export function entryRowHTML(row, look, { showAccount = true, after = '', cells 
   const account = look.accounts.get(row.account_id);
   const category = row.category_id ? look.categories.get(row.category_id) : null;
   const amount = row.direction === 'in' ? row.amount_minor : -row.amount_minor;
+  // Money lent or borrowed is changed from the Dues screen, which keeps the
+  // person it is owed by in step; the server refuses it from here too.
+  const isDues = [row.account_id, row.counter_account_id]
+    .some((id) => look.accounts.get(id)?.type === 'dues');
 
   // What this row IS in the history of the money: without it, the History
   // view is three near-identical rows and no way to tell which is which.
@@ -97,7 +101,7 @@ export function entryRowHTML(row, look, { showAccount = true, after = '', cells 
 
   return `
     <li>
-      <button type="button" class="row row--ledger entry-row${isReversal || wasReversed ? ' row--void' : ''}" data-edit="${esc(row.id)}">
+      <button type="button" class="row row--ledger entry-row${isReversal || wasReversed ? ' row--void' : ''}" data-edit="${esc(row.id)}"${isDues ? ' data-dues' : ''}>
         ${merchantGlyph(row) || `<span class="row__glyph ${className}">${icon(glyph, { class: 'icon' })}</span>`}
         <span class="row__main">
           <span class="row__title">${esc(title)}</span>

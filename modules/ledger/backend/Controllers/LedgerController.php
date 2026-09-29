@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -90,7 +91,10 @@ class LedgerController extends Controller
 
     public function store(StoreTransactionRequest $request): JsonResponse
     {
-        $legs = $this->writer->create($request->user(), $request->validated());
+        $data = $request->validated();
+        $this->refuseDues($request, [$data['account_id'] ?? null, $data['to_account_id'] ?? null]);
+
+        $legs = $this->writer->create($request->user(), $data);
 
         return response()->json([
             'data' => $this->shape($legs->first()),
@@ -110,9 +114,15 @@ class LedgerController extends Controller
         $reason = $data['reason'] ?? null;
         unset($data['reason']);
 
+        $original = $this->find($request, $id);
+        $this->refuseDues($request, [
+            $original->account_id, $original->counter_account_id,
+            $data['account_id'] ?? null, $data['to_account_id'] ?? null,
+        ]);
+
         $legs = $this->writer->correct(
             $request->user(),
-            $this->find($request, $id),
+            $original,
             $data,
             $reason,
         );
@@ -265,6 +275,40 @@ class LedgerController extends Controller
         }
 
         return [$f['from'] ?? null, $f['to'] ?? null];
+    }
+
+    /**
+     * A move into or out of a Dues account is written by the Dues screen,
+     * which links it to the person it is about. Recorded, corrected or
+     * repeated here, the new leg carries no such link: lend Rahim ৳5,000,
+     * correct it to ৳6,000 in the Ledger, and the Dues account holds ৳6,000
+     * while Rahim reads as settled. So the Ledger does not write those legs.
+     * Reversing stays allowed - a person's balance is read from the ledger,
+     * so a reversal keeps it right.
+     *
+     * By table, not through the Accounts module, as the requests' own
+     * ownership rules are.
+     *
+     * @param  array<int, string|null>  $accountIds
+     */
+    private function refuseDues(Request $request, array $accountIds): void
+    {
+        $ids = array_values(array_filter($accountIds));
+        if ($ids === []) {
+            return;
+        }
+
+        $touchesDues = DB::table('accounts')
+            ->where('user_id', $request->user()->id)
+            ->whereIn('id', $ids)
+            ->where('type', 'dues')
+            ->exists();
+
+        if ($touchesDues) {
+            throw ValidationException::withMessages([
+                'account_id' => 'Money lent or borrowed is changed from the Dues screen, so the person it is owed by stays right.',
+            ]);
+        }
     }
 
     private function find(Request $request, string $id): Transaction

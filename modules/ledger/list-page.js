@@ -23,6 +23,7 @@ import { attachRowGestures, collapseRow } from './row-gestures.js';
 import { toast, toastOk, toastFailure } from '../../shared/js/components/toast.js';
 import { menu } from '../../shared/js/components/menu.js';
 import { confirmDialog } from '../../shared/js/components/sheet.js';
+import { siteURL } from '../../shared/js/core/paths.js';
 
 // No header actions: adding an entry is the tab bar's + and nothing else
 // (docs/DIRECTION.md §3.2). Three buttons for one job was two too many.
@@ -82,13 +83,23 @@ qs('[data-search]')?.addEventListener('input', debounce((event) => {
   refresh();
 }, 220));
 
-delegate(document.body, 'click', '[data-edit]', (_event, button) => editEntry(button.dataset.edit));
+delegate(document.body, 'click', '[data-edit]', (_event, button) => {
+  if (button.hasAttribute('data-dues')) { duesOnly(); return; }
+  editEntry(button.dataset.edit);
+});
+
+/** A lent or borrowed move is changed where the person is: the Dues screen. */
+function duesOnly() {
+  toast('Money lent or borrowed is changed from Dues.', {
+    action: { label: 'Open Dues', onClick: () => { window.location.href = siteURL('modules/dues/list.html'); } },
+  });
+}
 
 /* Swipe right: the same entry again, today. Swipe left: reverse it. Hold (or
    right-click): the menu, which offers both and more - a swipe is never the
    only way to do something. */
 attachRowGestures(qs('[data-list]'), {
-  onRepeat: (id) => repeatEntry(id),
+  onRepeat: (id, row) => (row?.hasAttribute('data-dues') ? duesOnly() : repeatEntry(id)),
   onReverse: (id, row) => reverseEntry(id, row),
   onMenu: (id, row) => rowMenu(id, row),
 });
@@ -162,9 +173,11 @@ function rowMenu(id, rowEl) {
   // A reversal, or an entry already reversed, is history: it can be read and
   // copied, not changed.
   const isVoid = rowEl.classList.contains('row--void');
+  const isDues = rowEl.hasAttribute('data-dues');
   const items = [
-    !isVoid && { label: 'Edit', icon: 'edit', onClick: () => editEntry(id) },
-    !isVoid && { label: 'Repeat today', icon: 'refresh', onClick: () => repeatEntry(id) },
+    !isVoid && !isDues && { label: 'Edit', icon: 'edit', onClick: () => editEntry(id) },
+    !isVoid && !isDues && { label: 'Repeat today', icon: 'refresh', onClick: () => repeatEntry(id) },
+    !isVoid && isDues && { label: 'Open in Dues', icon: 'users', onClick: () => { window.location.href = siteURL('modules/dues/list.html'); } },
     { label: 'Copy amount', icon: 'copy', onClick: () => copyAmount(id) },
     !isVoid && { separator: true },
     !isVoid && { label: 'Reverse', icon: 'trash', danger: true, onClick: () => reverseEntry(id, rowEl) },
